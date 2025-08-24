@@ -72,8 +72,8 @@ server {
         proxy_cache_lock on;
         proxy_cache_lock_timeout 10s;
         proxy_cache_lock_age 30s;
-        proxy_cache_valid 200 5m;
-        proxy_cache_valid 404 30s;
+        proxy_cache_valid 200 1h;
+        proxy_cache_valid 404 5m;
         proxy_cache_key "$scheme$request_method$host$request_uri";
         
         # Reduce buffering for WebSocket
