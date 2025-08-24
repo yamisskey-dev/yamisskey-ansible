@@ -15,6 +15,7 @@ upstream cryptpad_websocket_backend {
 # Server block for CryptPad
 server {
     listen 8080;
+    http2 on;
     server_name {{ cryptpad_server_name }};
 
     # Error page handling - redirect to maintenance page when backend is down

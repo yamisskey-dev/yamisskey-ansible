@@ -13,6 +13,7 @@ upstream minio_api_backend {
 # Server block for MinIO API
 server {
     listen 8080;
+    http2 on;
     server_name {{ minio_api_server_name }};
 
     # High-throughput rate limiting with large burst
