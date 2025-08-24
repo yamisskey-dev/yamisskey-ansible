@@ -7,7 +7,10 @@ limit_req_zone $binary_remote_addr zone=minio_burst:10m rate=1000r/m;
 
 # Upstream definition
 upstream minio_api_backend {
-    server 127.0.0.1:9000;
+    server 127.0.0.1:9000 weight=1 max_fails=3 fail_timeout=10s;
+    keepalive 64;
+    keepalive_requests 1000;
+    keepalive_timeout 60s;
 }
 
 # Server block for MinIO API
@@ -15,6 +18,12 @@ server {
     listen 8080;
     http2 on;
     server_name {{ minio_api_server_name }};
+
+    # TCP tuning for high throughput
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 75;
+    reset_timedout_connection on;
 
     # High-throughput rate limiting with large burst
     limit_req zone=minio_general burst=100 nodelay;
@@ -209,4 +218,36 @@ server {
         # Pass through S3 error responses
         proxy_intercept_errors off;
     }
+    # Enhanced compression for S3 API responses
+    gzip on;
+    gzip_types
+        application/json
+        application/xml
+        text/xml
+        text/plain
+        application/octet-stream;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_min_length 128;
+    gzip_buffers 16 8k;
+    gzip_comp_level 6;
+    gzip_disable "msie6";
+    
+    # Open file cache for performance
+    open_file_cache max=10000 inactive=30s;
+    open_file_cache_valid 60s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+    
+    # Additional performance tuning
+    send_timeout 30s;
+    client_header_timeout 10s;
+    sendfile on;
+    sendfile_max_chunk 2m;
+    client_header_buffer_size 4k;
+    large_client_header_buffers 4 16k;
+    
+    # Access logging disabled for performance
+    access_log off;
+    error_log /dev/null crit;
 }
