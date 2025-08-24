@@ -3,8 +3,10 @@
 
 # Upstream definition
 upstream misskey_backend {
-    server localhost:3001;
-    keepalive 32;
+    server localhost:3001 weight=1 max_fails=3 fail_timeout=10s;
+    keepalive 64;
+    keepalive_requests 1000;
+    keepalive_timeout 60s;
 }
 
 # Server block for Misskey
@@ -12,6 +14,12 @@ server {
     listen 8080;
     http2 on;
     server_name {{ domain }};
+
+    # TCP tuning for many connections
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    reset_timedout_connection on;
 
     # Error page handling - redirect to maintenance page when backend is down
     error_page 502 503 504 @maintenance_redirect;
@@ -62,6 +70,8 @@ server {
         proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
         proxy_cache_background_update on;
         proxy_cache_lock on;
+        proxy_cache_lock_timeout 10s;
+        proxy_cache_lock_age 30s;
         proxy_cache_valid 200 5m;
         proxy_cache_valid 404 30s;
         proxy_cache_key "$scheme$request_method$host$request_uri";
@@ -85,6 +95,9 @@ server {
         proxy_cache_valid 404 1h;
         proxy_cache_use_stale error timeout updating;
         proxy_cache_key "$scheme$request_method$host$request_uri";
+        proxy_cache_revalidate on;
+        proxy_cache_background_update on;
+        proxy_cache_lock on;
 
         add_header X-Cache-Status $upstream_cache_status;
         expires 30d;  # 1日から30日に延長
@@ -105,6 +118,14 @@ server {
         proxy_cache_valid 404 1h;
         proxy_cache_use_stale error timeout updating;
         proxy_cache_key "$scheme$request_method$host$request_uri";
+        proxy_cache_revalidate on;
+        proxy_cache_background_update on;
+        proxy_cache_lock on;
+
+        # Buffer optimization for media
+        proxy_buffer_size 64k;
+        proxy_buffers 8 128k;
+        proxy_busy_buffers_size 256k;
 
         add_header X-Cache-Status $upstream_cache_status;
         add_header Access-Control-Allow-Origin * always;
@@ -136,8 +157,10 @@ server {
         application/vnd.ms-fontobject;
     gzip_proxied any;
     gzip_vary on;
-    gzip_min_length 256;
-    gzip_comp_level 6;
+    gzip_min_length 128;
+    gzip_buffers 16 8k;
+    gzip_comp_level 7;
+    gzip_disable "msie6";
     
     # Add Brotli compression if available
     # brotli on;
@@ -189,4 +212,19 @@ server {
     # Disable access log to reduce I/O load
     access_log off;
     error_log /dev/null crit;
+
+    # Open file cache for static content
+    open_file_cache max=10000 inactive=30s;
+    open_file_cache_valid 60s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+    # Additional performance tuning
+    send_timeout 10s;
+    client_body_timeout 10s;
+    client_header_timeout 10s;
+    sendfile on;
+    sendfile_max_chunk 1m;
+    client_header_buffer_size 4k;
+    large_client_header_buffers 4 16k;
 }
