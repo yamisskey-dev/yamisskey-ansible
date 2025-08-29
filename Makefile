@@ -28,7 +28,7 @@ ifneq (,$(wildcard $(ENV_FILE)))
     export $(shell sed 's/=.*//' $(ENV_FILE))
 endif
 
-all: install inventory clone provision backup update
+all: install inventory clone provision backup
 
 install:
 	@echo "Installing Ansible..."
@@ -327,7 +327,6 @@ help:
 	@echo "  clone         - Clone the repositories if they don't exist"
 	@echo "  provision     - Provision the server using Ansible"
 	@echo "  backup        - Run the backup playbook"
-	@echo "  update        - Update Misskey and rebuild Docker images"
 	@echo ""
 	@echo "Migration commands:"
 	@echo "  migrate       - Migrate MinIO data with encryption and progress monitoring"

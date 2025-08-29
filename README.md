@@ -170,7 +170,6 @@ Available targets:
   clone         - Clone the repositories if they don't exist
   provision     - Provision the server using Ansible
   backup        - Run the backup playbook
-  update        - Update Misskey and rebuild Docker images
 
 Migration commands:
   migrate       - Migrate MinIO data with encryption and progress monitoring
