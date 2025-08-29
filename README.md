@@ -119,7 +119,7 @@ sudo cloudflared service install your_connector_token_value
 
 ##### warp+
 
-subscribe warp licence key on mobile device
+subscribe warp licence key in [mobile app](https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone&hl=en_US&pli=1) on mobile device
 
 ```consol
 sudo systemctl enable warp-svc.service
