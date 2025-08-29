@@ -24,22 +24,7 @@ tailscale ssh balthasar
 
 ### clone
 
-Clone the yamisskey-provision repository from GitLab to your local machine:
-
-`~/.ssh/config`
-
-```config
-Host balthasar
-    User your_username
-    port 22
-    Hostname 00.000.000.000
-    IdentityFile ~/.ssh/id_ed25519_balthasar
-    TCPKeepAlive yes
-    IdentitiesOnly yes
-```
-
 ```consol
-ssh balthasar
 git clone https://github.com/yamisskey-dev/yamisskey-provision.git
 cd yamisskey-provision
 ```
@@ -63,17 +48,7 @@ cd .config
 cp docker_example.yml default.yml
 cp docker_example.env docker.env
 ```
-Edit the `docker-compose.yml` and `default.yml` and `docker.env` files, providing the appropriate configuration values. Refer to the comments within the files for guidance.
-
-- Change 3000 port to 3001 which conflicts with grafana in `docker-compose.yml` and `default.yml`
-- Change domain example.tld to yami.ski in `default.yml`
-- Change host of db from localhost to db and host of redis from localhost to redis in `default.yml`
-- Change name and user and pass in `default.yml` and `docker.env`
-
-[Configure Nginx](https://misskey-hub.net/ja/docs/for-admin/install/resources/nginx/) to reverse proxy Misskey. Ensure the Misskey Nginx configuration `misskey.conf` is properly set up to handle HTTP to HTTPS redirection, WebSocket support, and SSL configuration.
-
-- Change 3000 port to 3001 which conflicts with grafana
-- Change domain example.tld to yami.ski
+Edit the `docker-compose.yml` and `default.yml` and `docker.env` files.
 
 ### configure
 Prepare the Cloudflare API credentials file. Create a directory for Cloudflare configuration if it does not exist:
