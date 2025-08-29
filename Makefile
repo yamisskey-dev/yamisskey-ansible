@@ -1,4 +1,4 @@
-.PHONY: all install inventory clone migrate test provision backup help
+.PHONY: all install inventory clone migrate test provision help
 
 DESTINATION_SSH_USER=$(shell whoami)
 DESTINATION_HOSTNAME=$(shell hostname)
@@ -28,7 +28,7 @@ ifneq (,$(wildcard $(ENV_FILE)))
     export $(shell sed 's/=.*//' $(ENV_FILE))
 endif
 
-all: install inventory clone provision backup
+all: install inventory clone provision
 
 install:
 	@echo "Installing Ansible..."
@@ -314,10 +314,7 @@ provision:
 	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/minecraft.yml --ask-become-pass
 	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/neo-quesdon.yml --ask-become-pass
 	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/lemmy.yml --ask-become-pass
-
-backup:
 	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/misskey-backup.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/borgbackup.yml --ask-become-pass"
 
 help:
 	@echo "Available targets:"
@@ -326,7 +323,6 @@ help:
 	@echo "  inventory     - Create Ansible inventory (MODE=migration for migration, default for standard)"
 	@echo "  clone         - Clone the repositories if they don't exist"
 	@echo "  provision     - Provision the server using Ansible"
-	@echo "  backup        - Run the backup playbook"
 	@echo ""
 	@echo "Migration commands:"
 	@echo "  migrate       - Migrate MinIO data with encryption and progress monitoring"
