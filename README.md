@@ -48,9 +48,11 @@ cd .config
 cp docker_example.yml default.yml
 cp docker_example.env docker.env
 ```
+
 Edit the `docker-compose.yml` and `default.yml` and `docker.env` files.
 
 ### configure
+
 Prepare the Cloudflare API credentials file. Create a directory for Cloudflare configuration if it does not exist:
 
 - Access https://dash.cloudflare.com/profile/api-tokens
@@ -73,11 +75,12 @@ dns_cloudflare_api_key = your-cloudflare-global-api-key
 sudo chmod 600 /etc/cloudflare/cloudflare.ini
 ```
 
-### init
+### connect
 
 Need to manually log in to cloudflared and warp
 
 #### cloudflared
+
 ```consol
 cloudflared tunnel login
 ```
@@ -105,7 +108,9 @@ sudo systemctl restart cloudflared
 ```
 
 ##### cloudflare zero trust(optional)
+
 create cloudflare tunnel named yamisskey by Zero Trust in https://one.dash.cloudflare.com/
+
 ```consol
 sudo cloudflared service install your_connector_token_value
 ```
@@ -115,6 +120,7 @@ sudo cloudflared service install your_connector_token_value
 ##### warp+
 
 subscribe warp licence key on mobile device
+
 ```consol
 sudo systemctl enable warp-svc.service
 sudo systemctl start warp-svc.service
@@ -147,5 +153,4 @@ Return to the yamisskey-provision directory and use the Makefile to provision th
 ```consol
 cd ~/yamisskey-provision
 make provision
-```
 ```
