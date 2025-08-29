@@ -140,10 +140,6 @@ warp-cli tunnel host add region2.v2.argotunnel.com
 warp-cli tunnel host list
 ```
 
-### ai
-
-You need to manually prepare the configuration file `config.json` in ai repository to run. please see [this document](https://github.com/yamisskey-dev/yui?tab=readme-ov-file#docker%E3%81%A7%E5%8B%95%E3%81%8B%E3%81%99).
-
 ### provision
 
 Return to the yamisskey-provision directory and use the Makefile to provision the server:
@@ -154,20 +150,6 @@ make provision
 ```
 
 During the provisioning process, the Ansible playbook (playbook.yml) will pause and prompt you to review the configuration files you edited in step 4. Ensure that the configurations are correct, then press ENTER to continue the provisioning process. Once the provisioning is complete, verify that Misskey is running correctly.
-
-### backup
-
-Ensure that you have the necessary environment variables set up to backup. Create a .env file in the misskey-backup directory if it does not exist, and provide the required values:
-
-```config
-POSTGRES_HOST=your_postgres_host_in_misskey_config
-POSTGRES_USER=your_postgres_user_in_misskey_config
-POSTGRES_DB=your_postgres_namein_misskey_config
-POSTGRES_PASSWORD=your_postgres_passwordin_misskey_config
-R2_PREFIX=your_cloudflare_r2_bucket_prefix
-DISCORD_WEBHOOK_URL=your_discord_server_channel_webhook_url
-NOTIFICATION=true
-```
 
 ```consol
 make backup
