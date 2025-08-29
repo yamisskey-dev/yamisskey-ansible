@@ -4,36 +4,23 @@ This guide will walk you through the process of setting up Misskey etc using the
 
 ## Steps
 
-### login
+### login (via Tailscale SSH)
 
-Prepare to log in to balthasar as a general user with SSH private key:
-
-```consol
-adduser your_username
-usermod -aG sudo your_username
-vi /etc/ssh/sshd_config
-```
-
-`/etc/ssh/sshd_config`
-
-```config
-RSAAuthentication yes
-PubkeyAuthentication yes
-AuthorizedKeysFile .ssh/authorized_keys
-PasswordAuthentication no
-PermitRootLogin  no
-```
+Access to the server is managed via Tailscale SSH.
+Make sure you have Tailscale installed and log in:
 
 ```consol
-systemctl restart sshd
-su your_username
-mkdir ~/.ssh
-vi ~/.ssh/id_ed25519_balthasar.pub
-touch ~/.ssh/authrized_keys
-cat ~/.ssh/id_ed25519_balthasar.pub >>  ~/.ssh/authorized_keys
-chmod 700 ~/.ssh
-chmod 600 ~/.ssh/*
+tailscale login
+sudo tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
 ```
+
+Now you can SSH into the server without managing keys:
+
+```consol
+tailscale ssh balthasar
+```
+
+💡 If you prefer to keep a fallback SSH access method (in case Tailscale is unavailable), you may additionally configure an SSH public key and update /etc/ssh/sshd_config manually. This step is optional.
 
 ### clone
 
@@ -113,13 +100,7 @@ sudo chmod 600 /etc/cloudflare/cloudflare.ini
 
 ### init
 
-Need to manually log in to tailscale, cloudflared and warp
-
-#### tailscale
-```consol
-tailscale login
-sudo tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
-```
+Need to manually log in to cloudflared and warp
 
 #### cloudflared
 ```consol
