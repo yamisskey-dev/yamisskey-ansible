@@ -163,23 +163,3 @@ make provision
 ```consol
 make help
 ```
-
-```log
-Available targets:
-  all           - Install, clone, setup, provision, and backup
-  install       - Update and install necessary packages
-  inventory     - Create Ansible inventory (MODE=migration for migration, default for standard)
-  clone         - Clone the repositories if they don't exist
-  provision     - Provision the server using Ansible
-
-Migration commands:
-  migrate       - Migrate MinIO data with encryption and progress monitoring
-  test          - Test migration system functionality with enhanced checks
-  transfer      - Transfer complete system using export/import playbooks
-
-Migration examples:
-  make migrate SOURCE=balthasar TARGET=raspberrypi  # Full progress monitoring
-  make inventory MODE=migration SOURCE=balthasar TARGET=raspberrypi  # Migration inventory
-  make inventory        # Standard inventory for regular playbooks
-  make test             # Test system with progress feature validation
-```
