@@ -182,11 +182,4 @@ Migration examples:
   make inventory MODE=migration SOURCE=balthasar TARGET=raspberrypi  # Migration inventory
   make inventory        # Standard inventory for regular playbooks
   make test             # Test system with progress feature validation
-
-Progress monitoring features:
-  🚀 Real-time transfer progress (10-second intervals)
-  📊 File count tracking and completion percentages
-  ⏱️  Duration tracking for each phase
-  🔐 Encryption verification with sample file testing
-  📈 Visual progress indicators with emojis
 ```
