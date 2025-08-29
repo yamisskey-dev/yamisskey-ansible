@@ -172,25 +172,16 @@ warp-cli settings
 ```
 verify that warp=on.
 
-##### cloudflare zero trust(optional)
-create cloudflare tunnel named yamisskey-warp by Zero Trust in https://one.dash.cloudflare.com/
-
-copy mdm.xml to /var/lib/cloudflare-warp/mdm.xml
-```xml
-<dict>
-  <key>organization</key>
-  <string>yamisskey</string>
-  <key>auth_client_id</key>
-  <string>your_client_id_access_value</string>
-  <key>auth_client_secret</key>
-  <string>your_client_secret_value</string>
-  <key>warp_connector_token</key>
-  <string>your_connector_token_value</string>
-</dict>
-```
-
 ```consol
 sudo systemctl restart warp-svc.service
+```
+
+Exclude traffic to Cloudflare's edge servers from routing through WARP to prevent interference with direct cloudflared connections.
+
+```consol
+warp-cli tunnel host add region1.v2.argotunnel.com
+warp-cli tunnel host add region2.v2.argotunnel.com
+warp-cli tunnel host list
 ```
 
 ### ai
