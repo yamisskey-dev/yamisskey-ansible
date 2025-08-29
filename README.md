@@ -152,5 +152,6 @@ Return to the yamisskey-provision directory and use the Makefile to provision th
 
 ```consol
 cd ~/yamisskey-provision
+make inventory
 make provision
 ```
