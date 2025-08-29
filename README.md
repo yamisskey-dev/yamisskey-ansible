@@ -148,9 +148,4 @@ Return to the yamisskey-provision directory and use the Makefile to provision th
 cd ~/yamisskey-provision
 make provision
 ```
-
-During the provisioning process, the Ansible playbook (playbook.yml) will pause and prompt you to review the configuration files you edited in step 4. Ensure that the configurations are correct, then press ENTER to continue the provisioning process. Once the provisioning is complete, verify that Misskey is running correctly.
-
-```consol
-make backup
 ```
