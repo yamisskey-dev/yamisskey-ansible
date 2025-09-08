@@ -53,20 +53,23 @@ ap-inventory:
 	}
 
 ap-setup:
-	@ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/setup.yml --ask-become-pass
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles \
+	ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/setup.yml --ask-become-pass
 
 ap-migrate:
-	@ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-truenas.yml --ask-become-pass
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles \
+	ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-truenas.yml --ask-become-pass
 
 ap-e2e:
-	@ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/truenas-minio-deploy-and-migrate.yml --ask-become-pass
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles \
+	ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/truenas-minio-deploy-and-migrate.yml --ask-become-pass
 
 ap-syntax:
-	@ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/setup.yml || true
-	@ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/truenas-minio-deploy-and-migrate.yml || true
-	@ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-truenas.yml
-	@ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-phase-a.yml
-	@ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-cutover.yml
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/setup.yml || true
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/truenas-minio-deploy-and-migrate.yml || true
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-truenas.yml
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-phase-a.yml
+	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-cutover.yml
 
 all: sv-install sv-inventory sv-clone sv-provision
 
