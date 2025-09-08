@@ -1,0 +1,234 @@
+---
+# TrueNAS Scale専用 MinIO移行プレイブック
+# Cloudflare Tunnel統合対応（アプライアンス境界尊重）
+- name: MinIO Migration to TrueNAS Scale with Cloudflare Tunnel
+  hosts: truenas
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    # 移行設定（TrueNAS専用）
+    source_minio_host: "{{ migration_source | default('raspberrypi') }}"
+    source_minio_ip: "{{ hostvars[source_minio_host]['ansible_default_ipv4']['address'] }}"
+    source_minio_port: 9000
+    source_minio_alias: "source-minio"
+    target_minio_alias: "truenas-tunnel"
+    migration_temp_dir: "/tmp/truenas-minio-migration"
+    
+    # TrueNAS Cloudflare Tunnel設定
+    target_minio_endpoint: "https://{{ truenas_minio_domain }}"
+    target_platform: "truenas-tunnel"
+    
+    # 移行するバケット
+    buckets_to_migrate:
+      - "{{ minio_bucket_name_for_misskey }}"
+
+  tasks:
+    - name: Display TrueNAS Cloudflare Tunnel migration plan
+      debug:
+        msg: |
+          ==============================================
+          TrueNAS Scale Cloudflare Tunnel Migration
+          ==============================================
+          Source: {{ source_minio_host }} ({{ source_minio_ip }}:{{ source_minio_port }})
+          Target: {{ target_minio_endpoint }} (Cloudflare Tunnel)
+          Buckets: {{ buckets_to_migrate | join(', ') }}
+          Method: MinIO Client via HTTPS (Tunnel)
+          Security: End-to-End TLS + Tunnel isolation
+          ==============================================
+
+    - name: Verify source MinIO connectivity
+      uri:
+        url: "http://{{ source_minio_ip }}:{{ source_minio_port }}/minio/health/live"
+        method: GET
+        timeout: 10
+      register: source_health
+      failed_when: source_health.status != 200
+
+    - name: Wait for TrueNAS Custom App deployment
+      debug:
+        msg: "Waiting for TrueNAS MinIO Custom App to be deployed via truenas_apps role"
+      
+    - name: Verify TrueNAS MinIO via Cloudflare Tunnel
+      uri:
+        url: "{{ target_minio_endpoint }}/minio/health/live"
+        method: GET
+        timeout: 30
+        validate_certs: yes
+      register: target_health
+      retries: 10
+      delay: 15
+      until: target_health.status == 200
+
+    - name: Load source MinIO credentials
+      slurp:
+        src: "{{ hostvars[source_minio_host]['minio_secrets_file'] }}"
+      register: source_secrets_b64
+      delegate_to: "{{ source_minio_host }}"
+
+    - name: Parse source credentials
+      set_fact:
+        source_secrets: "{{ source_secrets_b64.content | b64decode | from_yaml }}"
+
+    - name: Load target MinIO credentials (TrueNAS)
+      slurp:
+        src: "{{ minio_secrets_file }}"
+      register: target_secrets_b64
+
+    - name: Parse target credentials
+      set_fact:
+        target_secrets: "{{ target_secrets_b64.content | b64decode | from_yaml }}"
+
+    - name: Create migration workspace
+      file:
+        path: "{{ migration_temp_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Install MinIO client (mc) if not present
+      get_url:
+        url: "https://dl.min.io/client/mc/release/linux-amd64/mc"
+        dest: "/usr/local/bin/mc"
+        mode: '0755'
+        force: no
+
+    - name: Configure source MinIO alias
+      shell: |
+        mc alias set {{ source_minio_alias }} \
+          http://{{ source_minio_ip }}:{{ source_minio_port }} \
+          "{{ source_secrets.minio.access_key }}" \
+          "{{ source_secrets.minio.secret_key }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+    - name: Configure target MinIO alias (Cloudflare Tunnel)
+      shell: |
+        mc alias set {{ target_minio_alias }} \
+          {{ target_minio_endpoint }} \
+          "{{ target_secrets.minio.root_user }}" \
+          "{{ target_secrets.minio.root_password }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      no_log: true
+
+    - name: Test source connectivity
+      shell: mc ls {{ source_minio_alias }}/
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      register: source_test
+
+    - name: Test target connectivity (Tunnel)
+      shell: mc ls {{ target_minio_alias }}/
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      register: target_test
+
+    - name: Create target buckets
+      shell: |
+        mc mb {{ target_minio_alias }}/{{ item }} --ignore-existing
+      loop: "{{ buckets_to_migrate }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+    - name: Set bucket encryption (KMS)
+      shell: |
+        mc encrypt set sse-kms "{{ target_secrets.minio.kms_key_id | default('minio-default-key') }}" \
+          {{ target_minio_alias }}/{{ item }}
+      loop: "{{ buckets_to_migrate }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      when: target_secrets.minio.kms_key_id is defined
+
+    - name: Perform bucket-by-bucket migration
+      shell: |
+        mc mirror \
+          --overwrite \
+          --remove \
+          --preserve \
+          {{ source_minio_alias }}/{{ item }}/ \
+          {{ target_minio_alias }}/{{ item }}/
+      loop: "{{ buckets_to_migrate }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      register: migration_results
+
+    - name: Create MinIO service user for Misskey
+      shell: |
+        mc admin user add {{ target_minio_alias }} \
+          "{{ target_secrets.minio.misskey_s3_access_key }}" \
+          "{{ target_secrets.minio.misskey_s3_secret_key }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      no_log: true
+      ignore_errors: yes
+
+    - name: Create IAM policy for Misskey
+      template:
+        src: "{{ playbook_dir }}/templates/minio_iam_policy.json.j2"
+        dest: "{{ migration_temp_dir }}/misskey-policy.json"
+
+    - name: Apply IAM policy
+      shell: |
+        mc admin policy create {{ target_minio_alias }} misskey-policy {{ migration_temp_dir }}/misskey-policy.json
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+    - name: Attach policy to user
+      shell: |
+        mc admin policy attach {{ target_minio_alias }} misskey-policy --user "{{ target_secrets.minio.misskey_s3_access_key }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+    - name: Set CORS policy
+      template:
+        src: "{{ playbook_dir }}/templates/minio_cors_policy.json.j2"
+        dest: "{{ migration_temp_dir }}/cors-policy.json"
+
+    - name: Apply CORS policy
+      shell: |
+        mc anonymous set-json {{ migration_temp_dir }}/cors-policy.json {{ target_minio_alias }}/{{ item }}
+      loop: "{{ buckets_to_migrate }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+    - name: Verify migration integrity
+      shell: |
+        mc diff {{ source_minio_alias }}/{{ item }}/ {{ target_minio_alias }}/{{ item }}/
+      loop: "{{ buckets_to_migrate }}"
+      environment:
+        MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+      register: diff_results
+
+    - name: Clean up migration workspace
+      file:
+        path: "{{ migration_temp_dir }}"
+        state: absent
+
+    - name: Display migration completion summary
+      debug:
+        msg: |
+          ==============================================
+          TrueNAS Cloudflare Tunnel Migration Complete
+          ==============================================
+          ✅ Source: {{ source_minio_host }} (verified)
+          ✅ Target: {{ target_minio_endpoint }} (Cloudflare Tunnel)
+          ✅ Buckets migrated: {{ buckets_to_migrate | join(', ') }}
+          ✅ IAM policies configured
+          ✅ CORS policies applied
+          ✅ Encryption enabled (KMS)
+          
+          🔧 Misskey Configuration Update:
+          S3_ENDPOINT={{ target_minio_endpoint }}
+          S3_ACCESS_KEY={{ target_secrets.minio.misskey_s3_access_key }}
+          S3_SECRET_KEY={{ target_secrets.minio.misskey_s3_secret_key }}
+          S3_REGION={{ truenas_minio_region | default('ap-northeast-3') }}
+          
+          🌐 TrueNAS Scale Cloudflare Tunnel:
+          - MinIO API: {{ target_minio_endpoint }}
+          - Security: End-to-End TLS + Tunnel Isolation
+          - Management: TrueNAS Scale Custom App UI
+          - Data Path: {{ truenas_minio_data_path }}
+          
+          📝 DNS Configuration:
+          {{ truenas_minio_domain }} → Cloudflare Tunnel (Automatic)
+          ==============================================

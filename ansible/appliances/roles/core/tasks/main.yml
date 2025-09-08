@@ -1,0 +1,135 @@
+---
+# TrueNAS Scale Core Infrastructure Management
+# API経由での本体設定管理（アプライアンス型IaC）
+
+- name: TrueNAS Scale Core Configuration Management
+  debug:
+    msg: |
+      ==============================================
+      TrueNAS Scale 25.04 Core Infrastructure Setup
+      ==============================================
+      Target: {{ inventory_hostname }}
+      API Version: JSON-RPC 2.0 over WebSocket
+      Management Mode: Appliance (API-driven)
+      ==============================================
+
+# API接続確認
+- name: Verify TrueNAS API connectivity
+  uri:
+    url: "{{ truenas_api_url }}/api/v2.0/system/info"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ truenas_api_key }}"
+    timeout: 10
+  register: truenas_api_check
+  failed_when: truenas_api_check.status != 200
+
+# ZFSデータセット管理
+- name: Ensure ZFS datasets exist for applications
+  block:
+    - name: Create MinIO data dataset
+      shell: |
+        midclt call pool.dataset.create '{
+          "name": "{{ truenas_pool_name }}/{{ item.name }}",
+          "type": "FILESYSTEM",
+          "properties": {
+            "compression": "{{ item.compression | default("lz4") }}",
+            "atime": "{{ item.atime | default("off") }}",
+            "recordsize": "{{ item.recordsize | default("1M") }}"
+          }
+        }'
+      loop: "{{ truenas_datasets }}"
+      register: dataset_result
+      changed_when: "'already exists' not in dataset_result.stderr"
+      failed_when: 
+        - dataset_result.rc != 0
+        - "'already exists' not in dataset_result.stderr"
+
+# ユーザー・グループ管理
+- name: Manage application users and groups
+  block:
+    - name: Create application groups
+      shell: |
+        midclt call group.create '{
+          "name": "{{ item.name }}",
+          "gid": {{ item.gid }}
+        }'
+      loop: "{{ truenas_groups | default([]) }}"
+      register: group_result
+      changed_when: "'already exists' not in group_result.stderr"
+      failed_when:
+        - group_result.rc != 0
+        - "'already exists' not in group_result.stderr"
+
+    - name: Create application users
+      shell: |
+        midclt call user.create '{
+          "username": "{{ item.name }}",
+          "uid": {{ item.uid }},
+          "group": {{ item.gid }},
+          "home": "{{ item.home }}",
+          "shell": "/usr/bin/bash",
+          "full_name": "{{ item.description | default(item.name + " Service Account") }}"
+        }'
+      loop: "{{ truenas_users | default([]) }}"
+      register: user_result
+      changed_when: "'already exists' not in user_result.stderr"
+      failed_when:
+        - user_result.rc != 0
+        - "'already exists' not in user_result.stderr"
+      no_log: true
+
+# データセット権限設定
+- name: Set dataset permissions for applications
+  file:
+    path: "/mnt/{{ truenas_pool_name }}/{{ item.name }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0755') }}"
+    recurse: "{{ item.recurse | default(false) }}"
+  loop: "{{ truenas_datasets }}"
+
+# スナップショット設定
+- name: Configure ZFS snapshots for data protection
+  shell: |
+    midclt call pool.snapshottask.create '{
+      "dataset": "{{ truenas_pool_name }}/{{ item.name }}",
+      "recursive": {{ item.recursive | default(true) | lower }},
+      "lifetime_value": {{ item.retention_days | default(30) }},
+      "lifetime_unit": "DAY",
+      "naming_schema": "auto-%Y-%m-%d_%H-%M",
+      "schedule": {
+        "minute": "0",
+        "hour": "{{ item.hour | default('2') }}",
+        "dom": "*",
+        "month": "*",
+        "dow": "*"
+      },
+      "enabled": true
+    }'
+  loop: "{{ truenas_datasets }}"
+  when: item.snapshot | default(true)
+  register: snapshot_result
+  changed_when: snapshot_result.rc == 0
+
+# システム設定のバックアップ
+- name: Backup system configuration
+  shell: |
+    midclt call system.info | jq . > "{{ truenas_backup_path }}/system-config-$(date +%Y%m%d-%H%M%S).json"
+  when: truenas_backup_config | default(true)
+
+- name: Display TrueNAS Core setup summary
+  debug:
+    msg: |
+      ==============================================
+      TrueNAS Core Setup Complete
+      ==============================================
+      ✅ API connectivity verified
+      ✅ ZFS datasets: {{ truenas_datasets | map(attribute='name') | list | join(', ') }}
+      ✅ Users/Groups configured
+      ✅ Permissions set
+      ✅ Snapshots scheduled
+      {% if truenas_backup_config | default(true) %}✅ System config backed up{% endif %}
+      
+      🔗 Next: Deploy applications using truenas_apps role
+      ==============================================

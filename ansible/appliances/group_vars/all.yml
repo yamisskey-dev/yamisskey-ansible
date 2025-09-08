@@ -1,0 +1,48 @@
+---
+# TrueNAS Scale 汎用変数設定
+# すべてのTrueNAS管理で共有される基本設定
+
+# TrueNAS Scale バージョン情報
+truenas_scale_version: "25.04"  # Fangtooth
+truenas_api_version: "2.0"
+
+# デフォルト MinIO 設定
+truenas_minio_region: "ap-northeast-3"
+truenas_minio_api_port: 9000
+truenas_minio_console_port: 9001
+
+# デフォルト ZFS 設定
+truenas_zfs_compression: "lz4"
+truenas_zfs_atime: "off"
+truenas_zfs_recordsize_minio: "1M"
+
+# デフォルト スナップショット設定
+truenas_snapshot_retention_days: 30
+truenas_snapshot_hour: 2
+
+# セキュリティ設定
+truenas_file_mode_config: "0644"
+truenas_file_mode_secrets: "0600"
+truenas_directory_mode: "0755"
+
+# Docker Compose 設定
+truenas_compose_healthcheck_interval: "30s"
+truenas_compose_healthcheck_timeout: "20s"
+truenas_compose_healthcheck_retries: 3
+truenas_compose_healthcheck_start_period: "60s"
+
+# Cloudflare Tunnel 設定
+truenas_cloudflared_protocol: "http2"
+truenas_cloudflared_connect_timeout: "2s"
+truenas_cloudflared_keep_alive_timeout: "15s"
+truenas_cloudflared_log_level: "info"
+
+# API タイムアウト設定
+truenas_api_timeout: 10
+truenas_health_check_timeout: 30
+truenas_health_check_retries: 10
+truenas_health_check_delay: 15
+
+# アプリケーション状態確認
+truenas_app_deploy_retries: 12
+truenas_app_deploy_delay: 10
