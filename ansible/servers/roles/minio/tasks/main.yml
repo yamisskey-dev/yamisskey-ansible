@@ -48,7 +48,7 @@
 
 - name: Deploy Docker Compose file for Minio
   template:
-    src: templates/minio_docker-compose.yml.j2
+    src: minio_docker-compose.yml.j2
     dest: /opt/minio/docker-compose.yml
     owner: root
     group: root
@@ -148,7 +148,7 @@
 
     - name: Deploy IAM policy template
       template:
-        src: templates/minio_iam_policy.json.j2
+        src: minio_iam_policy.json.j2
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
 
@@ -169,7 +169,7 @@
 
     - name: Deploy bucket policy template
       template:
-        src: templates/minio_cors_policy.json.j2
+        src: minio_cors_policy.json.j2
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
 

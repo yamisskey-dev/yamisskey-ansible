@@ -31,7 +31,7 @@
 
     - name: Deploy custom rsyslog configuration
       template:
-        src: templates/rsyslog.conf.j2
+        src: rsyslog.conf.j2
         dest: /etc/rsyslog.conf
         owner: root
         group: root
@@ -92,7 +92,7 @@
 
 - name: Deploy custom logrotate configuration for rsyslog
   template:
-    src: templates/logrotate_rsyslog.j2
+    src: logrotate_rsyslog.j2
     dest: /etc/logrotate.d/rsyslog
     owner: root
     group: root
@@ -424,7 +424,7 @@
 
     - name: Configure ClamAV daemon settings
       template:
-        src: templates/clamd.conf.j2
+        src: clamd.conf.j2
         dest: /etc/clamav/clamd.conf
         owner: root
         group: root
@@ -499,7 +499,7 @@
 
     - name: Deploy dnscrypt-proxy configuration
       template:
-        src: templates/dnscrypt-proxy.toml.j2
+        src: dnscrypt-proxy.toml.j2
         dest: /etc/dnscrypt-proxy/dnscrypt-proxy.toml
         mode: '0644'
       notify: Restart dnscrypt-proxy
@@ -515,7 +515,7 @@
   block:
     - name: Configure systemd-resolved DNS settings
       template:
-        src: templates/resolved.conf.j2
+        src: resolved.conf.j2
         dest: /etc/systemd/resolved.conf
         mode: '0644'
       notify: Restart systemd-resolved

@@ -87,7 +87,7 @@
 
 - name: Copy custom CSS file
   template:
-    src: templates/jitsi_custom.css.j2
+    src: jitsi_custom.css.j2
     dest: /usr/share/jitsi-meet/css/custom.css
     owner: root
     group: root

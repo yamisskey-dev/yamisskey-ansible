@@ -22,7 +22,7 @@
 
 - name: Create rclone config file
   template:
-    src: templates/rclone.conf.j2
+    src: rclone.conf.j2
     dest: /opt/misskey-backup/config/rclone.conf
     mode: '0644'
   notify: Restart backup container

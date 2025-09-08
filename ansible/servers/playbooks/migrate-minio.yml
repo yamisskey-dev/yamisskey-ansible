@@ -110,7 +110,7 @@
 
     - name: Create migration script
       template:
-        src: templates/minio_migration_script.sh.j2
+        src: minio_migration_script.sh.j2
         dest: "{{ migration_temp_dir }}/migrate.sh"
         mode: '0700'
 
