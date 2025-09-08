@@ -1,0 +1,65 @@
+---
+- name: Find existing snapshot tasks for dataset
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - pool.snapshottask.query
+      - >-
+        {{ [[ 'dataset','=', truenas_pool_name ~ '/' ~ ds.name ]] | to_json }}
+  register: stq
+  changed_when: false
+
+- name: Create snapshot task if missing
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - pool.snapshottask.create
+      - >-
+        {{ {
+             "dataset": truenas_pool_name ~ '/' ~ ds.name,
+             "recursive": (ds.recursive | default(true)),
+             "lifetime_value": (ds.retention_days | default(30)),
+             "lifetime_unit": "DAY",
+             "naming_schema": "auto-%Y-%m-%d_%H-%M",
+             "schedule": {
+               "minute": "0",
+               "hour": (ds.hour | default("2")),
+               "dom": "*",
+               "month": "*",
+               "dow": "*"
+             },
+             "enabled": true
+           } | to_json }}
+  when:
+    - ds.snapshot | default(true)
+    - (stq.stdout | from_json | length) == 0
+
+- name: Update snapshot task if present (id=0)
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - pool.snapshottask.update
+      - "{{ (stq.stdout | from_json)[0].id | string }}"
+      - >-
+        {{ {
+             "recursive": (ds.recursive | default(true)),
+             "lifetime_value": (ds.retention_days | default(30)),
+             "lifetime_unit": "DAY",
+             "schedule": {
+               "minute": "0",
+               "hour": (ds.hour | default("2")),
+               "dom": "*",
+               "month": "*",
+               "dow": "*"
+             },
+             "enabled": true
+           } | to_json }}
+  when:
+    - ds.snapshot | default(true)
+    - (stq.stdout | from_json | length) > 0

@@ -1,20 +1,25 @@
----
-# TrueNAS Scale Applications Management
-# Custom App (Docker Compose) デプロイ管理
+# TrueNAS SCALE Apps (Custom App / Compose) – MinIO + Cloudflared
+# 前提:
+#   - ansible_user は TrueNAS で root(or 同等) で実行
+#   - Compose は Vault からの値でテンプレート展開済み or 後段で environment 注入
+#   - Cloudflared は token モードでも named tunnel でもOK（config.yml側で選択）
 
-- name: TrueNAS Scale Applications Deployment
+- name: TrueNAS Scale Apps Layer Management
   debug:
     msg: |
       ==============================================
-      TrueNAS Scale Apps Layer Management
-      ==============================================
+      TrueNAS Scale Apps – Deploy (Custom App)
       Target: {{ inventory_hostname }}
-      Method: Custom App (Docker Compose)
-      Apps Directory: {{ truenas_apps_git_path }}
+      App: {{ truenas_minio_app_name }}
+      Compose path: {{ truenas_apps_config_path }}/minio/docker-compose.yml
       ==============================================
 
-# Apps Configuration Management
-- name: Ensure apps configuration directories
+# 0) 互換レイヤ（servers側の命名を受けても動くように）
+- name: Load compatibility variable mapping
+  import_tasks: 00_compat.yml
+
+# 1) ディレクトリ/設定ファイル配置
+- name: Ensure Apps config directories exist
   file:
     path: "{{ item }}"
     state: directory
@@ -24,109 +29,177 @@
     - "{{ truenas_apps_config_path }}/minio"
     - "{{ truenas_cloudflared_config_path }}"
 
-- name: Deploy Cloudflared credentials (from Vault)
+# (named tunnel を使う場合のみ) 資格情報JSONを配備
+- name: Deploy cloudflared credentials (named tunnel)
   copy:
-    content: "{{ truenas_tunnel_credentials }}"
-    dest: "{{ truenas_cloudflared_config_path }}/credentials.json"
+    content: "{{ truenas_tunnel_credentials | default('') }}"
+    dest: "{{ truenas_cloudflared_config_path }}/{{ truenas_tunnel_id | default('tunnel') }}.json"
     mode: '0600'
+  when: truenas_tunnel_id is defined
   no_log: true
 
-- name: Deploy Cloudflared configuration
+- name: Deploy cloudflared config.yml
   template:
     src: cloudflared-config.yml.j2
     dest: "{{ truenas_cloudflared_config_path }}/config.yml"
     mode: '0644'
 
-- name: Deploy MinIO Custom App Configuration
+- name: Deploy MinIO docker-compose.yml (Custom App YAML)
+  when: truenas_manage_custom_compose | default(false)
   template:
     src: minio-compose.yml.j2
     dest: "{{ truenas_apps_config_path }}/minio/docker-compose.yml"
     mode: '0644'
-  register: minio_compose_updated
+  register: compose_file_result
 
-# TrueNAS Apps API Deployment
-- name: Deploy MinIO via TrueNAS Apps API
-  block:
-    - name: Check if MinIO app exists
-      shell: |
-        midclt call app.query '[["name", "=", "{{ truenas_minio_app_name }}"]]'
-      register: minio_app_check
-      changed_when: false
+# 2) Compose を base64 化（APIに流す用）
+- name: Read compose and b64-encode
+  when: truenas_manage_custom_compose | default(false)
+  set_fact:
+    truenas_minio_compose_b64: "{{ lookup('file', truenas_apps_config_path + '/minio/docker-compose.yml') | b64encode }}"
 
-    - name: Create MinIO Custom App
-      shell: |
-        midclt call app.create '{
-          "name": "{{ truenas_minio_app_name }}",
-          "custom_compose_config": {
-            "compose": "{{ lookup('file', truenas_apps_config_path + '/minio/docker-compose.yml') | b64encode }}"
-          }
-        }'
-      when: minio_app_check.stdout == "[]"
-      register: minio_app_create
+# 1.5) TrueNAS Custom App へ貼り付け可能な compose（値埋め込み版）を出力
+- name: Ensure local export directory exists (paste-ready compose)
+  delegate_to: localhost
+  file:
+    path: "{{ truenas_compose_export_dir | default(playbook_dir + '/out') }}"
+    state: directory
+    mode: '0755'
 
-    - name: Update MinIO Custom App
-      shell: |
-        midclt call app.update '{{ truenas_minio_app_name }}' '{
-          "custom_compose_config": {
-            "compose": "{{ lookup('file', truenas_apps_config_path + '/minio/docker-compose.yml') | b64encode }}"
-          }
-        }'
-      when: 
-        - minio_app_check.stdout != "[]"
-        - minio_compose_updated.changed
-      register: minio_app_update
+- name: Render paste-ready docker compose (local artifact)
+  delegate_to: localhost
+  template:
+    src: minio-compose-paste.yml.j2
+    dest: "{{ (truenas_compose_export_dir | default(playbook_dir + '/out')) + '/minio-docker-compose.paste.yml' }}"
+    mode: '0600'
+  no_log: true
 
-# App Status Verification
-- name: Verify MinIO app deployment
-  shell: |
-    midclt call app.query '[["name", "=", "{{ truenas_minio_app_name }}"]]' | jq -r '.[0].state'
-  register: minio_app_status
-  retries: 12
+# 3) 既存アプリの有無を判定（jqに頼らない）
+- name: Query app existence
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - app.query
+      - "{{ ([[ 'name','=', truenas_minio_app_name ]] ) | to_json }}"
+  register: app_query
+
+- name: Set app_exists flag
+  set_fact:
+    truenas_minio_exists: "{{ (app_query.stdout | from_json | length) > 0 }}"
+
+# 4) 作成 or 更新
+- name: Create MinIO Custom App (first time)
+  when: (not truenas_minio_exists) and (truenas_manage_custom_compose | default(false))
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - app.create
+      - >-
+        {{ {
+             "name": truenas_minio_app_name,
+             "custom_compose_config": { "compose": truenas_minio_compose_b64 }
+           } | to_json }}
+  register: app_create
+
+- name: Update MinIO Custom App (compose changed)
+  when:
+    - truenas_minio_exists
+    - truenas_manage_custom_compose | default(false)
+    - compose_file_result.changed
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - app.update
+      - "{{ truenas_minio_app_name }}"
+      - >-
+        {{ {
+             "custom_compose_config": { "compose": truenas_minio_compose_b64 }
+           } | to_json }}
+  register: app_update
+
+# 環境変数をApps側から注入（Vault値とドメイン/Tunnel連携）
+# Composeにプレースホルダ(${...})を残し、ここで実値を流し込む
+- name: Inject/Update environment secrets
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - app.update
+      - "{{ truenas_minio_app_name }}"
+      - >-
+        {{ {
+             "environment": {
+               "MINIO_ROOT_USER": truenas_minio_root_user,
+               "MINIO_ROOT_PASSWORD": truenas_minio_root_password,
+               "MINIO_KMS_SECRET_KEY": truenas_minio_kms_key,
+               "MINIO_DOMAIN": truenas_minio_domain,
+               "MINIO_SERVER_URL": ("https://" ~ truenas_minio_domain),
+               "TUNNEL_TOKEN": truenas_tunnel_token
+             }
+           } | to_json }}
+  when: truenas_update_secrets | default(true)
+  no_log: true
+  register: app_env_update
+
+# 5) 変更があれば redeploy（確実に反映させる）
+- name: Redeploy app if updated
+  command:
+    argv: [ midclt, -j, call, app.redeploy, "{{ truenas_minio_app_name }}" ]
+  when:
+    - truenas_minio_exists
+    - (
+        (truenas_manage_custom_compose | default(false) and compose_file_result is defined and compose_file_result.changed)
+        or (app_env_update is defined and app_env_update.changed)
+      )
+
+# 6) RUNNING になるまで待つ（jq不要）
+- name: Poll app state until RUNNING
+  vars:
+    query_payload: "{{ ([[ 'name','=', truenas_minio_app_name ]] ) | to_json }}"
+  command:
+    argv: [ midclt, -j, call, app.query, "{{ query_payload }}" ]
+  register: app_state_raw
+  changed_when: false
+  retries: 30
   delay: 10
-  until: minio_app_status.stdout in ["RUNNING", "running"]
+  until: >-
+    (app_state_raw.stdout | from_json | length) > 0 and
+    (((app_state_raw.stdout | from_json)[0].state | lower) in ['running'])
 
-# Health Check (Cloudflare Tunnel経由)
-- name: MinIO health check via Cloudflare Tunnel
+- name: Parse app state
+  set_fact:
+    app_state: "{{ (app_state_raw.stdout | from_json)[0] if (app_state_raw.stdout | from_json | length) > 0 else {} }}"
+
+# 7) Cloudflare 経由のヘルスチェック
+- name: Health check via Cloudflare Tunnel
   uri:
     url: "https://{{ truenas_minio_domain }}/minio/health/live"
     method: GET
     timeout: 30
     validate_certs: yes
-  register: minio_health_check
+  register: minio_health
   retries: 10
-  delay: 15
-  until: minio_health_check.status == 200
+  delay: 12
+  until: minio_health.status == 200
 
-# Secrets Management
-- name: Deploy secrets for MinIO
-  shell: |
-    midclt call app.update '{{ truenas_minio_app_name }}' '{
-      "environment": {
-        "MINIO_ROOT_USER": "{{ truenas_minio_root_user | ansible_vault }}",
-        "MINIO_ROOT_PASSWORD": "{{ truenas_minio_root_password | ansible_vault }}",
-        "MINIO_KMS_SECRET_KEY": "{{ truenas_minio_kms_key | ansible_vault }}"
-      }
-    }'
-  when: truenas_update_secrets | default(false)
-  no_log: true
-
-- name: Display MinIO deployment summary
+# 8) まとめ
+- name: Deployment summary
   debug:
     msg: |
       ==============================================
-      MinIO App Deployment Complete
-      ==============================================
-      ✅ App Name: {{ truenas_minio_app_name }}
-      ✅ Status: {{ minio_app_status.stdout }}
-      ✅ API Endpoint: http://{{ ansible_default_ipv4.address }}:{{ truenas_minio_api_port }}
-      ✅ Health Check: {{ 'PASSED' if minio_health_check.status == 200 else 'FAILED' }}
-      
-      📋 Management:
-      - TrueNAS UI: Apps → {{ truenas_minio_app_name }}
-      - MinIO CLI: mc alias set truenas http://{{ ansible_default_ipv4.address }}:{{ truenas_minio_api_port }}
-      
-      🔧 Next Steps:
-      1. Configure MinIO buckets and users
-      2. Run data migration playbook
-      3. Update DNS and application configs
+      ✅ MinIO Deployed on TrueNAS Apps
+      App: {{ truenas_minio_app_name }}
+      State: {{ app_state.state }}
+      Public: https://{{ truenas_minio_domain }}
+      Health: {{ 'OK' if minio_health.status == 200 else 'NG' }}
+      Next:
+        - mc alias set truenas https://{{ truenas_minio_domain }} {{ truenas_minio_root_user }} {{ truenas_minio_root_password }}
+        - バケット作成/ポリシー適用/レプリケーション設定
       ==============================================

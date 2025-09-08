@@ -1,0 +1,26 @@
+---
+- name: Query user
+  command:
+    argv: [ midclt, -j, call, user.query,
+            "{{ [[ 'uid','=', user.uid ]] | to_json }}" ]
+  register: uq
+  changed_when: false
+
+- name: Create user
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - user.create
+      - >-
+        {{ {
+             "username": user.name,
+             "uid": user.uid,
+             "group": user.gid,
+             "home": user.home,
+             "shell": "/usr/bin/nologin",
+             "full_name": (user.description | default(user.name ~ " Service Account")),
+             "password_disabled": true
+           } | to_json }}
+  when: (uq.stdout | from_json | length) == 0

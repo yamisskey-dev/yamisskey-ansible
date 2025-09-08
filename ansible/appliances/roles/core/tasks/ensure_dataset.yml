@@ -1,0 +1,24 @@
+---
+- name: Query dataset
+  command:
+    argv: [ midclt, -j, call, pool.dataset.query,
+            "{{ [[ 'name','=', truenas_pool_name ~ '/' ~ dataset.name ]] | to_json }}" ]
+  register: dsq
+  changed_when: false
+
+- name: Create dataset when missing
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - pool.dataset.create
+      - >-
+        {{ {
+            "name": truenas_pool_name ~ '/' ~ dataset.name,
+            "acltype": (dataset.acl | default("POSIX")),
+            "atime": (dataset.atime | default(false)),
+            "compression": (dataset.compression | default("lz4")),
+            "recordsize": (dataset.recordsize | default("1M"))
+          } | to_json }}
+  when: (dsq.stdout | from_json | length) == 0

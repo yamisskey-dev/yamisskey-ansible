@@ -46,3 +46,30 @@ truenas_health_check_delay: 15
 # アプリケーション状態確認
 truenas_app_deploy_retries: 12
 truenas_app_deploy_delay: 10
+
+# MinIO client (mc) pinned release
+# Define the matching sha256 in vault or host/group vars
+mc_release_sha256: "CHANGE_ME_WITH_REAL_SHA256"
+
+# Migration defaults
+perform_cutover: false
+enable_bucket_versioning: false
+enable_minimal_ilm: false
+mc_workers: 8
+
+# CORS defaults for MinIO bucket CORS API
+# Override to your Misskey origin(s) in host/group vars
+cors_allowed_origins: ["*"]
+
+# Default bucket names used across migration/IAM
+minio_bucket_name_for_misskey: "files"
+minio_bucket_name_for_outline: "assets"
+
+# Strictness and optional helpers
+
+# Ensure environment injection for Custom App is enabled by default
+truenas_update_secrets: true
+
+# If WebUI already created and manages the Custom App compose,
+# keep Ansible from overwriting it. Set to true to manage compose via Ansible.
+truenas_manage_custom_compose: false

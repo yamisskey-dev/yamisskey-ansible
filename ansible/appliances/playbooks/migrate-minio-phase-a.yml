@@ -1,0 +1,23 @@
+---
+# Phase A only: Warm-up mirror and optional versioning/ILM
+- name: MinIO Migration Phase A (Warm-up)
+  hosts: truenas
+  become: yes
+  gather_facts: yes
+
+  vars:
+    source_minio_host: "{{ migration_source | default('raspberrypi') }}"
+    source_minio_address: "{{ source_minio_ip | default(source_minio_host) }}"
+    source_minio_port: 9000
+    source_minio_alias: "source-minio"
+    target_minio_alias: "truenas-tunnel"
+    target_minio_endpoint: "https://{{ truenas_minio_domain }}"
+    migration_temp_dir: "/tmp/truenas-minio-migration"
+    buckets_to_migrate:
+      - "{{ minio_bucket_name_for_misskey }}"
+
+  tasks:
+    - import_tasks: tasks/migrate/00_preamble.yml
+    - import_tasks: tasks/migrate/10_aliases_and_buckets.yml
+    - import_tasks: tasks/migrate/20_warmup.yml
+    # Versioning/ILM skipped to keep minimal

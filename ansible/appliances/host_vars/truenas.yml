@@ -38,17 +38,17 @@ target_minio_endpoint: "https://{{ truenas_minio_domain }}"
 
 # ストレージ設定 (ZFS Dataset)
 truenas_pool_name: "tank"  # 実際のプール名に変更
-truenas_minio_data_path: "/mnt/{{ truenas_pool_name }}/apps/minio"
-truenas_cloudflared_config_path: "/mnt/{{ truenas_pool_name }}/apps/cloudflared"
+truenas_minio_data_path: "/mnt/{{ truenas_pool_name }}/minio"
+truenas_cloudflared_config_path: "/mnt/{{ truenas_pool_name }}/cloudflared"
 truenas_apps_config_path: "/mnt/{{ truenas_pool_name }}/apps-config"
 
 # Custom App設定
 truenas_datasets:
-  - name: "apps/minio"
+  - name: "minio"   # already created via WebUI
     owner: "root"
     group: "root"
     mode: "0755"
-  - name: "apps/cloudflared" 
+  - name: "cloudflared"
     owner: "root"
     group: "root"
     mode: "0755"

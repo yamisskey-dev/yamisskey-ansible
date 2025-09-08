@@ -1,0 +1,53 @@
+---
+- name: Create MinIO service user for Misskey
+  when: misskey_s3_access_key is defined and misskey_s3_secret_key is defined
+  shell: |
+    mc admin user add {{ target_minio_alias }} \
+      "{{ misskey_s3_access_key }}" \
+      "{{ misskey_s3_secret_key }}"
+  environment:
+    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+  no_log: true
+  ignore_errors: yes
+
+- name: Create IAM policy for Misskey
+  template:
+    src: "{{ playbook_dir }}/templates/minio_iam_policy.json.j2"
+    dest: "{{ migration_temp_dir }}/misskey-policy.json"
+
+- name: Apply IAM policy
+  shell: |
+    mc admin policy create {{ target_minio_alias }} misskey-policy {{ migration_temp_dir }}/misskey-policy.json
+  environment:
+    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+- name: Attach policy to user
+  when: misskey_s3_access_key is defined
+  shell: |
+    mc admin policy attach {{ target_minio_alias }} misskey-policy --user "{{ misskey_s3_access_key }}"
+  environment:
+    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+
+- name: Set CORS policy (bucket-level JSON)
+  copy:
+    dest: "{{ migration_temp_dir }}/cors-policy.json"
+    mode: '0600'
+    content: |
+      [
+        {
+          "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"],
+          "AllowedOrigins": {{ cors_allowed_origins | default(['*']) | to_json }},
+          "AllowedHeaders": ["*"],
+          "ExposeHeaders": ["ETag"],
+          "MaxAgeSeconds": 3000
+        }
+      ]
+
+- name: Apply CORS policy
+  shell: |
+    mc bucket cors set {{ target_minio_alias }}/{{ item }} {{ migration_temp_dir }}/cors-policy.json
+  loop: "{{ buckets_to_migrate }}"
+  environment:
+    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+  loop_control:
+    label: "{{ item }}"
