@@ -1,0 +1,5 @@
+---
+# Cryptpad specific variables
+cryptpad_server_name: "pad.{{ domain }}"
+cryptpad_dir: '/var/www/cryptpad'
+cryptpad_secrets_file: '{{ cryptpad_dir }}/secrets.yml'

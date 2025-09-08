@@ -1,0 +1,3 @@
+---
+# ai specific variables
+ai_dir: '/home/{{ ansible_user }}/ai'
