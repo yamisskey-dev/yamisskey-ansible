@@ -34,9 +34,9 @@ install:
 	@echo "Installing Ansible..."
 	@sudo apt-get update && sudo apt-get install -y ansible || (echo "Install failed" && exit 1)
 	@echo "Installing Ansible collections..."
-	@ansible-galaxy collection install -r ansible/requirements.yml
+	@ansible-galaxy collection install -r ansible/servers/requirements.yml
 	@echo "Installing necessary packages..."
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/common.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/common.yml --ask-become-pass
 	@echo "Installing Tailscale..."
 	@curl -fsSL https://tailscale.com/install.sh | sh
 	@echo "Installing Cloudflare Warp..."
@@ -66,58 +66,58 @@ inventory:
 		SOURCE_IP=$$(tailscale status 2>/dev/null | grep "$(SOURCE)" | awk '{print $$1}' | head -1 || echo "$(SOURCE)"); \
 		TARGET_IP=$$(tailscale status 2>/dev/null | grep "$(TARGET)" | awk '{print $$1}' | head -1 || echo "$(TARGET)"); \
 		CURRENT_HOST=$$(hostname); \
-		echo "[source_hosts]" > ansible/inventory; \
+		echo "[source_hosts]" > ansible/servers/inventory; \
 		if [ "$$CURRENT_HOST" = "$(SOURCE)" ]; then \
-			echo "$(SOURCE) ansible_connection=local" >> ansible/inventory; \
+			echo "$(SOURCE) ansible_connection=local" >> ansible/servers/inventory; \
 		else \
-			echo "$(SOURCE) ansible_host=$(SOURCE) ansible_user=$(USER)" >> ansible/inventory; \
+			echo "$(SOURCE) ansible_host=$(SOURCE) ansible_user=$(USER)" >> ansible/servers/inventory; \
 		fi; \
-		echo "" >> ansible/inventory; \
-		echo "[target_hosts]" >> ansible/inventory; \
+		echo "" >> ansible/servers/inventory; \
+		echo "[target_hosts]" >> ansible/servers/inventory; \
 		if [ "$$CURRENT_HOST" = "$(TARGET)" ]; then \
-			echo "$(TARGET) ansible_connection=local" >> ansible/inventory; \
+			echo "$(TARGET) ansible_connection=local" >> ansible/servers/inventory; \
 		else \
-			echo "$(TARGET) ansible_host=$(TARGET) ansible_user=$(USER)" >> ansible/inventory; \
+			echo "$(TARGET) ansible_host=$(TARGET) ansible_user=$(USER)" >> ansible/servers/inventory; \
 		fi; \
-		echo "" >> ansible/inventory; \
-		echo "# Migration mode aliases for compatibility" >> ansible/inventory; \
-		echo "[source:children]" >> ansible/inventory; \
-		echo "source_hosts" >> ansible/inventory; \
-		echo "" >> ansible/inventory; \
-		echo "[destination:children]" >> ansible/inventory; \
-		echo "target_hosts" >> ansible/inventory; \
-		echo "" >> ansible/inventory; \
-		echo "[all:vars]" >> ansible/inventory; \
-		echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ProxyCommand=\"tailscale nc %h %p\"'" >> ansible/inventory; \
-		echo "ansible_python_interpreter=/usr/bin/python3" >> ansible/inventory; \
-		echo "ansible_ssh_pipelining=true" >> ansible/inventory; \
-		echo "ansible_become=true" >> ansible/inventory; \
-		echo "ansible_become_method=sudo" >> ansible/inventory; \
-		echo "ansible_become_user=root" >> ansible/inventory; \
-		echo "Migration inventory created at ansible/inventory"; \
+		echo "" >> ansible/servers/inventory; \
+		echo "# Migration mode aliases for compatibility" >> ansible/servers/inventory; \
+		echo "[source:children]" >> ansible/servers/inventory; \
+		echo "source_hosts" >> ansible/servers/inventory; \
+		echo "" >> ansible/servers/inventory; \
+		echo "[destination:children]" >> ansible/servers/inventory; \
+		echo "target_hosts" >> ansible/servers/inventory; \
+		echo "" >> ansible/servers/inventory; \
+		echo "[all:vars]" >> ansible/servers/inventory; \
+		echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ProxyCommand=\"tailscale nc %h %p\"'" >> ansible/servers/inventory; \
+		echo "ansible_python_interpreter=/usr/bin/python3" >> ansible/servers/inventory; \
+		echo "ansible_ssh_pipelining=true" >> ansible/servers/inventory; \
+		echo "ansible_become=true" >> ansible/servers/inventory; \
+		echo "ansible_become_method=sudo" >> ansible/servers/inventory; \
+		echo "ansible_become_user=root" >> ansible/servers/inventory; \
+		echo "Migration inventory created at ansible/servers/inventory"; \
 		echo "Source: $(SOURCE) ($$SOURCE_IP)"; \
 		echo "Target: $(TARGET) ($$TARGET_IP)"; \
 	else \
 		echo "Creating standard inventory..."; \
 		CURRENT_HOST=$$(hostname); \
-		echo "[source]" > ansible/inventory; \
-		echo "$$CURRENT_HOST ansible_connection=local" >> ansible/inventory; \
-		echo "" >> ansible/inventory; \
-		echo "[destination]" >> ansible/inventory; \
+		echo "[source]" > ansible/servers/inventory; \
+		echo "$$CURRENT_HOST ansible_connection=local" >> ansible/servers/inventory; \
+		echo "" >> ansible/servers/inventory; \
+		echo "[destination]" >> ansible/servers/inventory; \
 		if [ "$$CURRENT_HOST" != "$(DESTINATION_HOSTNAME)" ]; then \
-			echo "$(DESTINATION_HOSTNAME) ansible_host=$(DESTINATION_IP) ansible_user=$(DESTINATION_SSH_USER) ansible_port=$(DESTINATION_SSH_PORT)" >> ansible/inventory; \
+			echo "$(DESTINATION_HOSTNAME) ansible_host=$(DESTINATION_IP) ansible_user=$(DESTINATION_SSH_USER) ansible_port=$(DESTINATION_SSH_PORT)" >> ansible/servers/inventory; \
 		else \
-			echo "$$CURRENT_HOST ansible_connection=local" >> ansible/inventory; \
+			echo "$$CURRENT_HOST ansible_connection=local" >> ansible/servers/inventory; \
 		fi; \
-		echo "" >> ansible/inventory; \
-		echo "[all:vars]" >> ansible/inventory; \
-		echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10'" >> ansible/inventory; \
-		echo "ansible_python_interpreter=/usr/bin/python3" >> ansible/inventory; \
-		echo "ansible_ssh_pipelining=true" >> ansible/inventory; \
-		echo "ansible_become=true" >> ansible/inventory; \
-		echo "ansible_become_method=sudo" >> ansible/inventory; \
-		echo "ansible_become_user=root" >> ansible/inventory; \
-		echo "Standard inventory created at ansible/inventory"; \
+		echo "" >> ansible/servers/inventory; \
+		echo "[all:vars]" >> ansible/servers/inventory; \
+		echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10'" >> ansible/servers/inventory; \
+		echo "ansible_python_interpreter=/usr/bin/python3" >> ansible/servers/inventory; \
+		echo "ansible_ssh_pipelining=true" >> ansible/servers/inventory; \
+		echo "ansible_become=true" >> ansible/servers/inventory; \
+		echo "ansible_become_method=sudo" >> ansible/servers/inventory; \
+		echo "ansible_become_user=root" >> ansible/servers/inventory; \
+		echo "Standard inventory created at ansible/servers/inventory"; \
 		echo "Source: $$CURRENT_HOST (local)"; \
 		echo "Destination: $(DESTINATION_HOSTNAME) ($(DESTINATION_IP))"; \
 	fi
@@ -172,9 +172,9 @@ migrate:
 		echo "🔐 All files will be encrypted automatically on target"; \
 		echo ""; \
 		start_time=$$(date +%s); \
-		if ansible-playbook -i ansible/inventory \
+		if ansible-playbook -i ansible/servers/inventory \
 			-e "migrate_source=$(SOURCE) migrate_target=$(TARGET)" \
-			--limit $(TARGET) ansible/playbooks/migrate.yml; then \
+			--limit $(TARGET) ansible/servers/playbooks/migrate.yml; then \
 			end_time=$$(date +%s); \
 			duration=$$((end_time - start_time)); \
 			echo ""; \
@@ -192,7 +192,7 @@ migrate:
 		echo ""; \
 		echo "⏳ Starting migration with real-time progress monitoring..."; \
 		start_time=$$(date +%s); \
-		if ansible-playbook -i ansible/inventory --limit destination ansible/playbooks/migrate.yml; then \
+		if ansible-playbook -i ansible/servers/inventory --limit destination ansible/servers/playbooks/migrate.yml; then \
 			end_time=$$(date +%s); \
 			duration=$$((end_time - start_time)); \
 			echo ""; \
@@ -209,20 +209,20 @@ test:
 	@echo ""
 	@echo "🔍 Test 1: Basic inventory generation..."
 	@$(MAKE) inventory > /dev/null 2>&1
-	@if [ -f ansible/inventory ]; then \
+	@if [ -f ansible/servers/inventory ]; then \
 		echo "✅ Default inventory created successfully"; \
 		echo "📄 Contents preview:"; \
-		cat ansible/inventory | head -10; \
+		cat ansible/servers/inventory | head -10; \
 	else \
 		echo "❌ Default inventory creation failed"; \
 	fi
 	@echo ""
 	@echo "🔍 Test 2: Migration inventory generation..."
 	@$(MAKE) inventory SOURCE=balthasar TARGET=raspberrypi > /dev/null 2>&1
-	@if [ -f ansible/inventory ]; then \
+	@if [ -f ansible/servers/inventory ]; then \
 		echo "✅ Migration inventory created successfully"; \
 		echo "📄 Contents preview:"; \
-		cat ansible/inventory | head -10; \
+		cat ansible/servers/inventory | head -10; \
 	else \
 		echo "❌ Migration inventory creation failed"; \
 	fi
@@ -246,23 +246,23 @@ test:
 	fi
 	@echo ""
 	@echo "🔍 Test 5: Check migrate role structure..."
-	@if [ -d ansible/playbooks/roles/migrate ]; then \
+	@if [ -d ansible/servers/roles/migrate ]; then \
 		echo "✅ Migrate role directory exists"; \
 		echo "📁 Role structure:"; \
-		ls -la ansible/playbooks/roles/migrate/; \
+		ls -la ansible/servers/roles/migrate/; \
 	else \
 		echo "❌ Migrate role directory missing"; \
 	fi
 	@echo ""
 	@echo "🔍 Test 6: Progress monitoring features..."
-	@if [ -f ansible/playbooks/roles/migrate/tasks/main.yml ]; then \
+	@if [ -f ansible/servers/roles/migrate/tasks/main.yml ]; then \
 		echo "✅ Migration tasks file exists"; \
-		if grep -q "async:" ansible/playbooks/roles/migrate/tasks/main.yml; then \
+		if grep -q "async:" ansible/servers/roles/migrate/tasks/main.yml; then \
 			echo "✅ Async execution with progress monitoring enabled"; \
 		else \
 			echo "⚠️  Progress monitoring not configured"; \
 		fi; \
-		if grep -q "poll:" ansible/playbooks/roles/migrate/tasks/main.yml; then \
+		if grep -q "poll:" ansible/servers/roles/migrate/tasks/main.yml; then \
 			echo "✅ Polling intervals configured for real-time updates"; \
 		else \
 			echo "⚠️  Polling not configured"; \
@@ -273,7 +273,7 @@ test:
 	@echo ""
 	@echo "🔍 Test 7: README and Makefile consistency check..."
 	@echo "📖 README commands found:"
-	@grep -n "make " ansible/playbooks/roles/migrate/README.md | head -5
+	@grep -n "make " ansible/servers/roles/migrate/README.md | head -5
 	@echo ""
 	@echo "🛠️  Makefile targets available:"
 	@$(MAKE) help | grep -E "(inventory|migrate)"
@@ -289,33 +289,44 @@ test:
 
 transfer:
 	@echo "Transfer complete system: export from source and import to destination..."
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/export.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit destination ansible/playbooks/import.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/export.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit destination ansible/servers/playbooks/import.yml --ask-become-pass
 
 provision:
 	@echo "Running provision playbooks..."
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/common.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/security.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/modsecurity-nginx.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/monitoring.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/minio.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/misskey.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/ai.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/searxng.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/matrix.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/jitsi.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/vikunja.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/cryptpad.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/outline.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/uptime.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/deeplx.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/mcaptcha.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/ctfd.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/impostor.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/minecraft.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/neo-quesdon.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/lemmy.yml --ask-become-pass
-	@ansible-playbook -i ansible/inventory --limit source ansible/playbooks/misskey-backup.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/common.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/security.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/modsecurity-nginx.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/monitoring.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/minio.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/misskey.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/ai.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/searxng.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/matrix.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/jitsi.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/vikunja.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/cryptpad.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/outline.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/uptime.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/deeplx.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/mcaptcha.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/ctfd.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/impostor.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/minecraft.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/neo-quesdon.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/lemmy.yml --ask-become-pass
+	@ansible-playbook -i ansible/servers/inventory --limit source ansible/servers/playbooks/misskey-backup.yml --ask-become-pass
+
+appliances:
+	@echo "🏭 === TrueNAS Scale Appliance Management ==="
+	@echo ""
+	@echo "🔧 Running TrueNAS Scale setup playbook..."
+	@cd ansible/appliances && ansible-playbook -i inventory playbooks/setup.yml --ask-become-pass
+	@echo ""
+	@echo "📦 Running TrueNAS MinIO migration playbook..."
+	@cd ansible/appliances && ansible-playbook -i inventory playbooks/migrate-minio-truenas.yml --ask-become-pass
+	@echo ""
+	@echo "✅ TrueNAS Scale appliance management completed"
 
 help:
 	@echo "Available targets:"
@@ -324,6 +335,7 @@ help:
 	@echo "  inventory     - Create Ansible inventory (MODE=migration for migration, default for standard)"
 	@echo "  clone         - Clone the repositories if they don't exist"
 	@echo "  provision     - Provision the server using Ansible"
+	@echo "  appliances    - Run TrueNAS Scale appliance management playbooks"
 	@echo ""
 	@echo "Migration commands:"
 	@echo "  migrate       - Migrate MinIO data with encryption and progress monitoring"
@@ -335,3 +347,6 @@ help:
 	@echo "  make inventory MODE=migration SOURCE=balthasar TARGET=raspberrypi  # Migration inventory"
 	@echo "  make inventory        # Standard inventory for regular playbooks"
 	@echo "  make test             # Test system with progress feature validation"
+	@echo ""
+	@echo "Appliance management:"
+	@echo "  make appliances       # Run TrueNAS Scale setup and MinIO migration"
