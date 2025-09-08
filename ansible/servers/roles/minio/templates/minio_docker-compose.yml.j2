@@ -3,19 +3,28 @@ services:
     image: quay.io/minio/minio
     container_name: minio
     restart: always
-    # Basic resource limits for ARM64 compatibility
+    # Optimized for Pi 5 (8GB RAM, 4-core ARM Cortex-A76) with NVMe SSD
     deploy:
       resources:
         limits:
-          memory: 1g
-          cpus: '0.5'
-    # Basic healthcheck
+          memory: 3g        # 37.5% of Pi 5's 8GB RAM
+          cpus: '2.5'       # 62.5% of Pi 5's 4 cores
+          # TrueNAS Scale settings (commented out for Pi deployment):
+          # memory: 4g      # For 12GB Beelink system
+          # cpus: '4.0'     # For higher-core x86 system
+        reservations:
+          memory: 1g        # Higher baseline due to better RAM performance
+          cpus: '0.75'      # Better guaranteed performance
+          # TrueNAS Scale reservations:
+          # memory: 1g
+          # cpus: '1.0'
+    # Enhanced healthcheck for stability
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
-      timeout: 20s
-      retries: 3
-      start_period: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 120s
     environment:
       - MINIO_ROOT_USER={{ minio_root_user }}
       - MINIO_ROOT_PASSWORD={{ minio_root_password }}
@@ -23,19 +32,34 @@ services:
       - MINIO_BROWSER=off
       - MINIO_REGION=ap-northeast-3
       - MINIO_DOMAIN={{ minio_api_server_name }}
-      # Basic security settings
+      # Performance optimizations
       - MINIO_COMPRESS=on
-      # KMS encryption settings (auto-generated)
+      # KMS encryption
       - MINIO_KMS_SECRET_KEY={{ minio_kms_master_key }}
       - MINIO_KMS_AUTO_ENCRYPTION=on
+      # Pi 5 + NVMe optimized settings
+      - MINIO_SCANNER_SPEED=default       # Pi 5 + NVMe can handle normal speed
+      - MINIO_API_REQUESTS_MAX=1500       # Higher than Pi 4, lower than enterprise
+      # TrueNAS Scale optimizations (commented out for Pi):
+      # - MINIO_API_REQUESTS_MAX=2000    # Higher concurrent requests
+      # - MINIO_CACHE_DRIVES=/cache      # Enable drive caching
+      # - MINIO_CACHE_EXCLUDE="*.pdf"    # Exclude large files from cache
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
-      # Console port 9001 not exposed externally (CLI management only)
     volumes:
-      - /opt/minio/minio-data:/data
+      - {{ minio_data_path | default('/opt/minio/minio-data') }}:/data
     networks:
       - external_network
+    # NVMe-appropriate logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"     # NVMe can handle larger logs
+        max-file: "3"
+        # TrueNAS Scale logging (commented out):
+        # max-size: "50m"   # Larger logs for enterprise debugging
+        # max-file: "5"
 
 networks:
   external_network:
