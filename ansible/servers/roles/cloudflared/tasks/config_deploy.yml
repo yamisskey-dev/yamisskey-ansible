@@ -1,0 +1,57 @@
+---
+# Cloudflared Configuration Deployment
+
+- name: Deploy cloudflared configuration
+  template:
+    src: config.yml.j2
+    dest: "{{ cloudflared_config_file }}"
+    owner: "{{ cloudflared_user }}"
+    group: "{{ cloudflared_group }}"
+    mode: '0640'
+  register: config_deployed
+
+- name: Display configuration file location
+  debug:
+    msg: |
+      Configuration deployed:
+      File: {{ cloudflared_config_file }}
+      Owner: {{ cloudflared_user }}:{{ cloudflared_group }}
+
+- name: Copy configuration to system directory
+  copy:
+    src: "{{ cloudflared_config_file }}"
+    dest: "{{ cloudflared_system_config_dir }}/config.yml"
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: yes
+  become: yes
+  register: system_config_deployed
+
+- name: Copy tunnel credentials to system directory
+  copy:
+    src: "{{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
+    dest: "{{ cloudflared_system_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
+    owner: root
+    group: root
+    mode: '0600'
+    remote_src: yes
+  become: yes
+  register: system_credentials_deployed
+  when: cloudflared_tunnel_uuid is defined
+
+- name: Validate configuration syntax
+  command: cloudflared tunnel --config {{ cloudflared_config_file }} ingress validate
+  register: config_validation
+  changed_when: false
+
+- name: Display configuration validation
+  debug:
+    msg: |
+      Configuration Validation:
+      {{ config_validation.stdout }}
+
+- name: Fail if configuration is invalid
+  fail:
+    msg: "Invalid cloudflared configuration: {{ config_validation.stderr }}"
+  when: config_validation.rc != 0

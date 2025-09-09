@@ -1,66 +1,104 @@
 ---
-# Cloudflared role for managing configuration with existing make install system
-# Installation and systemd setup follows project README.md procedures
+# Cloudflared role with full automation capabilities
+# Supports both manual (make install) and automatic installation modes
 
+# Installation phase (conditional based on cloudflared_skip_install)
+- name: Install cloudflared
+  include_tasks: install.yml
+  when: not cloudflared_skip_install
+
+# Directory setup
 - name: Ensure cloudflared config directory exists
   file:
-    path: /home/taka/.cloudflared
+    path: "{{ cloudflared_config_dir }}"
     state: directory
-    owner: taka
-    group: taka
+    owner: "{{ cloudflared_user }}"
+    group: "{{ cloudflared_group }}"
     mode: '0755'
 
-- name: Check if cloudflared config exists
-  stat:
-    path: /home/taka/.cloudflared/config.yml
-  register: cloudflared_config_exists
+- name: Ensure system cloudflared config directory exists
+  file:
+    path: "{{ cloudflared_system_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
 
-- name: Create cloudflared config from template
-  template:
-    src: config.yml.j2
-    dest: /home/taka/.cloudflared/config.yml
-    owner: taka
-    group: taka
-    mode: '0640'
-  when: not cloudflared_config_exists.stat.exists
+# Tunnel management (if API credentials are provided)
+- name: Create and configure tunnel
+  include_tasks: tunnel_create.yml
+  when: 
+    - cloudflare_api_token is defined
+    - cloudflare_zone_id is defined
+    - cloudflare_account_id is defined
 
-- name: Check if cloudflared service is available
-  systemd:
-    name: cloudflared
-  register: cloudflared_service_status
-  failed_when: false
+# DNS management (if API credentials and tunnel creation was successful)
+- name: Update DNS records
+  include_tasks: dns_update.yml
+  when: 
+    - cloudflare_api_token is defined
+    - cloudflare_zone_id is defined
+    - tunnel_uuid is defined
 
+# Configuration deployment
+- name: Deploy configuration
+  include_tasks: config_deploy.yml
+
+# Service setup
+- name: Setup systemd service
+  include_tasks: service_setup.yml
+
+# Verification
+- name: Verify tunnel connectivity
+  include_tasks: verify.yml
+  when: tunnel_uuid is defined
+
+# Display status (enhanced with automation info)
 - name: Display cloudflared setup status
   debug:
     msg: |
       =============================================================
-      CLOUDFLARED CONFIGURATION DEPLOYED
+      CLOUDFLARED CONFIGURATION {{ 'FULLY AUTOMATED' if tunnel_uuid is defined else 'DEPLOYED' }}
       =============================================================
       
-      ✅ Configuration: /home/taka/.cloudflared/config.yml
-      ✅ MinIO routing: {{ minio_api_server_name }} → localhost:8080
+      ✅ Configuration: {{ cloudflared_config_dir }}/config.yml
+      ✅ MinIO routing: {{ cloudflared_hostname }} → localhost:{{ cloudflared_service_port }}
+      {% if tunnel_uuid is defined %}
+      ✅ Tunnel: {{ cloudflared_tunnel_name }} ({{ tunnel_uuid }})
+      ✅ DNS: {{ cloudflared_hostname }} → {{ tunnel_uuid }}.cfargotunnel.com
+      ✅ Service: systemd cloudflared.service installed and running
+      {% else %}
       
       📋 Manual steps required (follow project README.md):
       
-      1. Install cloudflared:
+      1. Install cloudflared (if not using automation):
          make install
       
       2. Login and create tunnel:
          cloudflared tunnel login
-         cloudflared tunnel create yamisskey
-         cloudflared tunnel route dns yamisskey {{ minio_api_server_name }}
+         cloudflared tunnel create {{ cloudflared_tunnel_name }}
+         cloudflared tunnel route dns {{ cloudflared_tunnel_name }} {{ cloudflared_hostname }}
       
       3. Update config with tunnel UUID:
-         Edit /home/taka/.cloudflared/config.yml
+         Edit {{ cloudflared_config_dir }}/config.yml
          Replace <Tunnel-UUID> with actual tunnel UUID
       
       4. Setup systemd service:
-         sudo mkdir -p /etc/cloudflared
-         sudo cp /home/taka/.cloudflared/config.yml /etc/cloudflared/
+         sudo mkdir -p {{ cloudflared_system_config_dir }}
+         sudo cp {{ cloudflared_config_dir }}/config.yml {{ cloudflared_system_config_dir }}/
          sudo cloudflared service install
          sudo systemctl enable cloudflared
          sudo systemctl start cloudflared
+      {% endif %}
       
       📊 Service status: {{ cloudflared_service_status.status.ActiveState | default('not installed') }}
-      🔗 Expected URL: https://{{ minio_api_server_name }}
+      🔗 Expected URL: https://{{ cloudflared_hostname }}
       =============================================================
+
+# Store service status for display
+- name: Check cloudflared service status
+  systemd:
+    name: cloudflared
+  register: cloudflared_service_status
+  failed_when: false

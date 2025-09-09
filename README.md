@@ -53,8 +53,17 @@ Edit the `docker-compose.yml` and `default.yml` and `docker.env` files.
 
 ### configure
 
+<!-- AUTOMATED: Cloudflare API credentials are now managed via Ansible Vault
 Prepare the Cloudflare API credentials file. Create a directory for Cloudflare configuration if it does not exist:
 
+- Access https://dash.cloudflare.com/profile/api-tokens
+- Create API Token with Zone:DNS:Edit permissions
+- Configure in ansible/servers/group_vars/vault.yml:
+  vault_cloudflare_api_token: "your-api-token"
+  vault_cloudflare_zone_id: "your-zone-id"
+  vault_cloudflare_account_id: "your-account-id"
+
+Legacy method (if not using automation):
 - Access https://dash.cloudflare.com/profile/api-tokens
 - Select View for Global API Key
 - Enter password to remove hCaptcha and select View
@@ -74,6 +83,7 @@ dns_cloudflare_api_key = your-cloudflare-global-api-key
 ```consol
 sudo chmod 600 /etc/cloudflare/cloudflare.ini
 ```
+-->
 
 ### connect
 
@@ -81,6 +91,11 @@ Need to manually log in to cloudflared and warp
 
 #### cloudflared
 
+<!-- AUTOMATED: Cloudflared setup is now automated via Ansible
+With API credentials configured in vault.yml, tunnel creation, DNS setup, and service installation
+are handled automatically during 'make provision'.
+
+Manual method (if not using automation):
 ```consol
 cloudflared tunnel login
 ```
@@ -114,6 +129,7 @@ create cloudflare tunnel named yamisskey by Zero Trust in https://one.dash.cloud
 ```consol
 sudo cloudflared service install your_connector_token_value
 ```
+-->
 
 #### warp-cli
 

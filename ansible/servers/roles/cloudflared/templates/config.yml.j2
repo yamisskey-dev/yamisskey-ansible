@@ -1,59 +1,96 @@
-tunnel: <Tunnel-UUID>
-credentials-file: /home/taka/.cloudflared/<Tunnel-UUID>.json
-origincert: /home/taka/.cloudflared/cert.pem
-protocol: http2
+tunnel: {{ cloudflared_tunnel_uuid | default('<Tunnel-UUID>') }}
+credentials-file: {{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid | default('<Tunnel-UUID>') }}.json
+{% if cloudflared_tunnel_uuid is not defined %}
+origincert: {{ cloudflared_config_dir }}/cert.pem
+{% endif %}
+
+protocol: {{ cloudflared_protocol }}
 dns:
   upstreams:
-    - 127.0.0.1:5353
-retries: 5
-timeout: 5s
-compression: true
-noTLSVerify: false
-max_backoff: 15s
-connection_strategy: "race"
+{% for upstream in cloudflared_dns_upstreams %}
+    - {{ upstream }}
+{% endfor %}
+
+retries: {{ cloudflared_retries }}
+timeout: {{ cloudflared_timeout }}
+compression: {{ cloudflared_compression }}
+noTLSVerify: {{ cloudflared_no_tls_verify }}
+max_backoff: {{ cloudflared_max_backoff }}
+connection_strategy: "{{ cloudflared_connection_strategy }}"
+
 originRequest:
-  disableChunkedEncoding: true
-  connectTimeout: 2s
-  keepAliveTimeout: 15s
-  http2Origin: true
-  tcpKeepAlive: 15s
-  noHappyEyeballs: true
-metrics: localhost:49312
+{% for key, value in cloudflared_origin_request.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+
+metrics: localhost:{{ cloudflared_metrics_port }}
 
 ingress:
-  # All services through ModSecurity-Nginx (except bypasses and special cases)
+{% if ansible_hostname == 'balthasar' %}
+  # Social Services
   - hostname: {{ domain }}
-    service: http://localhost:8080
+    service: http://localhost:{{ cloudflared_service_port }}
   - hostname: bypass.{{ domain }}
     service: http://localhost:3001  # Direct to Misskey (bypass ModSecurity)
-  - hostname: {{ searxng_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ synapse_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ element_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ ctfd_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ minio_api_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ jitsi_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ grafana_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ vikunja_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ cryptpad_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ outline_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ uptime_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ zitadel_server_name }}
-    service: http://localhost:8080
-  - hostname: {{ mcaptcha_server_name }}
-    service: http://localhost:8080
   - hostname: {{ neo_quesdon_server_name }}
-    service: http://localhost:8080
+    service: http://localhost:{{ cloudflared_service_port }}
+  
+  # Matrix Services
+  - hostname: {{ synapse_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  - hostname: {{ element_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  
+  # App Services
   - hostname: {{ lemmy_server_name }}
-    service: http://localhost:8080
+    service: http://localhost:{{ cloudflared_service_port }}
+  - hostname: {{ outline_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  - hostname: {{ vikunja_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  - hostname: {{ cryptpad_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+
+{% elif ansible_hostname == 'caspar' %}
+  # Security Services
+  - hostname: {{ zitadel_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  
+  # CTF Services
+  - hostname: {{ ctfd_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  
+  # Social Services (N/A)
+  # - hostname: nayamisskey.example.com (configure as needed)
+  #   service: http://localhost:{{ cloudflared_service_port }}
+  # - hostname: nostr.example.com (configure as needed)  
+  #   service: http://localhost:{{ cloudflared_service_port }}
+  
+  # Captcha Services
+  - hostname: {{ mcaptcha_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  
+  # Monitoring Services
+  - hostname: {{ grafana_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+  - hostname: {{ uptime_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+
+{% elif ansible_hostname == 'joseph' %}
+  # MinIO Storage
+  - hostname: {{ minio_api_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+
+{% elif ansible_hostname == 'linode-proxy' %}
+  # Search Services
+  - hostname: {{ searxng_server_name }}
+    service: http://localhost:{{ cloudflared_service_port }}
+
+{% else %}
+  # Default configuration for other hosts
+  - hostname: {{ cloudflared_hostname }}
+    service: http://localhost:{{ cloudflared_service_port }}
+{% endif %}
+
+  # Catch-all
   - service: http_status:404
