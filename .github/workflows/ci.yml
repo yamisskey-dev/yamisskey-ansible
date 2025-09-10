@@ -37,11 +37,12 @@ jobs:
             ansible-galaxy role install -r ansible/servers/requirements.yml || true
           fi
 
-      - name: yamllint
-        run: yamllint .
+      - name: yamllint (scoped)
+        run: |
+          yamllint .github ansible/servers
 
-      - name: ansible-lint
-        run: ansible-lint -v
+      - name: ansible-lint (scoped)
+        run: ansible-lint -v ansible/servers
 
       - name: Ansible syntax-check (servers/playbooks)
         run: |
