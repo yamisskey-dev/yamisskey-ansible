@@ -3,7 +3,7 @@
 
 # Upstream definition
 upstream misskey_backend {
-    server localhost:3001 weight=1 max_fails=3 fail_timeout=10s;
+    server localhost:{{ host_services.balthasar.misskey }} weight=1 max_fails=3 fail_timeout=10s;
     keepalive 64;
     keepalive_requests 1000;
     keepalive_timeout 60s;
@@ -11,7 +11,7 @@ upstream misskey_backend {
 
 # Server block for Misskey
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ domain }};
 

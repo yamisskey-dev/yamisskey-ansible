@@ -9,7 +9,7 @@ upstream zitadel_backend {
 
 # Server block for Zitadel
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ zitadel_server_name }};
 

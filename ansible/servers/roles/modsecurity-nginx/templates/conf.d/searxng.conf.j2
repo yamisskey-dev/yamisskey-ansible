@@ -9,7 +9,7 @@ upstream searxng_backend {
 
 # Server block for SearXNG
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ searxng_server_name }};
 

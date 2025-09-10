@@ -9,7 +9,7 @@ upstream grafana_backend {
 
 # Server block for Grafana
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ grafana_server_name }};
 

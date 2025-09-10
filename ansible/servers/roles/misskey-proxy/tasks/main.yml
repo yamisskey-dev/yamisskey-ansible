@@ -70,7 +70,7 @@
     name: media-proxy-rs-server
     image: 'ghcr.io/yamisskey/media-proxy-rs:main'
     ports:
-      - '12766:12766'
+      - '{{ host_services.linode_prox.media_proxy_rs }}:{{ host_services.linode_prox.media_proxy_rs }}'
     state: started
     restart_policy: always
     detach: yes
@@ -81,7 +81,7 @@
     name: proxy
     image: nginx
     ports:
-      - '80:80'
+      - '{{ host_services.linode_prox.nginx }}:{{ host_services.linode_prox.nginx }}'
     state: started
     restart_policy: always
     detach: yes

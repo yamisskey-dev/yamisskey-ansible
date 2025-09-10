@@ -3,13 +3,13 @@
 
 # Upstream definition
 upstream neo_quesdon_backend {
-    server localhost:3025;
+    server localhost:{{ host_services.balthasar.neo_quesdon }};
     keepalive 8;
 }
 
 # Server block for Neo-Quesdon
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ neo_quesdon_server_name }};
     

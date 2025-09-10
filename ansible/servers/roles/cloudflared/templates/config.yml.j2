@@ -26,72 +26,15 @@ originRequest:
 metrics: localhost:{{ cloudflared_metrics_port }}
 
 ingress:
-{% if ansible_hostname == 'balthasar' %}
-  # Social Services
-  - hostname: {{ domain }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  - hostname: bypass.{{ domain }}
-    service: http://localhost:3001  # Direct to Misskey (bypass ModSecurity)
-  - hostname: {{ neo_quesdon_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  
-  # Matrix Services
-  - hostname: {{ synapse_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  - hostname: {{ element_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  
-  # App Services
-  - hostname: {{ lemmy_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  - hostname: {{ outline_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  - hostname: {{ vikunja_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  - hostname: {{ cryptpad_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-
-{% elif ansible_hostname == 'caspar' %}
-  # Security Services
-  - hostname: {{ zitadel_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  
-  # CTF Services
-  - hostname: {{ ctfd_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  
-  # Social Services (N/A)
-  # - hostname: nayamisskey.example.com (configure as needed)
-  #   service: http://localhost:{{ cloudflared_service_port }}
-  # - hostname: nostr.example.com (configure as needed)  
-  #   service: http://localhost:{{ cloudflared_service_port }}
-  
-  # Captcha Services
-  - hostname: {{ mcaptcha_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  
-  # Monitoring Services
-  - hostname: {{ grafana_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-  - hostname: {{ uptime_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-
-{% elif ansible_hostname == 'joseph' %}
-  # MinIO Storage
-  - hostname: {{ minio_api_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
-
-{% elif ansible_hostname == 'linode-proxy' %}
-  # Misskey Proxy Services
-  - hostname: media.{{ domain }}
-    service: http://localhost:12766
-  - hostname: summaly.{{ domain }}
-    service: http://localhost:80
-
+{% if cloudflared_ingress[ansible_hostname] is defined %}
+{% for service in cloudflared_ingress[ansible_hostname] %}
+  - hostname: {{ service.hostname }}
+    service: {{ service.service }}
+{% endfor %}
 {% else %}
-  # Default configuration for other hosts
-  - hostname: {{ cloudflared_hostname }}
-    service: http://localhost:{{ cloudflared_service_port }}
+  # Default configuration for unconfigured hosts
+  - hostname: {{ cloudflared_hostname | default('example.com') }}
+    service: http://localhost:{{ cloudflared_service_port | default('8080') }}
 {% endif %}
 
   # Catch-all

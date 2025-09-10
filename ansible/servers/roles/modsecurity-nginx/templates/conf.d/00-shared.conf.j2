@@ -25,7 +25,7 @@ limit_req_zone $binary_remote_addr zone=misskey_limit:10m rate=1000r/s;
 
 # Health check server for ModSecurity-Nginx
 server {
-    listen 8080 default_server;
+    listen {{ host_services.balthasar.modsecurity_nginx }} default_server;
     server_name _;
 
     # Health check endpoint

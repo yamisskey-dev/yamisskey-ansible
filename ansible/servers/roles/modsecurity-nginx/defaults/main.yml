@@ -8,14 +8,14 @@ modsecurity_nginx_tag: "nginx"
 modsecurity_nginx_restart_policy: "unless-stopped"
 
 # Network configuration
-modsecurity_nginx_port: "8080"
+modsecurity_nginx_port: "{{ host_services.balthasar.modsecurity_nginx }}"
 modsecurity_nginx_ssl_port: "8443"
 # Host ports not needed when using host network mode
 
 # Backend configuration
 modsecurity_backend_host: "misskey-web-1"
-modsecurity_backend_port: "3001"
-modsecurity_backend: "http://misskey-web-1:3001"
+modsecurity_backend_port: "{{ host_services.balthasar.misskey }}"
+modsecurity_backend: "http://misskey-web-1:{{ host_services.balthasar.misskey }}"
 modsecurity_server_name: "{{ domain | default('localhost') }}"
 
 # ModSecurity configuration

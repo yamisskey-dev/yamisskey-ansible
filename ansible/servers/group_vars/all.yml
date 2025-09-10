@@ -6,3 +6,115 @@ mkp224o_output_dir: '/home/{{ ansible_user }}/mkp224o-output'
 domain_prefix: yamiski
 domain: yami.ski
 github_org: yamisskey-dev
+
+# =========================================
+# Host-Based Service Configuration
+# =========================================
+
+# Service distribution by host (based on actual deployment architecture)
+host_services:
+  balthasar:
+    # Main production server - Social & Apps
+    modsecurity_nginx: 8080     # Main reverse proxy
+    misskey: 3001              # Yamisskey container port
+    neo_quesdon: 3025          # Neo-Quesdon
+    outline: 3004              # Outline
+    element: 8081              # Element Matrix client
+    synapse: 8008              # Matrix Synapse
+    cryptpad: 3003             # CryptPad (main) 3333 (websocket)
+    lemmy: 8536                # Lemmy
+    vikunja: 3456              # Vikunja
+    cadvisor: 8085             # cAdvisor
+    # All public services route through modsecurity_nginx:8080
+
+  caspar:
+    # Security & monitoring hub + CTF environment
+    modsecurity_nginx: 8080
+    ctfd: 8000                 # CTFd
+    zitadel: 8993              # Zitadel (security)
+    mcaptcha: 7493             # mCaptcha (shared security service)
+    uptime_kuma: 3009          # Uptime Kuma (monitoring)
+    prometheus: 9090           # Prometheus (monitoring)
+    grafana: 3000              # Grafana (monitoring dashboard)
+    blackbox_exporter: 9115    # Blackbox Exporter
+    alert_manager: 9093        # AlertManager
+    nayamisskey: 3002          # Misskey N/A (test environment)
+    nostream: 8080             # Nostr relay
+
+  linode_prox:
+    # External proxy services
+    nginx: 80                  # Nginx for summaly
+    media_proxy_rs: 12766      # Media proxy service
+    summaly: 3030              # Summaly (behind nginx)
+    squid: 3128                # Squid proxy
+
+  joseph:
+    # TrueNAS SCALE storage server
+    minio_api: 9000            # MinIO API
+    minio_console: 9001        # MinIO Console
+    node_exporter: 9100        # Node Exporter (monitoring agent)
+
+  raspberrypi:
+    # Minecraft dedicated server
+    minecraft: 25565           # Minecraft Java server
+    playit: 8080               # playit.gg proxy
+
+# Cloudflared ingress mapping
+cloudflared_ingress:
+  balthasar:
+    # All services behind ModSecurity-Nginx
+    - hostname: "{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "bypass.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "matrix.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "chat.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "ctf.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "grafana.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "task.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "pad.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "wiki.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "uptime.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "auth.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "captcha.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "neo-quesdon.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "lemmy.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+
+  caspar:
+    # Security & monitoring services behind ModSecurity-Nginx
+    - hostname: "grafana.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    - hostname: "uptime.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    - hostname: "auth.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    - hostname: "captcha.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    - hostname: "ctf.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    - hostname: "na.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+
+  linode_prox:
+    # Direct service exposure for external proxies
+    - hostname: "media.{{ domain }}"
+      service: "http://localhost:{{ host_services.linode_prox.media_proxy_rs }}"
+    - hostname: "summaly.{{ domain }}"
+      service: "http://localhost:{{ host_services.linode_prox.nginx }}"
+
+  caspar:
+    # Test services
+    - hostname: "na.{{ domain }}"
+      service: "http://localhost:8080"

@@ -3,13 +3,13 @@
 
 # Upstream definition
 upstream outline_backend {
-    server localhost:3004;
+    server localhost:{{ host_services.balthasar.outline }};
     keepalive 8;
 }
 
 # Server block for Outline
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ outline_server_name }};
 

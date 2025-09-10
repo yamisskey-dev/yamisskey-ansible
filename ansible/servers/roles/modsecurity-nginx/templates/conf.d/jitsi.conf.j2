@@ -9,7 +9,7 @@ upstream jitsi_backend {
 
 # Server block for Jitsi Meet
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ jitsi_server_name }};
     

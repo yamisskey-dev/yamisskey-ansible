@@ -9,7 +9,7 @@ upstream ctfd_backend {
 
 # Server block for CTFd
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ ctfd_server_name }};
 

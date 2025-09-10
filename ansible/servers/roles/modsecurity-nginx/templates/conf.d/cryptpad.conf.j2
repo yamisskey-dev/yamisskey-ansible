@@ -8,13 +8,13 @@ upstream cryptpad_backend {
 }
 
 upstream cryptpad_websocket_backend {
-    server localhost:3003;
+    server localhost:{{ host_services.balthasar.cryptpad }};
     keepalive 8;
 }
 
 # Server block for CryptPad
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ cryptpad_server_name }};
 

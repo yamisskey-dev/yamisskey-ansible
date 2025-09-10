@@ -20,7 +20,7 @@
 
 - name: Verify Node Exporter metrics endpoint
   uri:
-    url: http://localhost:9100/metrics
+    url: http://localhost:{{ host_services.joseph.node_exporter }}/metrics
     method: GET
     status_code: 200
   register: node_exporter_metrics
@@ -145,10 +145,10 @@
         method: GET
         status_code: 200
       loop:
-        - { port: 9100, name: 'node-exporter' }
-        - { port: 8085, name: 'cadvisor' }
-        - { port: 9115, name: 'blackbox-exporter', path: '/probe?target=localhost&module=http_2xx' }
-        - { port: 3000, name: 'grafana', path: '/api/health' }
+        - { port: "{{ host_services.joseph.node_exporter }}", name: 'node-exporter' }
+        - { port: "{{ host_services.balthasar.cadvisor }}", name: 'cadvisor' }
+        - { port: "{{ host_services.caspar.blackbox_exporter }}", name: 'blackbox-exporter', path: '/probe?target=localhost&module=http_2xx' }
+        - { port: "{{ host_services.caspar.grafana }}", name: 'grafana', path: '/api/health' }
       register: service_checks
   rescue:
     - name: Report service check failures

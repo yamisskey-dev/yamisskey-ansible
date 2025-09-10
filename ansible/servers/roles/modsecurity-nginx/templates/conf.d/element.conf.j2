@@ -3,13 +3,13 @@
 
 # Upstream definition
 upstream element_backend {
-    server localhost:8081;
+    server localhost:{{ host_services.balthasar.element }};
     keepalive 8;
 }
 
 # Server block for Element Web
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ element_server_name }};
 

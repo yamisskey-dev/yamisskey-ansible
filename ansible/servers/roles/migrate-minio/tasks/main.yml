@@ -7,7 +7,7 @@
       MinIO Migration Plan
       ==============================================
       Source: {{ source_minio_host }} ({{ source_minio_ip }}:{{ source_minio_port }})
-      Target: {{ inventory_hostname }} (localhost:9000)
+      Target: {{ inventory_hostname }} (localhost:{{ host_services.joseph.minio_api }})
       Buckets: {{ buckets_to_migrate | join(', ') }}
       Encryption: Enabled (KMS)
       Method: API-based with transparent encryption
@@ -23,7 +23,7 @@
 
 - name: Verify target MinIO connectivity
   uri:
-    url: "http://localhost:9000/minio/health/live"
+    url: "http://localhost:{{ host_services.joseph.minio_api }}/minio/health/live"
     method: GET
     timeout: 10
   register: target_health
@@ -212,7 +212,7 @@
       
       🔧 Misskey Configuration ({{ source_minio_host }}):
       Update .env file:
-      S3_ENDPOINT=http://{{ ansible_default_ipv4.address }}:9000
+      S3_ENDPOINT=http://{{ ansible_default_ipv4.address }}:{{ host_services.joseph.minio_api }}
       S3_ACCESS_KEY={{ target_secrets.minio.misskey_s3_access_key }}
       S3_SECRET_KEY={{ target_secrets.minio.misskey_s3_secret_key }}
       

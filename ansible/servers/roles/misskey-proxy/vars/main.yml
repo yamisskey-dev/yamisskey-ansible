@@ -7,16 +7,16 @@ proxy_squid_config_dir: '/etc/squid'
 proxy_containers:
   - name: 'media-proxy-rs-server'
     image: 'ghcr.io/{{ github_org }}/media-proxy-rs:main'
-    port: '12766:12766'
+    port: '{{ host_services.linode_prox.media_proxy_rs }}:{{ host_services.linode_prox.media_proxy_rs }}'
   - name: 'nginx-proxy'
     image: 'nginx'
-    port: '80:80'
+    port: '{{ host_services.linode_prox.nginx }}:{{ host_services.linode_prox.nginx }}'
 
 # Squid configuration
 squid_cache_dir: '/var/spool/squid'
 squid_cache_size: 1000
 squid_log_dir: '/var/log/squid'
-squid_port: 3128
+squid_port: '{{ host_services.linode_prox.squid }}'
 
 # DNS servers
 squid_dns_servers:

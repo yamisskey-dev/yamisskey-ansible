@@ -3,13 +3,13 @@
 
 # Upstream definition
 upstream synapse_backend {
-    server localhost:8008;
+    server localhost:{{ host_services.balthasar.synapse }};
     keepalive 16;
 }
 
 # Server block for Matrix Synapse
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ synapse_server_name }};
 

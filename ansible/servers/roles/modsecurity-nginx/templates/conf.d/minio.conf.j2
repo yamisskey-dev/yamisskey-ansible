@@ -7,7 +7,7 @@ limit_req_zone $binary_remote_addr zone=minio_burst:10m rate=1000r/m;
 
 # Upstream definition
 upstream minio_api_backend {
-    server 127.0.0.1:9000 weight=1 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:{{ host_services.joseph.minio_api | default('9000') }} weight=1 max_fails=3 fail_timeout=10s;
     keepalive 64;
     keepalive_requests 1000;
     keepalive_timeout 60s;
@@ -15,7 +15,7 @@ upstream minio_api_backend {
 
 # Server block for MinIO API
 server {
-    listen 8080;
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ minio_api_server_name }};
 
