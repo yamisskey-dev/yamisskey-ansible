@@ -16,17 +16,27 @@ MinIO用のCloudflare Tunnel設定を管理するAnsibleロールです。
 
 ## 使用方法
 
-### 1. 通常のプロビジョニング実行
+### 1. 統一コマンドでの実行
 
 ```bash
-make provision  # cloudflaredロールがMinIOプロビジョニングに自動的に含まれる
+# Cloudflaredプレイブック実行
+make run PLAYBOOK=cloudflared
+
+# ドライラン（変更内容確認）
+make check PLAYBOOK=cloudflared
+
+# 特定のタグのみ実行
+make run PLAYBOOK=cloudflared TAGS=config
 ```
 
 ### 2. 手動セットアップ（プロジェクトREADME.md準拠）
 
 ```bash
-# インストール
+# Ansibleインストール
 make install
+
+# インベントリ作成
+make inventory
 
 # ログインと認証
 cloudflared tunnel login
