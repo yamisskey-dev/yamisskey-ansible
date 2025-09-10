@@ -1,0 +1,7 @@
+[allowlist]
+description = "Allow encrypted secrets and known patterns"
+regexes = [
+  # SOPS encrypted values (we do not decrypt in CI)
+  'ENC\[AES256_GCM,.+\]'
+]
+

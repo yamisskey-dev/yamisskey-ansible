@@ -1,0 +1,43 @@
+name: Release (tagged)
+
+on:
+  push:
+    tags:
+      - "infra-*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0.17.7
+
+      - name: Generate SBOM for repository
+        run: syft dir:. -o spdx-json > sbom-repo.spdx.json
+
+      - name: Trivy (config scan)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          hide-progress: true
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Create GitHub Release and attach SBOM
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            sbom-repo.spdx.json
+

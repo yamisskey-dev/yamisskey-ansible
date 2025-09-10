@@ -1,0 +1,77 @@
+name: CI (lint / plan / security)
+
+on:
+  pull_request:
+    branches: [ "**" ]
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linters and tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint yamllint
+
+      - name: Ansible Galaxy (optional)
+        run: |
+          if [ -f ansible/servers/requirements.yml ]; then
+            ansible-galaxy collection install -r ansible/servers/requirements.yml
+            ansible-galaxy role install -r ansible/servers/requirements.yml || true
+          fi
+
+      - name: yamllint
+        run: yamllint .
+
+      - name: ansible-lint
+        run: ansible-lint -v
+
+      - name: Ansible syntax-check (servers/playbooks)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for f in ansible/servers/playbooks/*.yml; do
+            echo "-- syntax-check: $f"
+            ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
+          done
+
+      - name: Trivy (config scan)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          hide-progress: true
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          scanners: misconfig,secret
+          skip-dirs: .git,.github
+
+      - name: Gitleaks (secrets scan)
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: "-v --no-git --config .gitleaks.toml"
+
+      - name: Check no AGE private keys committed
+        run: |
+          if grep -RIn "AGE-SECRET-KEY-" . --exclude-dir=.git --exclude-dir=.github; then
+            echo 'AGE private key found in repo. Remove it and push again.'
+            exit 1
+          fi
+          echo 'No AGE private keys detected.'
