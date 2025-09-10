@@ -7,3 +7,5 @@ rules:
     allow-non-breakable-inline-mappings: true
   truthy: disable
   trailing-spaces: disable
+  document-start: disable
+  new-line-at-end-of-file: disable
