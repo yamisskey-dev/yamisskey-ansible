@@ -133,7 +133,7 @@ sudo cloudflared service install your_connector_token_value
 
 #### warp-cli
 
-##### warp+
+<!-- ##### warp+
 
 subscribe warp licence key in [mobile app](https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone&hl=en_US&pli=1) on mobile device
 
@@ -160,7 +160,7 @@ Exclude traffic to Cloudflare's edge servers from routing through WARP to preven
 warp-cli tunnel host add region1.v2.argotunnel.com
 warp-cli tunnel host add region2.v2.argotunnel.com
 warp-cli tunnel host list
-```
+``` -->
 
 ### provision
 

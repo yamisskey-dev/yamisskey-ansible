@@ -1,0 +1,7 @@
+---
+- name: restart warp
+  become: yes
+  ansible.builtin.systemd:
+    name: "{{ warp_service_name }}"
+    state: restarted
+
