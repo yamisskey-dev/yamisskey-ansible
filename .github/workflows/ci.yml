@@ -39,13 +39,18 @@ jobs:
 
       - name: yamllint (scoped)
         run: |
-          yamllint .github ansible/servers
+          yamllint .github ansible/servers ansible/appliances
 
-      - name: ansible-lint (scoped)
+      - name: ansible-lint (servers)
         env:
           ANSIBLE_CONFIG: ansible/servers/ansible.cfg
           ANSIBLE_ROLES_PATH: ansible/servers/roles
-        run: ansible-lint -v ansible/servers || true
+        run: ansible-lint -v ansible/servers
+
+      - name: ansible-lint (appliances)
+        env:
+          ANSIBLE_ROLES_PATH: ansible/appliances/roles
+        run: ansible-lint -v ansible/appliances
 
       - name: Ansible syntax-check (servers/playbooks)
         env:
@@ -55,6 +60,17 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           for f in ansible/servers/playbooks/*.yml; do
+            echo "-- syntax-check: $f"
+            ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
+          done
+
+      - name: Ansible syntax-check (appliances/playbooks)
+        env:
+          ANSIBLE_ROLES_PATH: ansible/appliances/roles
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for f in ansible/appliances/playbooks/*.yml; do
             echo "-- syntax-check: $f"
             ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
           done
@@ -69,11 +85,6 @@ jobs:
           severity: CRITICAL,HIGH
           scanners: misconfig,secret
           skip-dirs: .git,.github
-
-      - name: Gitleaks (secrets scan)
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: "-v --no-git --config .gitleaks.toml"
 
       - name: Check no AGE private keys committed
         run: |
