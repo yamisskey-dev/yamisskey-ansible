@@ -9,3 +9,6 @@ rules:
   trailing-spaces: disable
   document-start: disable
   new-line-at-end-of-file: disable
+  braces:
+    min-spaces-inside: 1
+    max-spaces-inside: 1
