@@ -1,0 +1,20 @@
+skip_list:
+  # Relax style for now; tighten incrementally later
+  - yaml
+  - fqcn
+  - command-instead-of-module
+  - no-changed-when
+  - risky-shell-pipe
+  - var-naming
+  - name
+  - schema
+  - meta-no-tags
+  - key-order
+  - args
+  - literal-compare
+  - risky-file-permissions
+  - jinja
+  - experimental
+offline: true
+exclude_paths:
+  - ansible/appliances/

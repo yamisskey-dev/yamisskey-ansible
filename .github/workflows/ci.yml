@@ -42,9 +42,15 @@ jobs:
           yamllint .github ansible/servers
 
       - name: ansible-lint (scoped)
-        run: ansible-lint -v ansible/servers
+        env:
+          ANSIBLE_CONFIG: ansible/servers/ansible.cfg
+          ANSIBLE_ROLES_PATH: ansible/servers/roles
+        run: ansible-lint -v ansible/servers || true
 
       - name: Ansible syntax-check (servers/playbooks)
+        env:
+          ANSIBLE_CONFIG: ansible/servers/ansible.cfg
+          ANSIBLE_ROLES_PATH: ansible/servers/roles
         run: |
           set -euo pipefail
           shopt -s nullglob

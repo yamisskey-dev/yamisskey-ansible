@@ -10,5 +10,11 @@ rules:
   document-start: disable
   new-line-at-end-of-file: disable
   braces:
-    min-spaces-inside: 1
-    max-spaces-inside: 1
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+  comments-indentation: disable
+  comments:
+    min-spaces-from-content: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
