@@ -20,9 +20,106 @@ ifneq (,$(wildcard $(ENV_FILE)))
     export $(shell sed 's/=.*//' $(ENV_FILE))
 endif
 
-# Appliances helpers
-.PHONY: ap-setup ap-migrate ap-e2e ap-syntax
+# Common Ansible configuration
+ANSIBLE_PATH := $$HOME/.local/bin:$$PATH
+ANSIBLE_COMMON_OPTS := -i $(SERVERS_INV)
+ANSIBLE_BECOME_OPTS := --ask-become-pass
 
+# Logging configuration
+LOG_DIR := logs
+LOG_FILE := $(LOG_DIR)/ansible-$(shell date +%Y%m%d).log
+BACKUP_DIR := backups
+TIMESTAMP := $(shell date +%Y%m%dT%H%M%S)
+
+# Ensure log directory exists
+$(shell mkdir -p $(LOG_DIR) $(BACKUP_DIR))
+
+# Environment variables to Ansible variables conversion
+ANSIBLE_EXTRA_VARS := $(if $(HOST_SERVICES),-e "host_services=$(HOST_SERVICES)") \
+                     $(if $(BACKUP_RETENTION),-e "backup_retention=$(BACKUP_RETENTION)") \
+                     $(if $(DEBUG_MODE),-e "debug_mode=$(DEBUG_MODE)") \
+                     $(if $(FORCE_RECREATE),-e "force_recreate=$(FORCE_RECREATE)") \
+                     $(if $(SKIP_TAGS),-e "skip_tags=$(SKIP_TAGS)") \
+                     $(if $(ONLY_TAGS),-e "only_tags=$(ONLY_TAGS)")
+
+# Common execution presets
+PRESET_DEVELOPMENT := --tags "install,config" -e "debug_mode=true" -e "force_recreate=true"
+PRESET_PRODUCTION := --tags "install,config,security" -e "debug_mode=false"
+PRESET_MINIMAL := --tags "install" --skip-tags "optional"
+PRESET_UPDATE := --tags "update,config" -e "force_recreate=false"
+
+# Get preset configuration
+define get_preset
+$(if $(filter development,$(1)),$(PRESET_DEVELOPMENT),\
+$(if $(filter production,$(1)),$(PRESET_PRODUCTION),\
+$(if $(filter minimal,$(1)),$(PRESET_MINIMAL),\
+$(if $(filter update,$(1)),$(PRESET_UPDATE),$(1)))))
+endef
+
+# Ansible wrapper functions
+define ansible_run
+	@echo "🚀 Running Ansible playbook: $(1)"
+	@echo "📋 Logging to: $(LOG_FILE)"
+	@if [ ! -f "$(SERVERS_PLAY)/$(1).yml" ]; then \
+		echo "❌ Playbook $(1).yml not found in $(SERVERS_PLAY)/"; \
+		echo "[$(TIMESTAMP)] ERROR: Playbook $(1).yml not found" >> $(LOG_FILE); \
+		exit 1; \
+	fi
+	@echo "[$(TIMESTAMP)] START: $(1) $(if $(2),limit=$(2)) $(if $(3),preset/extra=$(3))" >> $(LOG_FILE)
+	@export PATH="$(ANSIBLE_PATH)"; \
+	if ansible-playbook $(ANSIBLE_COMMON_OPTS) $(SERVERS_PLAY)/$(1).yml $(if $(2),--limit $(2)) $(ANSIBLE_EXTRA_VARS) $(call get_preset,$(3)) $(ANSIBLE_BECOME_OPTS) 2>&1 | tee -a $(LOG_FILE); then \
+		echo "[$(TIMESTAMP)] SUCCESS: $(1)" >> $(LOG_FILE); \
+		echo "✅ Playbook $(1) completed successfully"; \
+	else \
+		echo "[$(TIMESTAMP)] FAILED: $(1)" >> $(LOG_FILE); \
+		echo "❌ Playbook $(1) failed. Check logs: $(LOG_FILE)"; \
+		echo "💡 Run 'make logs' to view recent logs"; \
+		exit 1; \
+	fi
+endef
+
+define ansible_run_no_become
+	@echo "🚀 Running Ansible playbook: $(1)"
+	@echo "📋 Logging to: $(LOG_FILE)"
+	@if [ ! -f "$(SERVERS_PLAY)/$(1).yml" ]; then \
+		echo "❌ Playbook $(1).yml not found in $(SERVERS_PLAY)/"; \
+		echo "[$(TIMESTAMP)] ERROR: Playbook $(1).yml not found" >> $(LOG_FILE); \
+		exit 1; \
+	fi
+	@echo "[$(TIMESTAMP)] START: $(1) $(if $(2),limit=$(2)) $(if $(3),preset/extra=$(3))" >> $(LOG_FILE)
+	@export PATH="$(ANSIBLE_PATH)"; \
+	if ansible-playbook $(ANSIBLE_COMMON_OPTS) $(SERVERS_PLAY)/$(1).yml $(if $(2),--limit $(2)) $(ANSIBLE_EXTRA_VARS) $(call get_preset,$(3)) 2>&1 | tee -a $(LOG_FILE); then \
+		echo "[$(TIMESTAMP)] SUCCESS: $(1)" >> $(LOG_FILE); \
+		echo "✅ Playbook $(1) completed successfully"; \
+	else \
+		echo "[$(TIMESTAMP)] FAILED: $(1)" >> $(LOG_FILE); \
+		echo "❌ Playbook $(1) failed. Check logs: $(LOG_FILE)"; \
+		echo "💡 Run 'make logs' to view recent logs"; \
+		exit 1; \
+	fi
+endef
+
+define ansible_check
+	@echo "🔍 Checking Ansible playbook: $(1)"
+	@if [ ! -f "$(SERVERS_PLAY)/$(1).yml" ]; then \
+		echo "❌ Playbook $(1).yml not found in $(SERVERS_PLAY)/"; \
+		exit 1; \
+	fi
+	@export PATH="$(ANSIBLE_PATH)"; \
+	ansible-playbook $(ANSIBLE_COMMON_OPTS) $(SERVERS_PLAY)/$(1).yml $(if $(2),--limit $(2)) $(ANSIBLE_EXTRA_VARS) --check --diff $(call get_preset,$(3))
+endef
+
+define ansible_syntax
+	@echo "📝 Syntax check for Ansible playbook: $(1)"
+	@if [ ! -f "$(SERVERS_PLAY)/$(1).yml" ]; then \
+		echo "❌ Playbook $(1).yml not found in $(SERVERS_PLAY)/"; \
+		exit 1; \
+	fi
+	@export PATH="$(ANSIBLE_PATH)"; \
+	ansible-playbook $(ANSIBLE_COMMON_OPTS) $(SERVERS_PLAY)/$(1).yml --syntax-check
+endef
+
+# Appliances inventory helper (minimal)
 ap-inventory:
 	@echo "Appliances inventory path: $(APPLIANCES_INV)"
 	@{ \
@@ -38,26 +135,132 @@ ap-inventory:
 	  fi; \
 	}
 
-ap-setup:
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles \
-	ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/setup.yml --ask-become-pass
-
-ap-migrate:
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles \
-	ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-truenas.yml --ask-become-pass
-
-ap-e2e:
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles \
-	ansible-playbook -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/truenas-minio-deploy-and-migrate.yml --ask-become-pass
-
-ap-syntax:
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/setup.yml || true
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/truenas-minio-deploy-and-migrate.yml || true
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-truenas.yml
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-phase-a.yml
-	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-cutover.yml
-
 all: sv-inventory sv-provision
+
+# Generic playbook execution
+run:
+	@if [ -z "$(PLAYBOOK)" ]; then \
+		echo "❌ PLAYBOOK parameter is required"; \
+		echo "Usage: make run PLAYBOOK=<playbook-name> [LIMIT=<host-group>] [PRESET=<preset>] [EXTRA='<extra-args>']"; \
+		echo "Examples:"; \
+		echo "  make run PLAYBOOK=common"; \
+		echo "  make run PLAYBOOK=security LIMIT=source"; \
+		echo "  make run PLAYBOOK=monitoring PRESET=development"; \
+		echo "  make run PLAYBOOK=misskey PRESET=production LIMIT=source"; \
+		echo ""; \
+		echo "Available presets: development, production, minimal, update"; \
+		echo "Environment variables: HOST_SERVICES, DEBUG_MODE, FORCE_RECREATE, etc."; \
+		exit 1; \
+	fi
+	$(call ansible_run,$(PLAYBOOK),$(LIMIT),$(if $(PRESET),$(PRESET),$(EXTRA)))
+
+# Generic playbook check (dry-run)
+check:
+	@if [ -z "$(PLAYBOOK)" ]; then \
+		echo "❌ PLAYBOOK parameter is required"; \
+		echo "Usage: make check PLAYBOOK=<playbook-name> [LIMIT=<host-group>] [PRESET=<preset>]"; \
+		exit 1; \
+	fi
+	$(call ansible_check,$(PLAYBOOK),$(LIMIT),$(PRESET))
+
+# Generic syntax check
+syntax:
+	@if [ -z "$(PLAYBOOK)" ]; then \
+		echo "❌ PLAYBOOK parameter is required"; \
+		echo "Usage: make syntax PLAYBOOK=<playbook-name>"; \
+		exit 1; \
+	fi
+	$(call ansible_syntax,$(PLAYBOOK))
+
+# List available playbooks
+list:
+	@echo "📋 Available playbooks:"
+	@if [ -d "$(SERVERS_PLAY)" ]; then \
+		ls $(SERVERS_PLAY)/*.yml 2>/dev/null | sed 's|.*/||; s|\.yml$$||' | sort | sed 's/^/  - /'; \
+	else \
+		echo "  No playbooks found in $(SERVERS_PLAY)"; \
+	fi
+	@echo ""
+	@echo "📦 Available presets:"
+	@echo "  - development: install,config with debug mode"
+	@echo "  - production:  install,config,security without debug"
+	@echo "  - minimal:     install only, skip optional tasks"
+	@echo "  - update:      update,config without recreate"
+	@echo ""
+	@echo "🔧 Environment variables:"
+	@echo "  - HOST_SERVICES:    comma-separated list of services"
+	@echo "  - DEBUG_MODE:       true/false for debug output"
+	@echo "  - FORCE_RECREATE:   true/false to force recreation"
+	@echo "  - BACKUP_RETENTION: number of backups to keep"
+
+# Log management
+logs:
+	@echo "📋 Recent Ansible logs:"
+	@if [ -f "$(LOG_FILE)" ]; then \
+		tail -50 $(LOG_FILE); \
+	else \
+		echo "  No logs found for today. Check $(LOG_DIR)/ for other dates."; \
+	fi
+
+# View all log files
+logs-all:
+	@echo "📋 Available log files:"
+	@ls -la $(LOG_DIR)/ 2>/dev/null || echo "  No log directory found"
+
+# Clean old logs (keep last 7 days)
+logs-clean:
+	@echo "🧹 Cleaning old logs (keeping last 7 days)..."
+	@find $(LOG_DIR) -name "ansible-*.log" -mtime +7 -delete 2>/dev/null || true
+	@echo "✅ Log cleanup completed"
+
+# Backup inventory before operations
+backup:
+	@echo "💾 Creating backup of inventory..."
+	@if [ -f "$(SERVERS_INV)" ]; then \
+		cp "$(SERVERS_INV)" "$(BACKUP_DIR)/inventory-$(TIMESTAMP).bak"; \
+		echo "✅ Backup created: $(BACKUP_DIR)/inventory-$(TIMESTAMP).bak"; \
+	else \
+		echo "⚠️  No inventory file to backup"; \
+	fi
+
+# Restore from backup
+restore:
+	@if [ -z "$(BACKUP_FILE)" ]; then \
+		echo "❌ BACKUP_FILE parameter is required"; \
+		echo "Usage: make restore BACKUP_FILE=<backup-filename>"; \
+		echo "Available backups:"; \
+		ls -la $(BACKUP_DIR)/ 2>/dev/null | grep "inventory-" || echo "  No backups found"; \
+		exit 1; \
+	fi
+	@if [ -f "$(BACKUP_DIR)/$(BACKUP_FILE)" ]; then \
+		cp "$(BACKUP_DIR)/$(BACKUP_FILE)" "$(SERVERS_INV)"; \
+		echo "✅ Restored from backup: $(BACKUP_FILE)"; \
+	else \
+		echo "❌ Backup file not found: $(BACKUP_DIR)/$(BACKUP_FILE)"; \
+	fi
+
+# Clean old backups (keep last 10)
+backup-clean:
+	@echo "🧹 Cleaning old backups (keeping last 10)..."
+	@ls -t $(BACKUP_DIR)/inventory-*.bak 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
+	@echo "✅ Backup cleanup completed"
+
+# Run multiple playbooks in sequence
+deploy:
+	@if [ -z "$(PLAYBOOKS)" ]; then \
+		echo "❌ PLAYBOOKS parameter is required"; \
+		echo "Usage: make deploy PLAYBOOKS='<playbook1> <playbook2> ...' [LIMIT=<host-group>] [PRESET=<preset>]"; \
+		echo "Example: make deploy PLAYBOOKS='common security monitoring' LIMIT=source PRESET=production"; \
+		exit 1; \
+	fi
+	@echo "🚀 Running playbook sequence: $(PLAYBOOKS)"
+	@for playbook in $(PLAYBOOKS); do \
+		echo ""; \
+		echo "▶️ Running: $$playbook"; \
+		$(MAKE) run PLAYBOOK=$$playbook LIMIT=$(LIMIT) PRESET=$(PRESET) EXTRA=$(EXTRA) || exit 1; \
+	done
+	@echo ""
+	@echo "🎉 All playbooks completed successfully!"
 
 # Install Ansible itself (prerequisite for other operations)
 install-ansible:
@@ -104,201 +307,106 @@ install-ansible:
 	@echo "1. Run: make sv-inventory"
 	@echo "2. Run: ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/system-init.yml --ask-become-pass"
 
-# System initialization (Ansible itself managed by Makefile, other packages by playbook)
-sv-install:
-	@echo "📦 System initialization starting..."
-	@echo ""
-	@echo "🔧 Step 1: Installing Ansible and development tools..."
-	@$(MAKE) install-ansible
-	@echo ""
-	@echo "🔧 Step 2: Running system initialization playbook..."
-	@export PATH="$$HOME/.local/bin:$$PATH"; \
-	ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/system-init.yml --ask-become-pass
-	@echo ""
-	@echo "🎉 System initialization completed!"
-
+# Simple inventory creation
 sv-inventory:
-	@echo "Creating inventory file..."
-	@if [ "$(MODE)" = "migration" ] || ([ -n "$(SOURCE)" ] && [ -n "$(TARGET)" ]); then \
-		echo "Creating migration inventory for $(SOURCE) → $(TARGET)..."; \
-		SOURCE_IP=$$(tailscale status 2>/dev/null | grep "$(SOURCE)" | awk '{print $$1}' | head -1 || echo "$(SOURCE)"); \
-		TARGET_IP=$$(tailscale status 2>/dev/null | grep "$(TARGET)" | awk '{print $$1}' | head -1 || echo "$(TARGET)"); \
-		CURRENT_HOST=$$(hostname); \
-		echo "[source_hosts]" > $(SERVERS_INV); \
-		if [ "$$CURRENT_HOST" = "$(SOURCE)" ]; then \
-			echo "$(SOURCE) ansible_connection=local" >> $(SERVERS_INV); \
-		else \
-			echo "$(SOURCE) ansible_host=$(SOURCE) ansible_user=$(USER)" >> $(SERVERS_INV); \
-		fi; \
-		echo "" >> $(SERVERS_INV); \
-		echo "[target_hosts]" >> $(SERVERS_INV); \
-		if [ "$$CURRENT_HOST" = "$(TARGET)" ]; then \
-			echo "$(TARGET) ansible_connection=local" >> $(SERVERS_INV); \
-		else \
-			echo "$(TARGET) ansible_host=$(TARGET) ansible_user=$(USER)" >> $(SERVERS_INV); \
-		fi; \
-		echo "" >> $(SERVERS_INV); \
-		echo "# Migration mode aliases for compatibility" >> $(SERVERS_INV); \
-		echo "[source:children]" >> $(SERVERS_INV); \
-		echo "source_hosts" >> $(SERVERS_INV); \
-		echo "" >> $(SERVERS_INV); \
-		echo "[destination:children]" >> $(SERVERS_INV); \
-		echo "target_hosts" >> $(SERVERS_INV); \
-		echo "" >> $(SERVERS_INV); \
-		echo "[all:vars]" >> $(SERVERS_INV); \
-		echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ProxyCommand=\"tailscale nc %h %p\"'" >> $(SERVERS_INV); \
-		echo "ansible_python_interpreter=/usr/bin/python3" >> $(SERVERS_INV); \
-		echo "ansible_ssh_pipelining=true" >> $(SERVERS_INV); \
-		echo "ansible_become=true" >> $(SERVERS_INV); \
-		echo "ansible_become_method=sudo" >> $(SERVERS_INV); \
-		echo "ansible_become_user=root" >> $(SERVERS_INV); \
-		echo "Migration inventory created at $(SERVERS_INV)"; \
-		echo "Source: $(SOURCE) ($$SOURCE_IP)"; \
-		echo "Target: $(TARGET) ($$TARGET_IP)"; \
-	else \
-		echo "Creating standard inventory..."; \
-		CURRENT_HOST=$$(hostname); \
-		echo "[source]" > $(SERVERS_INV); \
-		echo "$$CURRENT_HOST ansible_connection=local" >> $(SERVERS_INV); \
-		echo "" >> $(SERVERS_INV); \
-		echo "[destination]" >> $(SERVERS_INV); \
-		if [ "$$CURRENT_HOST" != "$(DESTINATION_HOSTNAME)" ]; then \
-			echo "$(DESTINATION_HOSTNAME) ansible_host=$(DESTINATION_IP) ansible_user=$(DESTINATION_SSH_USER) ansible_port=$(DESTINATION_SSH_PORT)" >> $(SERVERS_INV); \
-		else \
-			echo "$$CURRENT_HOST ansible_connection=local" >> $(SERVERS_INV); \
-		fi; \
-		echo "" >> $(SERVERS_INV); \
-		echo "[all:vars]" >> $(SERVERS_INV); \
-		echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10'" >> $(SERVERS_INV); \
-		echo "ansible_python_interpreter=/usr/bin/python3" >> $(SERVERS_INV); \
-		echo "ansible_ssh_pipelining=true" >> $(SERVERS_INV); \
-		echo "ansible_become=true" >> $(SERVERS_INV); \
-		echo "ansible_become_method=sudo" >> $(SERVERS_INV); \
-		echo "ansible_become_user=root" >> $(SERVERS_INV); \
-		echo "Standard inventory created at $(SERVERS_INV)"; \
-		echo "Source: $$CURRENT_HOST (local)"; \
-		echo "Destination: $(DESTINATION_HOSTNAME) ($(DESTINATION_IP))"; \
-	fi
-
-# Repository cloning (migrated to clone-repos.yml)
-sv-clone:
-	@echo "📁 Repository cloning has been migrated to Ansible playbook"
-	@echo "Run: ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/clone-repos.yml"
-
-sv-migrate:
-	@echo "🚀 Migrating MinIO data with encryption and progress monitoring..."
-	@echo ""
-	@echo "📋 Usage examples:"
-	@echo "  make migrate                           # Default: source→destination"
-	@echo "  make migrate SOURCE=balthasar TARGET=raspberrypi  # Custom hosts"
-	@echo ""
-	@if [ -n "$(SOURCE)" ] && [ -n "$(TARGET)" ]; then \
-		echo "🔧 Creating migration inventory and executing..."; \
-		echo "📡 Source: $(SOURCE)"; \
-		echo "🎯 Target: $(TARGET)"; \
-		echo "🌐 Network: Tailscale private network"; \
-		echo ""; \
-		$(MAKE) sv-inventory MODE=migration SOURCE=$(SOURCE) TARGET=$(TARGET); \
-		echo ""; \
-		echo "⏳ Starting migration with real-time progress monitoring..."; \
-		echo "📊 Progress will be displayed every 10 seconds during transfer"; \
-		echo "🔐 All files will be encrypted automatically on target"; \
-		echo ""; \
-		start_time=$$(date +%s); \
-		if ansible-playbook -i $(SERVERS_INV) \
-			-e "migrate_source=$(SOURCE) migrate_target=$(TARGET)" \
-			--limit $(TARGET) $(SERVERS_PLAY)/migrate.yml; then \
-			end_time=$$(date +%s); \
-			duration=$$((end_time - start_time)); \
-			echo ""; \
-			echo "🎉 Migration completed successfully in $${duration} seconds!"; \
-			echo "✅ All data transferred and encrypted"; \
-			echo "🔍 Check migration logs for detailed verification results"; \
-		else \
-			echo ""; \
-			echo "❌ Migration failed. Check logs for details."; \
-			exit 1; \
-		fi; \
-	else \
-		echo "🔧 Using default source→destination migration..."; \
-		$(MAKE) sv-inventory MODE=migration; \
-		echo ""; \
-		echo "⏳ Starting migration with real-time progress monitoring..."; \
-		start_time=$$(date +%s); \
-		if ansible-playbook -i $(SERVERS_INV) --limit destination $(SERVERS_PLAY)/migrate.yml; then \
-			end_time=$$(date +%s); \
-			duration=$$((end_time - start_time)); \
-			echo ""; \
-			echo "🎉 Migration completed successfully in $${duration} seconds!"; \
-		else \
-			echo ""; \
-			echo "❌ Migration failed. Check logs for details."; \
-			exit 1; \
-		fi; \
-	fi
-
-# System testing (migrated to system-test.yml)
-sv-test:
-	@echo "🧪 System testing has been migrated to Ansible playbook"
-	@echo "Run: ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/system-test.yml"
-
-sv-transfer:
-	@echo "Transfer complete system: export from source and import to destination..."
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/export.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit destination $(SERVERS_PLAY)/import.yml --ask-become-pass
-
-sv-provision:
-	@echo "Running provision playbooks..."
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/common.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/security.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/modsecurity-nginx.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/monitoring.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/minio.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/misskey.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/ai.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/searxng.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/matrix.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/jitsi.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/vikunja.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/cryptpad.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/outline.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/uptime.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/deeplx.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/mcaptcha.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/ctfd.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/impostor.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/minecraft.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/neo-quesdon.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/lemmy.yml --ask-become-pass
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/misskey-backup.yml --ask-become-pass
+	@echo "📋 Creating servers inventory..."
+	@CURRENT_HOST=$$(hostname); \
+	echo "[local]" > $(SERVERS_INV); \
+	echo "$$CURRENT_HOST ansible_connection=local" >> $(SERVERS_INV); \
+	echo "" >> $(SERVERS_INV); \
+	echo "[all:vars]" >> $(SERVERS_INV); \
+	echo "ansible_python_interpreter=/usr/bin/python3" >> $(SERVERS_INV); \
+	echo "ansible_become=true" >> $(SERVERS_INV); \
+	echo "ansible_become_method=sudo" >> $(SERVERS_INV); \
+	echo "ansible_become_user=root" >> $(SERVERS_INV); \
+	echo "✅ Basic inventory created at $(SERVERS_INV)"
+	@echo "💡 Edit manually for multi-host setups or use generic Ansible patterns"
 
 help:
-	@echo "Available targets:"
+	@echo "🚀 Ansible Wrapper - Flexible Infrastructure Management"
+	@echo "=================================================================="
 	@echo ""
-	@echo "Appliances:"
-	@echo "  ap-inventory   - Create TrueNAS inventory"
-	@echo "  ap-setup       - Run appliances setup"
-	@echo "  ap-migrate     - Run appliances migration"
-	@echo "  ap-e2e         - End-to-end deploy + migrate"
-	@echo "  ap-syntax      - Syntax-check appliances playbooks"
+	@echo "📋 QUICK START:"
+	@echo "  1. make install-ansible     # Install Ansible tools"
+	@echo "  2. make sv-inventory         # Create basic inventory"
+	@echo "  3. make run PLAYBOOK=common  # Run your first playbook"
 	@echo ""
-	@echo "Setup & Prerequisites:"
-	@echo "  install-ansible - Install Ansible and ansible-lint via uv (Python tools)"
-	@echo "                    Provides unified Python-based tool management"
-	@echo "                    Includes: ansible, ansible-lint, git"
+	@echo "🔧 CORE COMMANDS:"
+	@echo "  run PLAYBOOK=<name>         - Run any playbook with advanced options"
+	@echo "  check PLAYBOOK=<name>       - Dry-run (--check --diff)"
+	@echo "  syntax PLAYBOOK=<name>      - Syntax check"
+	@echo "  list                        - List available playbooks and presets"
+	@echo "  deploy PLAYBOOKS='a b c'    - Run multiple playbooks in sequence"
 	@echo ""
-	@echo "Servers (Ansible Wrappers):"
-	@echo "  sv-install    - Complete system initialization (Ansible + packages)"
-	@echo "  sv-inventory  - Create servers inventory (MODE=migration for migration)"
-	@echo "  sv-clone      - [MIGRATED] Run: ansible-playbook -i inventory playbooks/clone-repos.yml"
-	@echo "  sv-provision  - Provision the server using Ansible"
-	@echo "  sv-migrate    - Migrate MinIO data with encryption and progress monitoring"
-	@echo "  sv-test       - [MIGRATED] Run: ansible-playbook -i inventory playbooks/system-test.yml"
-	@echo "  sv-transfer   - Transfer complete system using export/import playbooks"
+	@echo "📊 MONITORING & LOGS:"
+	@echo "  logs                        - View recent execution logs"
+	@echo "  logs-all                    - List all log files"
+	@echo "  logs-clean                  - Clean old logs (keep 7 days)"
 	@echo ""
-	@echo "Operations (New Ansible Playbooks):"
-	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=status    # Service status"
-	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=health    # Health check"
-	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=logs      # View logs"
-	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=restart   # Restart services"
+	@echo "💾 BACKUP & RESTORE:"
+	@echo "  backup                      - Backup current inventory"
+	@echo "  restore BACKUP_FILE=<file>  - Restore from backup"
+	@echo "  backup-clean                - Clean old backups (keep 10)"
+	@echo ""
+	@echo "⚙️ SETUP:"
+	@echo "  install-ansible             - Install Ansible and tools via uv"
+	@echo "  sv-inventory                - Create basic inventory file"
+	@echo "  ap-inventory                - Create appliances inventory"
+	@echo ""
+	@echo "📚 USAGE EXAMPLES:"
+	@echo "  make run PLAYBOOK=common                     # Basic execution"
+	@echo "  make run PLAYBOOK=security LIMIT=local      # Target specific hosts"
+	@echo "  make run PLAYBOOK=misskey PRESET=production # Use preset configuration"
+	@echo "  make deploy PLAYBOOKS='common security monitoring'"
+	@echo "  make check PLAYBOOK=nginx                    # Dry-run check"
+	@echo ""
+	@echo "🔍 MORE INFO:"
+	@echo "  make list                   # Show all available options"
+	@echo "  make help-advanced          # Advanced usage and environment variables"
+	@echo ""
+
+# Advanced help with detailed examples
+help-advanced:
+	@echo "🔧 ADVANCED USAGE"
+	@echo "=================="
+	@echo ""
+	@echo "🎯 PRESETS (Use with PRESET=<name>):"
+	@echo "  development - install,config + debug mode + force recreate"
+	@echo "  production  - install,config,security - debug mode"
+	@echo "  minimal     - install only, skip optional tasks"
+	@echo "  update      - update,config without recreate"
+	@echo ""
+	@echo "🌍 ENVIRONMENT VARIABLES:"
+	@echo "  HOST_SERVICES='svc1,svc2'   - Specify services to manage"
+	@echo "  DEBUG_MODE=true              - Enable debug output"
+	@echo "  FORCE_RECREATE=true          - Force recreation of resources"
+	@echo "  BACKUP_RETENTION=30          - Number of backups to keep"
+	@echo "  SKIP_TAGS='optional,docs'    - Skip specific tags"
+	@echo "  ONLY_TAGS='install,config'   - Run only specific tags"
+	@echo ""
+	@echo "📋 COMPLEX EXAMPLES:"
+	@echo "  # Production deployment with specific services"
+	@echo "  HOST_SERVICES='nginx,redis' make run PLAYBOOK=web PRESET=production"
+	@echo ""
+	@echo "  # Development setup with debug"
+	@echo "  DEBUG_MODE=true FORCE_RECREATE=true make run PLAYBOOK=dev"
+	@echo ""
+	@echo "  # Sequential deployment with error handling"
+	@echo "  make deploy PLAYBOOKS='common security web' PRESET=production || make logs"
+	@echo ""
+	@echo "  # Custom configuration with tags"
+	@echo "  make run PLAYBOOK=app EXTRA='--tags install,config --skip-tags optional'"
+	@echo ""
+	@echo "📁 FILE LOCATIONS:"
+	@echo "  Playbooks: $(SERVERS_PLAY)/"
+	@echo "  Inventory: $(SERVERS_INV)"
+	@echo "  Logs:      $(LOG_DIR)/"
+	@echo "  Backups:   $(BACKUP_DIR)/"
+	@echo ""
+	@echo "🔗 TIPS:"
+	@echo "  - Always run 'make backup' before major changes"
+	@echo "  - Use 'make check' to verify changes before applying"
+	@echo "  - Check 'make logs' if operations fail"
+	@echo "  - Use presets for consistent environments"
+	@echo "  - Edit inventory manually for multi-host setups"
 	@echo ""
