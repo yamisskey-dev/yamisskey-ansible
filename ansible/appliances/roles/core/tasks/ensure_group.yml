@@ -1,8 +1,8 @@
 ---
 - name: Query group
   command:
-    argv: [ midclt, -j, call, group.query,
-            "{{ [[ 'group','=', group.gid ]] | to_json }}" ]
+    argv: [midclt, -j, call, group.query,
+           "{{ [[ 'group','=', group.gid ]] | to_json }}"]
   register: gq
   changed_when: false
 

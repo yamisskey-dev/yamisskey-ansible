@@ -11,7 +11,7 @@
 # 0) API/ミドルウェア応答確認（RESTじゃなく midclt で）
 - name: Check middleware is reachable
   command:
-    argv: [ midclt, -j, call, system.info ]
+    argv: [midclt, -j, call, system.info]
   register: sysinfo
   changed_when: false
 

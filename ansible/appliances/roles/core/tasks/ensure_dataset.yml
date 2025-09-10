@@ -1,8 +1,8 @@
 ---
 - name: Query dataset
   command:
-    argv: [ midclt, -j, call, pool.dataset.query,
-            "{{ [[ 'name','=', truenas_pool_name ~ '/' ~ dataset.name ]] | to_json }}" ]
+    argv: [midclt, -j, call, pool.dataset.query,
+           "{{ [[ 'name','=', truenas_pool_name ~ '/' ~ dataset.name ]] | to_json }}"]
   register: dsq
   changed_when: false
 

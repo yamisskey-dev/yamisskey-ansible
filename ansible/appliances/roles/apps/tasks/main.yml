@@ -151,7 +151,7 @@
 # 5) 変更があれば redeploy（確実に反映させる）
 - name: Redeploy app if updated
   command:
-    argv: [ midclt, -j, call, app.redeploy, "{{ truenas_minio_app_name }}" ]
+    argv: [midclt, -j, call, app.redeploy, "{{ truenas_minio_app_name }}"]
   when:
     - truenas_minio_exists
     - (
@@ -164,7 +164,7 @@
   vars:
     query_payload: "{{ ([[ 'name','=', truenas_minio_app_name ]] ) | to_json }}"
   command:
-    argv: [ midclt, -j, call, app.query, "{{ query_payload }}" ]
+    argv: [midclt, -j, call, app.query, "{{ query_payload }}"]
   register: app_state_raw
   changed_when: false
   retries: 30
