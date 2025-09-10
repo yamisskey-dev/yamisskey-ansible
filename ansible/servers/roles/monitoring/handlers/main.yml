@@ -2,3 +2,8 @@
   systemd:
     name: prometheus
     state: restarted
+
+- name: restart grafana-server
+  systemd:
+    name: grafana-server
+    state: restarted

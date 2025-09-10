@@ -20,7 +20,7 @@
   when: not secrets_stat.stat.exists
   block:
     - name: Generate admin password
-      shell: openssl rand -base64 12
+      command: openssl rand -base64 12
       register: admin_password_output
 
     - name: Create secrets file

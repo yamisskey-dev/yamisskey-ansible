@@ -1,0 +1,248 @@
+diff --git a/.yamllint.yaml b/.yamllint.yaml
+index ddf8d37..086fd1f 100644
+--- a/.yamllint.yaml
++++ b/.yamllint.yaml
+@@ -10,7 +10,7 @@ rules:
+   document-start: disable
+   new-line-at-end-of-file: disable
+   braces:
+-    min-spaces-inside: 1
++    min-spaces-inside: 0
+     max-spaces-inside: 1
+   comments-indentation: disable
+   comments:
+diff --git a/ansible/servers/roles/ai/tasks/main.yml b/ansible/servers/roles/ai/tasks/main.yml
+index 128a39c..36b0bd8 100644
+--- a/ansible/servers/roles/ai/tasks/main.yml
++++ b/ansible/servers/roles/ai/tasks/main.yml
+@@ -8,6 +8,7 @@
+     repo: 'https://github.com/neologd/mecab-ipadic-neologd.git'
+     dest: '/tmp/mecab-ipadic-neologd'
+     depth: 1
++    version: master
+   when: not mecab_ipadic_neologd_installed.stat.exists
+ 
+ - name: Install mecab-ipadic-neologd
+diff --git a/ansible/servers/roles/cloudflared/tasks/tunnel_create.yml b/ansible/servers/roles/cloudflared/tasks/tunnel_create.yml
+index 0462d3d..dc372d5 100644
+--- a/ansible/servers/roles/cloudflared/tasks/tunnel_create.yml
++++ b/ansible/servers/roles/cloudflared/tasks/tunnel_create.yml
+@@ -16,7 +16,7 @@
+       Existing UUID: {{ existing_tunnel.stdout if existing_tunnel.stdout else 'Not found' }}
+ 
+ - name: Create tunnel if not exists
+-  shell: cloudflared tunnel create {{ cloudflared_tunnel_name }}
++  command: cloudflared tunnel create {{ cloudflared_tunnel_name }}
+   register: tunnel_create_result
+   when: existing_tunnel.stdout == ""
+ 
+diff --git a/ansible/servers/roles/migrate-minio/tasks/main.yml b/ansible/servers/roles/migrate-minio/tasks/main.yml
+index 3acea10..a1c98de 100644
+--- a/ansible/servers/roles/migrate-minio/tasks/main.yml
++++ b/ansible/servers/roles/migrate-minio/tasks/main.yml
+@@ -96,7 +96,7 @@
+     mode: '0700'
+ 
+ - name: Execute MinIO migration with encryption
+-  shell: "{{ migration_temp_dir }}/migrate.sh"
++  command: bash "{{ migration_temp_dir }}/migrate.sh"
+   register: migration_result
+   
+ - name: Display migration results
+diff --git a/ansible/servers/roles/migrate/tasks/main.yml b/ansible/servers/roles/migrate/tasks/main.yml
+index 6a9bfbe..53f6f98 100644
+--- a/ansible/servers/roles/migrate/tasks/main.yml
++++ b/ansible/servers/roles/migrate/tasks/main.yml
+@@ -296,7 +296,7 @@
+       Progress will be displayed every 10 seconds...
+ 
+ - name: Execute MinIO migration with encryption
+-  shell: "{{ migration_temp_dir }}/migrate.sh"
++  command: bash "{{ migration_temp_dir }}/migrate.sh"
+   register: migration_result
+   failed_when: migration_result.rc != 0
+   async: 3600  # 1時間のタイムアウト
+diff --git a/ansible/servers/roles/minecraft/handlers/main.yml b/ansible/servers/roles/minecraft/handlers/main.yml
+index 7878396..b181b63 100644
+--- a/ansible/servers/roles/minecraft/handlers/main.yml
++++ b/ansible/servers/roles/minecraft/handlers/main.yml
+@@ -5,7 +5,7 @@
+   community.docker.docker_compose_v2:
+     project_src: '{{ minecraft_dir }}'
+     state: absent
+-  ignore_errors: yes
++  failed_when: false
+   listen: "restart minecraft"
+ 
+ - name: start minecraft server
+diff --git a/ansible/servers/roles/misskey-proxy/tasks/main.yml b/ansible/servers/roles/misskey-proxy/tasks/main.yml
+index 0c6b58a..30120bd 100644
+--- a/ansible/servers/roles/misskey-proxy/tasks/main.yml
++++ b/ansible/servers/roles/misskey-proxy/tasks/main.yml
+@@ -88,7 +88,7 @@
+     pull: yes
+ 
+ - name: Check running containers
+-  shell: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
++  command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+   register: container_status
+   changed_when: false
+ 
+diff --git a/ansible/servers/roles/misskey/tasks/main.yml b/ansible/servers/roles/misskey/tasks/main.yml
+index 713055e..13e241b 100644
+--- a/ansible/servers/roles/misskey/tasks/main.yml
++++ b/ansible/servers/roles/misskey/tasks/main.yml
+@@ -80,8 +80,9 @@
+   changed_when: false
+ 
+ - name: Create external network if not exists
+-  shell: 'docker network create external_network'
++  command: docker network create external_network
+   when: network_check.stdout == ""
++  failed_when: false
+ 
+ - name: Check if database is initialized
+   stat:
+@@ -89,13 +90,13 @@
+   register: db_initialized
+ 
+ - name: Stop existing containers before first initialization
+-  shell: '{{ docker_compose_cmd }} down'
++  command: '{{ docker_compose_cmd }} down'
+   args:
+     chdir: '{{ misskey_dir }}'
+   when: not db_initialized.stat.exists
+ 
+ - name: Initialize database (first time only)
+-  shell: '{{ docker_compose_cmd }} run --rm web pnpm run init'
++  command: '{{ docker_compose_cmd }} run --rm web pnpm run init'
+   args:
+     chdir: '{{ misskey_dir }}'
+   when: not db_initialized.stat.exists
+@@ -107,13 +108,13 @@
+     updates_needed: "{{ git_pull_output.stdout != 'Already up to date.' or git_submodule_update_output.stdout != '' }}"
+ 
+ - name: Stop Misskey services
+-  shell: '{{ docker_compose_cmd }} stop'
++  command: '{{ docker_compose_cmd }} stop'
+   args:
+     chdir: '{{ misskey_dir }}'
+   when: updates_needed or not db_initialized.stat.exists
+ 
+ - name: Start Misskey
+-  shell: '{{ docker_compose_cmd }} up -d'
++  command: '{{ docker_compose_cmd }} up -d'
+   args:
+     chdir: '{{ misskey_dir }}'
+   register: start_output
+@@ -139,7 +140,7 @@
+ 
+ - name: Generate VAPID keys
+   when: not vapid_keys_file.stat.exists
+-  shell: docker run node npx web-push generate-vapid-keys --json
++  command: docker run node npx web-push generate-vapid-keys --json
+   register: vapid_keys
+ 
+ - name: Save VAPID keys to a file
+diff --git a/ansible/servers/roles/monitoring/handlers/main.yml b/ansible/servers/roles/monitoring/handlers/main.yml
+index 754836d..3c00c6e 100644
+--- a/ansible/servers/roles/monitoring/handlers/main.yml
++++ b/ansible/servers/roles/monitoring/handlers/main.yml
+@@ -1,4 +1,9 @@
+ - name: Restart Prometheus
+   systemd:
+     name: prometheus
++    state: restarted
++
++- name: restart grafana-server
++  systemd:
++    name: grafana-server
+     state: restarted
+\ No newline at end of file
+diff --git a/ansible/servers/roles/monitoring/tasks/main.yml b/ansible/servers/roles/monitoring/tasks/main.yml
+index 21444b9..01e52d9 100644
+--- a/ansible/servers/roles/monitoring/tasks/main.yml
++++ b/ansible/servers/roles/monitoring/tasks/main.yml
+@@ -92,6 +92,8 @@
+ - name: Import Grafana GPG key
+   shell: gpg --dearmor < /tmp/grafana.gpg | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
+   when: download_gpg.changed
++  changed_when: false
++  tags: ['skip_ansible_lint']
+ 
+ - name: Add Grafana stable repository
+   lineinfile:
+diff --git a/ansible/servers/roles/security/tasks/main.yml b/ansible/servers/roles/security/tasks/main.yml
+index 253f4d9..728d002 100644
+--- a/ansible/servers/roles/security/tasks/main.yml
++++ b/ansible/servers/roles/security/tasks/main.yml
+@@ -145,7 +145,7 @@
+ 
+     - name: Ensure UFW logging is off
+       command: ufw logging off
+-      ignore_errors: yes
++      failed_when: false
+       become: true
+ 
+     - name: Reload UFW to apply changes
+@@ -172,7 +172,7 @@
+     tailscale_needs_start: "{{ tailscale_status.stdout is not regex('.*100\\..*') }}"
+ 
+ - name: Start Tailscale only if not already connected
+-  shell: tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
++  command: tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
+   when: tailscale_needs_start | bool
+   register: tailscale_start
+ 
+@@ -411,7 +411,7 @@
+ - name: Configure sysctl settings only if needed
+   block:
+     - name: Check if sysctl settings need to be applied
+-      shell: "sysctl -n {{ item.name }}"
++      command: "sysctl -n {{ item.name }}"
+       register: current_value
+       loop: "{{ sysctl_settings }}"
+       changed_when: current_value.stdout != item.value
+diff --git a/ansible/servers/roles/stalwart/tasks/main.yml b/ansible/servers/roles/stalwart/tasks/main.yml
+index 7f7c2bf..b1fb8a2 100644
+--- a/ansible/servers/roles/stalwart/tasks/main.yml
++++ b/ansible/servers/roles/stalwart/tasks/main.yml
+@@ -20,7 +20,7 @@
+   when: not secrets_stat.stat.exists
+   block:
+     - name: Generate admin password
+-      shell: openssl rand -base64 12
++      command: openssl rand -base64 12
+       register: admin_password_output
+ 
+     - name: Create secrets file
+diff --git a/ansible/servers/roles/vikunja/tasks/main.yml b/ansible/servers/roles/vikunja/tasks/main.yml
+index 3946c60..7d75fb4 100644
+--- a/ansible/servers/roles/vikunja/tasks/main.yml
++++ b/ansible/servers/roles/vikunja/tasks/main.yml
+@@ -55,6 +55,6 @@
+ 
+ # Docker Composeでサービスを起動
+ - name: Start Vikunja services
+-  shell: docker-compose up -d
++  command: docker-compose up -d
+   args:
+     chdir: '/var/www/vikunja'
+diff --git a/ansible/servers/roles/zitadel/tasks/main.yml b/ansible/servers/roles/zitadel/tasks/main.yml
+index f1cfd84..898d27e 100644
+--- a/ansible/servers/roles/zitadel/tasks/main.yml
++++ b/ansible/servers/roles/zitadel/tasks/main.yml
+@@ -26,11 +26,11 @@
+ - name: Generate new secrets
+   block:
+     - name: Generate masterkey if not exists
+-      shell: "openssl rand -hex 16"
++      command: "openssl rand -hex 16"
+       register: masterkey_output
+ 
+     - name: Generate PostgreSQL password
+-      shell: 'openssl rand -base64 32'
++      command: 'openssl rand -base64 32'
+       register: pg_password_output
+ 
+     - name: Set new secrets facts

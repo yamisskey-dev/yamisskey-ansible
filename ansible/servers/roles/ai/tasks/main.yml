@@ -8,6 +8,7 @@
     repo: 'https://github.com/neologd/mecab-ipadic-neologd.git'
     dest: '/tmp/mecab-ipadic-neologd'
     depth: 1
+    version: master
   when: not mecab_ipadic_neologd_installed.stat.exists
 
 - name: Install mecab-ipadic-neologd

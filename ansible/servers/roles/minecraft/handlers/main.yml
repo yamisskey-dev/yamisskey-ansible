@@ -5,7 +5,7 @@
   community.docker.docker_compose_v2:
     project_src: '{{ minecraft_dir }}'
     state: absent
-  ignore_errors: yes
+  failed_when: false
   listen: "restart minecraft"
 
 - name: start minecraft server

@@ -16,7 +16,7 @@
       Existing UUID: {{ existing_tunnel.stdout if existing_tunnel.stdout else 'Not found' }}
 
 - name: Create tunnel if not exists
-  shell: cloudflared tunnel create {{ cloudflared_tunnel_name }}
+  command: cloudflared tunnel create {{ cloudflared_tunnel_name }}
   register: tunnel_create_result
   when: existing_tunnel.stdout == ""
 

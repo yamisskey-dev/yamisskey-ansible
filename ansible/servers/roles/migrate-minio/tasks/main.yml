@@ -96,7 +96,7 @@
     mode: '0700'
 
 - name: Execute MinIO migration with encryption
-  shell: "{{ migration_temp_dir }}/migrate.sh"
+  command: bash "{{ migration_temp_dir }}/migrate.sh"
   register: migration_result
   
 - name: Display migration results

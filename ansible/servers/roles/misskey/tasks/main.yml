@@ -80,8 +80,9 @@
   changed_when: false
 
 - name: Create external network if not exists
-  shell: 'docker network create external_network'
+  command: docker network create external_network
   when: network_check.stdout == ""
+  failed_when: false
 
 - name: Check if database is initialized
   stat:
@@ -89,13 +90,13 @@
   register: db_initialized
 
 - name: Stop existing containers before first initialization
-  shell: '{{ docker_compose_cmd }} down'
+  command: '{{ docker_compose_cmd }} down'
   args:
     chdir: '{{ misskey_dir }}'
   when: not db_initialized.stat.exists
 
 - name: Initialize database (first time only)
-  shell: '{{ docker_compose_cmd }} run --rm web pnpm run init'
+  command: '{{ docker_compose_cmd }} run --rm web pnpm run init'
   args:
     chdir: '{{ misskey_dir }}'
   when: not db_initialized.stat.exists
@@ -107,13 +108,13 @@
     updates_needed: "{{ git_pull_output.stdout != 'Already up to date.' or git_submodule_update_output.stdout != '' }}"
 
 - name: Stop Misskey services
-  shell: '{{ docker_compose_cmd }} stop'
+  command: '{{ docker_compose_cmd }} stop'
   args:
     chdir: '{{ misskey_dir }}'
   when: updates_needed or not db_initialized.stat.exists
 
 - name: Start Misskey
-  shell: '{{ docker_compose_cmd }} up -d'
+  command: '{{ docker_compose_cmd }} up -d'
   args:
     chdir: '{{ misskey_dir }}'
   register: start_output
@@ -139,7 +140,7 @@
 
 - name: Generate VAPID keys
   when: not vapid_keys_file.stat.exists
-  shell: docker run node npx web-push generate-vapid-keys --json
+  command: docker run node npx web-push generate-vapid-keys --json
   register: vapid_keys
 
 - name: Save VAPID keys to a file

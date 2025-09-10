@@ -26,11 +26,11 @@
 - name: Generate new secrets
   block:
     - name: Generate masterkey if not exists
-      shell: "openssl rand -hex 16"
+      command: "openssl rand -hex 16"
       register: masterkey_output
 
     - name: Generate PostgreSQL password
-      shell: 'openssl rand -base64 32'
+      command: 'openssl rand -base64 32'
       register: pg_password_output
 
     - name: Set new secrets facts

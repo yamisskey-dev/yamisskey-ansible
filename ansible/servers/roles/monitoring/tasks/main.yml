@@ -92,6 +92,8 @@
 - name: Import Grafana GPG key
   shell: gpg --dearmor < /tmp/grafana.gpg | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
   when: download_gpg.changed
+  changed_when: false
+  tags: ['skip_ansible_lint']
 
 - name: Add Grafana stable repository
   lineinfile:

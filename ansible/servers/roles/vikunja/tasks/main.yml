@@ -55,6 +55,6 @@
 
 # Docker Composeでサービスを起動
 - name: Start Vikunja services
-  shell: docker-compose up -d
+  command: docker-compose up -d
   args:
     chdir: '/var/www/vikunja'
