@@ -5,21 +5,7 @@ DESTINATION_HOSTNAME=$(shell hostname)
 DESTINATION_IP=$(shell tailscale status | grep $(DESTINATION_HOSTNAME) | awk '{print $$1}')
 DESTINATION_SSH_PORT=22
 OS=$(shell lsb_release -is | tr '[:upper:]' '[:lower:]')
-CODENAME=$(shell lsb_release -cs)
-ARCH=$(shell dpkg --print-architecture)
 USER=$(shell whoami)
-TIMESTAMP=$(shell date +%Y%m%dT%H%M%S`date +%N | cut -c 1-6`)
-GITHUB_ORG=yamisskey-dev
-GITHUB_ORG_URL=https://github.com/$(GITHUB_ORG)
-MISSKEY_REPO=$(GITHUB_ORG_URL)/yamisskey.git
-MISSKEY_DIR=/var/www/misskey
-MISSKEY_BRANCH=master
-CONFIG_FILES=$(MISSKEY_DIR)/.config/default.yml $(MISSKEY_DIR)/.config/docker.env
-AI_DIR=$(HOME)/ai
-BACKUP_SCRIPT_DIR=/opt/misskey-backup
-ANONOTE_DIR=$(HOME)/misskey-anonote
-ASSETS_DIR=$(HOME)/misskey-assets
-CTFD_DIR=$(HOME)/ctfd
 ENV_FILE=.env
 APPLIANCES_DIR=ansible/appliances
 SERVERS_DIR=ansible/servers
@@ -71,36 +57,65 @@ ap-syntax:
 	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-phase-a.yml
 	@ANSIBLE_ROLES_PATH=$(APPLIANCES_DIR)/roles ansible-playbook --syntax-check -i $(APPLIANCES_INV) $(APPLIANCES_PLAY)/migrate-minio-cutover.yml
 
-all: sv-install sv-inventory sv-clone sv-provision
+all: sv-inventory sv-provision
 
+# Install Ansible itself (prerequisite for other operations)
+install-ansible:
+	@echo "📦 Installing Ansible and development tools via uv..."
+	@echo "🖥️ Target OS: $(OS)"
+	@echo ""
+	@echo "🔧 Installing uv if not present..."
+	@if ! command -v uv >/dev/null 2>&1; then \
+		echo "📦 Installing uv..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	fi
+	@echo "✅ uv is available"
+	@echo ""
+	@echo "📋 Installing Python tools via uv..."
+	@export PATH="$$HOME/.local/bin:$$PATH"; \
+	uv tool install ansible; \
+	uv tool install ansible-lint
+	@echo "✅ Ansible tools installation completed"
+	@echo ""
+	@echo "📋 Installing git via package manager..."
+	@if [ "$(OS)" = "ubuntu" ] || [ "$(OS)" = "debian" ] || [ "$(OS)" = "kali" ]; then \
+		sudo apt-get update && sudo apt-get install -y git; \
+	elif [ "$(OS)" = "arch" ]; then \
+		sudo pacman -Syu --noconfirm git; \
+	elif [ "$(OS)" = "gentoo" ]; then \
+		sudo emerge dev-vcs/git; \
+	else \
+		echo "⚠️  Unsupported OS for git installation: $(OS)"; \
+		echo "📋 Please install git manually"; \
+	fi
+	@echo "✅ Git installation completed"
+	@echo ""
+	@echo "📋 Installing Ansible collections..."
+	@export PATH="$$HOME/.local/bin:$$PATH"; \
+	ansible-galaxy collection install -r $(SERVERS_DIR)/requirements.yml
+	@echo "🎉 Ready to run Ansible playbooks!"
+	@echo ""
+	@echo "Installed tools:"
+	@echo "  - ansible (latest from PyPI)"
+	@echo "  - ansible-lint (latest from PyPI)"
+	@echo "  - git (from system package manager)"
+	@echo ""
+	@echo "Next steps:"
+	@echo "1. Run: make sv-inventory"
+	@echo "2. Run: ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/system-init.yml --ask-become-pass"
+
+# System initialization (Ansible itself managed by Makefile, other packages by playbook)
 sv-install:
-	@echo "Installing Ansible..."
-	@sudo apt-get update && sudo apt-get install -y ansible || (echo "Install failed" && exit 1)
-	@echo "Installing Ansible collections..."
-	@ansible-galaxy collection install -r $(SERVERS_DIR)/requirements.yml
-	@echo "Installing necessary packages..."
-	@ansible-playbook -i $(SERVERS_INV) --limit source $(SERVERS_PLAY)/common.yml --ask-become-pass
-	@echo "Installing Tailscale..."
-	@curl -fsSL https://tailscale.com/install.sh | sh
-	@echo "Installing Cloudflare Warp..."
-	@curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-	@echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(CODENAME) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-	@sudo apt-get update && sudo apt-get install -y cloudflare-warp
-	@echo "Installing Cloudflared..."
-	@wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$(ARCH).deb
-	@sudo dpkg -i cloudflared-linux-$(ARCH).deb
-	@rm -f cloudflared-linux-$(ARCH).deb
-	@echo "Installing Docker..."
-	@sudo install -m 0755 -d /etc/apt/keyrings
-	@sudo curl -fsSL https://download.docker.com/linux/$(OS)/gpg -o /etc/apt/keyrings/docker.asc
-	@sudo chmod a+r /etc/apt/keyrings/docker.asc
-	@echo "deb [arch=$(ARCH) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/$(OS) $(CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-	@sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || (echo "Docker installation failed" && exit 1)
-	@curl -SsL https://playit-cloud.github.io/ppa/key.gpg | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/playit.gpg >/dev/null
-	@echo "Installing Playit..."
-	@echo "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./" | sudo tee /etc/apt/sources.list.d/playit-cloud.list
-	@sudo apt update
-	@sudo apt install playit
+	@echo "📦 System initialization starting..."
+	@echo ""
+	@echo "🔧 Step 1: Installing Ansible and development tools..."
+	@$(MAKE) install-ansible
+	@echo ""
+	@echo "🔧 Step 2: Running system initialization playbook..."
+	@export PATH="$$HOME/.local/bin:$$PATH"; \
+	ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/system-init.yml --ask-become-pass
+	@echo ""
+	@echo "🎉 System initialization completed!"
 
 sv-inventory:
 	@echo "Creating inventory file..."
@@ -165,35 +180,10 @@ sv-inventory:
 		echo "Destination: $(DESTINATION_HOSTNAME) ($(DESTINATION_IP))"; \
 	fi
 
+# Repository cloning (migrated to clone-repos.yml)
 sv-clone:
-	@echo "Cloning repositories if not already present..."
-	@sudo mkdir -p $(MISSKEY_DIR)
-	@sudo chown $(USER):$(USER) $(MISSKEY_DIR)
-	@if [ ! -d "$(MISSKEY_DIR)/.git" ]; then \
-		git clone $(MISSKEY_REPO) $(MISSKEY_DIR); \
-		cd $(MISSKEY_DIR) && git checkout $(MISSKEY_BRANCH); \
-	fi
-	@sudo mkdir -p $(ASSETS_DIR)
-	@sudo chown $(USER):$(USER) $(ASSETS_DIR)
-	@if [ ! -d "$(ASSETS_DIR)/.git" ]; then \
-		git clone $(GITHUB_ORG_URL)/yamisskey-assets.git $(ASSETS_DIR); \
-	fi
-	@mkdir -p $(AI_DIR)
-	@if [ ! -d "$(AI_DIR)/.git" ]; then \
-		git clone $(GITHUB_ORG_URL)/yui.git $(AI_DIR); \
-	fi
-	@mkdir -p $(BACKUP_SCRIPT_DIR)
-	@if [ ! -d "$(BACKUP_SCRIPT_DIR)/.git" ]; then \
-		git clone $(GITHUB_ORG_URL)/yamisskey-backup.git $(BACKUP_SCRIPT_DIR); \
-	fi
-	@mkdir -p $(ANONOTE_DIR)
-	@if [ ! -d "$(ANONOTE_DIR)/.git" ]; then \
-		git clone $(GITHUB_ORG_URL)/yamisskey-anonote.git $(ANONOTE_DIR); \
-	fi
-	@mkdir -p $(CTFD_DIR)
-	@if [ ! -d "$(CTFD_DIR)/.git" ]; then \
-		git clone $(GITHUB_ORG_URL)/ctf.yami.ski.git $(CTFD_DIR); \
-	fi
+	@echo "📁 Repository cloning has been migrated to Ansible playbook"
+	@echo "Run: ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/clone-repos.yml"
 
 sv-migrate:
 	@echo "🚀 Migrating MinIO data with encryption and progress monitoring..."
@@ -247,88 +237,10 @@ sv-migrate:
 		fi; \
 	fi
 
+# System testing (migrated to system-test.yml)
 sv-test:
-	@echo "🧪 === MinIO Migration System Test ==="
-	@echo ""
-	@echo "🔍 Test 1: Basic inventory generation..."
-	@$(MAKE) sv-inventory > /dev/null 2>&1
-	@if [ -f $(SERVERS_INV) ]; then \
-		echo "✅ Default inventory created successfully"; \
-		echo "📄 Contents preview:"; \
-		cat $(SERVERS_INV) | head -10; \
-	else \
-		echo "❌ Default inventory creation failed"; \
-	fi
-	@echo ""
-	@echo "🔍 Test 2: Migration inventory generation..."
-	@$(MAKE) sv-inventory SOURCE=balthasar TARGET=raspberrypi > /dev/null 2>&1
-	@if [ -f $(SERVERS_INV) ]; then \
-		echo "✅ Migration inventory created successfully"; \
-		echo "📄 Contents preview:"; \
-		cat $(SERVERS_INV) | head -10; \
-	else \
-		echo "❌ Migration inventory creation failed"; \
-	fi
-	@echo ""
-	@echo "🔍 Test 3: Tailscale status check..."
-	@if command -v tailscale >/dev/null 2>&1; then \
-		echo "🌐 Tailscale network status:"; \
-		tailscale status | head -5; \
-		echo "✅ Tailscale available"; \
-	else \
-		echo "⚠️  Tailscale not installed (expected in development)"; \
-	fi
-	@echo ""
-	@echo "🔍 Test 4: Ansible availability..."
-	@if command -v ansible >/dev/null 2>&1; then \
-		echo "🤖 Ansible version:"; \
-		ansible --version | head -1; \
-		echo "✅ Ansible available"; \
-	else \
-		echo "❌ Ansible not available"; \
-	fi
-	@echo ""
-	@echo "🔍 Test 5: Check migrate role structure..."
-	@if [ -d $(SERVERS_DIR)/roles/migrate ]; then \
-		echo "✅ Migrate role directory exists"; \
-		echo "📁 Role structure:"; \
-		ls -la $(SERVERS_DIR)/roles/migrate/; \
-	else \
-		echo "❌ Migrate role directory missing"; \
-	fi
-	@echo ""
-	@echo "🔍 Test 6: Progress monitoring features..."
-	@if [ -f $(SERVERS_DIR)/roles/migrate/tasks/main.yml ]; then \
-		echo "✅ Migration tasks file exists"; \
-		if grep -q "async:"$(SERVERS_DIR)/roles/migrate/tasks/main.yml; then \
-			echo "✅ Async execution with progress monitoring enabled"; \
-		else \
-			echo "⚠️  Progress monitoring not configured"; \
-		fi; \
-		if grep -q "poll:" $(SERVERS_DIR)/roles/migrate/tasks/main.yml; then \
-			echo "✅ Polling intervals configured for real-time updates"; \
-		else \
-			echo "⚠️  Polling not configured"; \
-		fi; \
-	else \
-		echo "❌ Migration tasks file missing"; \
-	fi
-	@echo ""
-	@echo "🔍 Test 7: README and Makefile consistency check..."
-	@echo "📖 README commands found:"
-	@grep -n "make " $(SERVERS_DIR)/roles/migrate/README.md | head -5
-	@echo ""
-	@echo "🛠️  Makefile targets available:"
-	@$(MAKE) help | grep -E "(inventory|migrate)"
-	@echo ""
-	@echo "🎯 === Test Summary ==="
-	@echo "✅ = Pass, ❌ = Fail, ⚠️ = Warning"
-	@echo ""
-	@echo "🚀 To perform actual migration:"
-	@echo "1. make migrate SOURCE=balthasar TARGET=raspberrypi"
-	@echo "2. Ensure both hosts are accessible via Tailscale"
-	@echo "3. Verify /opt/minio/secrets.yml exists on both hosts"
-	@echo "4. Monitor progress through real-time updates every 10 seconds"
+	@echo "🧪 System testing has been migrated to Ansible playbook"
+	@echo "Run: ansible-playbook -i $(SERVERS_INV) $(SERVERS_PLAY)/system-test.yml"
 
 sv-transfer:
 	@echo "Transfer complete system: export from source and import to destination..."
@@ -370,12 +282,23 @@ help:
 	@echo "  ap-e2e         - End-to-end deploy + migrate"
 	@echo "  ap-syntax      - Syntax-check appliances playbooks"
 	@echo ""
-	@echo "Servers:"
-	@echo "  sv-install    - Update and install necessary packages"
+	@echo "Setup & Prerequisites:"
+	@echo "  install-ansible - Install Ansible and ansible-lint via uv (Python tools)"
+	@echo "                    Provides unified Python-based tool management"
+	@echo "                    Includes: ansible, ansible-lint, git"
+	@echo ""
+	@echo "Servers (Ansible Wrappers):"
+	@echo "  sv-install    - Complete system initialization (Ansible + packages)"
 	@echo "  sv-inventory  - Create servers inventory (MODE=migration for migration)"
-	@echo "  sv-clone      - Clone the repositories if they don't exist"
+	@echo "  sv-clone      - [MIGRATED] Run: ansible-playbook -i inventory playbooks/clone-repos.yml"
 	@echo "  sv-provision  - Provision the server using Ansible"
 	@echo "  sv-migrate    - Migrate MinIO data with encryption and progress monitoring"
-	@echo "  sv-test       - Test migration system functionality with enhanced checks"
+	@echo "  sv-test       - [MIGRATED] Run: ansible-playbook -i inventory playbooks/system-test.yml"
 	@echo "  sv-transfer   - Transfer complete system using export/import playbooks"
+	@echo ""
+	@echo "Operations (New Ansible Playbooks):"
+	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=status    # Service status"
+	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=health    # Health check"
+	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=logs      # View logs"
+	@echo "  ansible-playbook -i inventory playbooks/operations.yml -e op=restart   # Restart services"
 	@echo ""
