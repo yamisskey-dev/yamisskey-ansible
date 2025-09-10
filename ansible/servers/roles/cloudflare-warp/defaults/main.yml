@@ -19,4 +19,3 @@ warp_excluded_hosts:
 
 # Timeout for connectivity verification to Cloudflare trace endpoint
 warp_verify_timeout: 10
-

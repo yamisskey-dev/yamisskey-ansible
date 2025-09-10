@@ -23,7 +23,7 @@
 - name: Initialize empty secrets structure if file doesn't exist
   set_fact:
     existing_secrets:
-      minio: {}
+      minio: { }
   when: not secrets_file_stat.stat.exists
 
 - name: Generate all credentials (auto-generate missing ones)

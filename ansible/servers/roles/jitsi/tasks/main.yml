@@ -36,7 +36,6 @@
   command: cp env.example .env
   args:
     chdir: /var/www/jitsi
-
 - name: Set strong passwords in the security section of .env file
   command: ./gen-passwords.sh
   args:
@@ -127,4 +126,3 @@
   command: docker-compose up -d
   args:
     chdir: /var/www/jitsi
-

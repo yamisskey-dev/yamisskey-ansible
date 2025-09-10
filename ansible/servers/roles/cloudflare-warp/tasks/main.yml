@@ -43,7 +43,7 @@
   become: yes
   ansible.builtin.command: warp-cli connect
   register: warp_connect
-  changed_when: "connected" in (warp_connect.stdout | lower) or warp_connect.rc == 0
+  changed_when: "'connected' in (warp_connect.stdout | lower) or warp_connect.rc == 0"
 
 - name: Get current WARP settings
   become: yes
@@ -100,4 +100,3 @@
 - name: Debug final excluded hosts
   ansible.builtin.debug:
     var: warp_excluded_final.stdout
-

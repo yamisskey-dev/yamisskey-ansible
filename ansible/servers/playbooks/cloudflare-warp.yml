@@ -12,4 +12,3 @@
   roles:
     - role: cloudflare-warp
       tags: [cloudflare, warp]
-
