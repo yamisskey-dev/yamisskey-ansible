@@ -40,7 +40,7 @@ make clone
 
 ### edit
 
-Navigate to the `misskey` directory inside the misskey directory and copy the configuration file templates:
+<!-- Navigate to the `misskey` directory inside the misskey directory and copy the configuration file templates:
 
 ```consol
 cd /var/www/misskey
@@ -49,7 +49,7 @@ cp docker_example.yml default.yml
 cp docker_example.env docker.env
 ```
 
-Edit the `docker-compose.yml` and `default.yml` and `docker.env` files.
+Edit the `docker-compose.yml` and `default.yml` and `docker.env` files. -->
 
 ### configure
 
