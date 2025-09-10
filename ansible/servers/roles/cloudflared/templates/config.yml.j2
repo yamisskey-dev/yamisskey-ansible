@@ -82,9 +82,11 @@ ingress:
     service: http://localhost:{{ cloudflared_service_port }}
 
 {% elif ansible_hostname == 'linode-proxy' %}
-  # Search Services
-  - hostname: {{ searxng_server_name }}
-    service: http://localhost:{{ cloudflared_service_port }}
+  # Misskey Proxy Services
+  - hostname: media.{{ domain }}
+    service: http://localhost:12766
+  - hostname: summaly.{{ domain }}
+    service: http://localhost:80
 
 {% else %}
   # Default configuration for other hosts

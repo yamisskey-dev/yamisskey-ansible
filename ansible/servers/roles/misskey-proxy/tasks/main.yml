@@ -1,0 +1,97 @@
+---
+- name: Install required packages
+  package:
+    name:
+      - docker.io
+      - docker-compose
+      - squid
+      - git
+    state: present
+  become: yes
+
+- name: Start and enable Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Create proxy directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+  loop:
+    - '{{ proxy_dir }}'
+    - '{{ squid_cache_dir }}'
+    - '{{ squid_log_dir }}'
+  become: yes
+
+- name: Deploy Squid configuration
+  template:
+    src: squid.conf.j2
+    dest: '{{ proxy_squid_config_dir }}/squid.conf'
+    backup: yes
+    mode: '0644'
+  become: yes
+  notify: restart squid
+
+- name: Start and enable Squid service
+  systemd:
+    name: squid
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Clone summaly-docker repository
+  git:
+    repo: '{{ summaly_repo }}'
+    dest: '{{ summaly_dir }}'
+    version: main
+    force: yes
+
+- name: Initialize git submodules for summaly-docker
+  shell: |
+    cd {{ summaly_dir }}
+    git submodule init
+    git submodule update
+  register: submodule_output
+  changed_when: submodule_output.stdout != ""
+
+- name: Deploy summaly-docker service
+  shell: |
+    cd {{ summaly_dir }}/example
+    docker compose up -d
+  register: summaly_deploy
+  changed_when: "'Creating' in summaly_deploy.stdout or 'Starting' in summaly_deploy.stdout"
+
+- name: Deploy media-proxy-rs container
+  docker_container:
+    name: media-proxy-rs-server
+    image: 'ghcr.io/yamisskey/media-proxy-rs:main'
+    ports:
+      - '12766:12766'
+    state: started
+    restart_policy: always
+    detach: yes
+    pull: yes
+
+- name: Deploy nginx proxy container
+  docker_container:
+    name: proxy
+    image: nginx
+    ports:
+      - '80:80'
+    state: started
+    restart_policy: always
+    detach: yes
+    pull: yes
+
+- name: Check running containers
+  shell: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  register: container_status
+  changed_when: false
+
+- name: Display container status
+  debug:
+    var: container_status.stdout_lines
