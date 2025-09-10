@@ -1,6 +1,7 @@
+---
 - name: Update and upgrade apt packages
   apt:
-    update_cache: yes
+    update_cache: true
     upgrade: 'dist'
   tags:
     - update
@@ -25,7 +26,7 @@
 - name: Ensure unattended-upgrades service is enabled and started
   systemd:
     name: unattended-upgrades
-    enabled: yes
+    enabled: true
     state: started
   tags:
     - unattended-upgrades

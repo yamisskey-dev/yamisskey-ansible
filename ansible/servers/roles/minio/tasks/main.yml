@@ -1,3 +1,4 @@
+---
 - name: Create required directories
   file:
     path: "{{ item }}"
@@ -43,7 +44,7 @@
         misskey_s3_secret_key: "{{ misskey_s3_secret_key }}"
         kms_master_key: "{{ minio_kms_master_key }}"
     dest: "{{ minio_secrets_file }}"
-    backup: yes
+    backup: true
     mode: '0600'
 
 - name: Deploy Docker Compose file for Minio
@@ -69,7 +70,7 @@
     rule: allow
     port: "{{ host_services.joseph.minio_api }}"
     from_ip: 100.64.0.0/10
-  become: yes
+  become: true
 
 - name: Wait for MinIO port to be ready
   wait_for:
@@ -121,13 +122,13 @@
     - name: Check if files bucket exists
       command: /usr/local/bin/mc ls "{{ minio_alias }}/{{ minio_bucket_name_for_misskey }}"
       register: files_bucket_check
-      ignore_errors: yes
+      ignore_errors: true
       changed_when: false
 
     - name: Check if assets bucket exists
       command: /usr/local/bin/mc ls "{{ minio_alias }}/{{ minio_bucket_name_for_outline }}"
       register: assets_bucket_check
-      ignore_errors: yes
+      ignore_errors: true
       changed_when: false
 
     - name: Create files bucket if not exists
@@ -141,7 +142,7 @@
     - name: Create Misskey IAM user
       command: /usr/local/bin/mc admin user add "{{ minio_alias }}" "{{ misskey_s3_access_key }}" "{{ misskey_s3_secret_key }}"
       register: misskey_user_result
-      ignore_errors: yes
+      ignore_errors: true
       changed_when: misskey_user_result.rc == 0
       failed_when: misskey_user_result.rc != 0 and "UserAlreadyExists" not in misskey_user_result.stderr
       no_log: true

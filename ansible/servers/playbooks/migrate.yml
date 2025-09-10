@@ -16,7 +16,7 @@
           - Current host: {{ ansible_hostname }}
           - Available groups: {{ groups.keys() | list }}
           - All hosts: {{ groups['all'] }}
-    
+
     - name: Validate migration parameters
       assert:
         that:
@@ -31,7 +31,7 @@
           - Target: {{ target_minio_host | default('undefined') }}
           - Available hosts: {{ groups['all'] }}
           Both source and target must be different and exist in inventory.
-    
+
     - name: Display migration configuration
       debug:
         msg: |
@@ -44,14 +44,14 @@
           Target IP: {{ hostvars[target_minio_host]['ansible_host'] | default('localhost') }}
           Buckets: {{ minio_bucket_name_for_misskey | default('files') }}, {{ minio_bucket_name_for_outline | default('assets') }}
           ==============================================
-    
+
     - name: Test SSH connectivity to source host
       command: ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no {{ hostvars[source_minio_host]['ansible_user'] | default(ansible_user) }}@{{ hostvars[source_minio_host]['ansible_host'] | default(source_minio_host) }} "echo 'SSH connection successful'"
       register: ssh_test
       failed_when: false
       changed_when: false
       when: source_minio_host != inventory_hostname
-    
+
     - name: Display SSH connectivity result
       debug:
         msg: |
