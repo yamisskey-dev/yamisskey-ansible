@@ -1,3 +1,34 @@
+# Ansible inventories (created by make inventory)
+ansible/servers/inventory
+ansible/appliances/inventory
+
+# Legacy inventory paths
 ansible/inventory
+
+# Ansible secrets
 ansible/vault_pass
 ansible/group_vars/sudo_passwords.yml
+
+# Runtime directories created by Makefile
+backups/
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local

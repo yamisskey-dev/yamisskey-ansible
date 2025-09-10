@@ -1,15 +1,16 @@
 # yamisskey-provision
 
-A flexible Ansible infrastructure management toolkit with an intuitive Makefile wrapper for deploying and managing Misskey instances and related services.
+A unified Ansible infrastructure management toolkit with an intuitive Makefile wrapper for deploying and managing servers and appliances (TrueNAS) with equal ease.
 
 ## Overview
 
 This repository provides a comprehensive infrastructure-as-code solution with:
-- **Flexible Ansible Wrapper**: Advanced Makefile-based Ansible abstraction
-- **Preset Configurations**: Pre-defined deployment scenarios (development, production, minimal, update)
-- **Comprehensive Logging**: Automatic logging with cleanup and backup features
-- **Environment Integration**: Seamless environment variable to Ansible variable conversion
-- **Multi-Service Support**: Playbooks for Misskey, MinIO, monitoring, security, and more
+- **🚀 Unified Ansible Wrapper**: Simple, consistent commands for both servers and appliances
+- **🎯 Dual Target Support**: Seamless switching between servers and TrueNAS appliances
+- **📦 Automatic Setup**: Cross-platform Ansible management via uv
+- **💾 Smart Backups**: Target-specific inventory backups with timestamps
+- **🔍 Error Handling**: Clear error messages and validation
+- **📋 Discovery Tools**: List available playbooks and create inventories
 
 ## Quick Start
 
@@ -37,127 +38,102 @@ cd yamisskey-provision
 
 Install Ansible and tools:
 ```bash
-make install-ansible
+make install
 ```
 
-Create inventory:
+Create inventory (choose your target):
 ```bash
-make sv-inventory
+make inventory                    # Create servers inventory (default)
+make inventory TARGET=appliances  # Create TrueNAS appliances inventory
 ```
 
 ### 3. Basic Usage
 
-Run a playbook:
+Get help:
+```bash
+make help
+```
+
+Run a playbook on servers (default):
 ```bash
 make run PLAYBOOK=common
+```
+
+Run a playbook on appliances:
+```bash
+make run PLAYBOOK=setup TARGET=appliances
 ```
 
 Check what would be changed (dry-run):
 ```bash
 make check PLAYBOOK=security
+make check PLAYBOOK=migrate-minio-phase-a TARGET=appliances
 ```
 
-## Makefile Commands
+## 🎯 Unified Command System
+
+All commands work consistently across both targets using the `TARGET` parameter:
 
 ### Core Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `run` | Execute any playbook with advanced options | `make run PLAYBOOK=common` |
-| `check` | Dry-run with diff preview | `make check PLAYBOOK=security` |
-| `syntax` | Syntax validation | `make syntax PLAYBOOK=misskey` |
-| `list` | Show available playbooks and presets | `make list` |
-| `deploy` | Run multiple playbooks in sequence | `make deploy PLAYBOOKS='common security'` |
+| Command | Description | Server Example | Appliance Example |
+|---------|-------------|----------------|-------------------|
+| `run` | Execute playbook | `make run PLAYBOOK=common` | `make run PLAYBOOK=setup TARGET=appliances` |
+| `check` | Dry-run with diff | `make check PLAYBOOK=security` | `make check PLAYBOOK=migrate-minio-phase-a TARGET=appliances` |
+| `deploy` | Run multiple playbooks | `make deploy PLAYBOOKS='common security'` | `make deploy PLAYBOOKS='setup migrate-minio-phase-a' TARGET=appliances` |
+| `list` | Show available playbooks | `make list` | `make list TARGET=appliances` |
 
 ### Management Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `logs` | View recent execution logs | `make logs` |
-| `logs-clean` | Clean old logs (keep 7 days) | `make logs-clean` |
-| `backup` | Backup current inventory | `make backup` |
-| `restore` | Restore from backup | `make restore BACKUP_FILE=inventory-20231201.bak` |
+| Command | Description | Server Example | Appliance Example |
+|---------|-------------|----------------|-------------------|
+| `inventory` | Create inventory | `make inventory` | `make inventory TARGET=appliances` |
+| `backup` | Backup inventory | `make backup` | `make backup TARGET=appliances` |
+| `logs` | View recent logs | `make logs` | `make logs` |
 
-### Setup Commands
+### Advanced Parameters
 
-| Command | Description | Notes |
-|---------|-------------|-------|
-| `install-ansible` | Install Ansible via uv | Cross-platform Python tool management |
-| `sv-inventory` | Create basic local inventory | Edit manually for multi-host setups |
-| `ap-inventory` | Create appliances inventory skeleton | For TrueNAS integration |
+Add these parameters to any `run`, `check`, or `deploy` command:
 
-## Deployment Presets
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `LIMIT=<hosts>` | Target specific hosts | `make run PLAYBOOK=common LIMIT=local` |
+| `TAGS=<tags>` | Run only specific tags | `make run PLAYBOOK=security TAGS=firewall,ssh` |
 
-Use presets for consistent deployment environments:
+## 🎯 Target Types
 
-| Preset | Description | Tags | Extra Variables |
-|--------|-------------|------|------------------|
-| `development` | Development environment | install,config | debug_mode=true, force_recreate=true |
-| `production` | Production environment | install,config,security | debug_mode=false |
-| `minimal` | Minimal installation | install | skip optional tasks |
-| `update` | Update existing setup | update,config | force_recreate=false |
+### Servers (Default - TARGET=servers)
+- **Path**: `ansible/servers/`
+- **Inventory**: `ansible/servers/inventory`
+- **Use case**: Traditional server management, web services, applications
 
-### Usage Examples
+### Appliances (TARGET=appliances)
+- **Path**: `ansible/appliances/`
+- **Inventory**: `ansible/appliances/inventory`
+- **Use case**: TrueNAS management, storage appliances
 
-```bash
-# Production deployment
-make run PLAYBOOK=misskey PRESET=production
-
-# Development with specific host
-make run PLAYBOOK=security LIMIT=local PRESET=development
-
-# Minimal installation
-make run PLAYBOOK=common PRESET=minimal
-```
-
-## Environment Variables
-
-Configure behavior via environment variables:
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `HOST_SERVICES` | Comma-separated services to manage | `HOST_SERVICES='nginx,redis'` |
-| `DEBUG_MODE` | Enable debug output | `DEBUG_MODE=true` |
-| `FORCE_RECREATE` | Force recreation of resources | `FORCE_RECREATE=true` |
-| `BACKUP_RETENTION` | Number of backups to keep | `BACKUP_RETENTION=30` |
-| `SKIP_TAGS` | Skip specific tags | `SKIP_TAGS='optional,docs'` |
-| `ONLY_TAGS` | Run only specific tags | `ONLY_TAGS='install,config'` |
-
-### Advanced Examples
-
-```bash
-# Production deployment with specific services
-HOST_SERVICES='nginx,redis' make run PLAYBOOK=web PRESET=production
-
-# Development setup with debug
-DEBUG_MODE=true FORCE_RECREATE=true make run PLAYBOOK=misskey
-
-# Custom tags
-make run PLAYBOOK=security EXTRA='--tags install,config --skip-tags optional'
-```
-
-## Complete Provisioning Workflows
+## 📋 Complete Provisioning Workflows
 
 ### New Server Setup
 
 1. **Initial Setup**
    ```bash
-   make install-ansible
-   make sv-inventory
-   make backup  # Backup initial state
+   make install                    # Install Ansible via uv
+   make inventory                  # Create servers inventory (default)
+   make backup                     # Backup initial state
    ```
 
 2. **Base System Configuration**
    ```bash
-   make run PLAYBOOK=common PRESET=production
-   make run PLAYBOOK=security PRESET=production
+   make run PLAYBOOK=common
+   make run PLAYBOOK=security
    ```
 
 3. **Service Installation**
    ```bash
-   make run PLAYBOOK=monitoring PRESET=production
-   make run PLAYBOOK=minio PRESET=production
-   make run PLAYBOOK=misskey PRESET=production
+   make run PLAYBOOK=monitoring
+   make run PLAYBOOK=minio
+   make run PLAYBOOK=misskey
    ```
 
 ### Misskey Instance Deployment
@@ -166,62 +142,84 @@ Complete Misskey setup workflow:
 
 ```bash
 # Sequential deployment
-make deploy PLAYBOOKS='common security modsecurity-nginx monitoring minio misskey' PRESET=production
+make deploy PLAYBOOKS='common security modsecurity-nginx monitoring minio misskey'
 
 # Or step by step with checks
-make check PLAYBOOK=common PRESET=production
-make run PLAYBOOK=common PRESET=production
-make check PLAYBOOK=misskey PRESET=production
-make run PLAYBOOK=misskey PRESET=production
+make check PLAYBOOK=common
+make run PLAYBOOK=common
+make check PLAYBOOK=misskey
+make run PLAYBOOK=misskey
 ```
 
-### Development Environment
+### TrueNAS Appliance Setup
+
+Complete TrueNAS appliance management:
 
 ```bash
-# Development setup with debug
-make deploy PLAYBOOKS='common misskey' PRESET=development
+# Initial setup
+make inventory TARGET=appliances
+make backup TARGET=appliances
 
-# Quick iteration
-DEBUG_MODE=true make run PLAYBOOK=misskey PRESET=development
+# Deploy MinIO migration
+make deploy PLAYBOOKS='setup migrate-minio-phase-a' TARGET=appliances
+
+# Or step by step
+make check PLAYBOOK=setup TARGET=appliances
+make run PLAYBOOK=setup TARGET=appliances
+make run PLAYBOOK=migrate-minio-truenas TARGET=appliances
 ```
 
-### Service Management
+### Mixed Environment Management
+
+Managing both servers and appliances:
 
 ```bash
-# Individual service updates
-make run PLAYBOOK=monitoring PRESET=update
-make run PLAYBOOK=minio PRESET=update
+# Check servers
+make list TARGET=servers
+make run PLAYBOOK=common TARGET=servers
 
-# Check service configurations
-make check PLAYBOOK=nginx PRESET=production
+# Check appliances
+make list TARGET=appliances
+make run PLAYBOOK=setup TARGET=appliances
+
+# Backup both
+make backup TARGET=servers
+make backup TARGET=appliances
 ```
 
-## Available Playbooks
+## 📦 Available Playbooks
 
-Core infrastructure playbooks available in `ansible/servers/playbooks/`:
+### Server Playbooks (`TARGET=servers`)
 
-### Essential Services
+Available in `ansible/servers/playbooks/`:
+
+**Essential Services**
 - `common` - Base system configuration and essential packages
 - `security` - Security hardening and firewall configuration
+- `system-init` - System initialization
+- `system-test` - System testing and validation
 - `monitoring` - System monitoring and alerting setup
 
-### Web Services
+**Web Services**
 - `modsecurity-nginx` - Nginx with ModSecurity WAF
 - `misskey` - Misskey social media platform
+- `misskey-proxy` - Misskey proxy configuration
 - `ai` - AI services integration
 - `searxng` - Privacy-respecting search engine
+- `outline` - Team wiki and knowledge base
+- `cryptpad` - Collaborative document editing
 
-### Storage & Database
-- `minio` - S3-compatible object storage
-- `misskey-backup` - Backup automation for Misskey
-
-### Communication & Collaboration
+**Communication & Collaboration**
 - `matrix` - Matrix homeserver
 - `jitsi` - Video conferencing platform
-- `cryptpad` - Collaborative document editing
-- `outline` - Team wiki and knowledge base
+- `stalwart` - Email server
 
-### Utilities & Games
+**Storage & Database**
+- `minio` - S3-compatible object storage
+- `misskey-backup` - Backup automation for Misskey
+- `borgbackup` - Backup solution
+
+**Utilities & Services**
 - `uptime` - Uptime monitoring
 - `deeplx` - Translation service
 - `mcaptcha` - Privacy-focused CAPTCHA
@@ -229,46 +227,104 @@ Core infrastructure playbooks available in `ansible/servers/playbooks/`:
 - `minecraft` - Minecraft server
 - `vikunja` - Task management
 - `lemmy` - Link aggregator
+- `impostor` - Among Us server
+- `zitadel` - Identity and access management
 
-### Infrastructure
+**Infrastructure & Operations**
 - `clone-repos` - Repository cloning and setup
 - `migrate` - Data migration tools
+- `migrate-minio` - MinIO data migration
+- `operations` - Operational tasks
 - `export` / `import` - System backup and restore
+- `cloudflared` - Cloudflare tunnel
+- `cloudflare-warp` - Cloudflare WARP
 
-## Troubleshooting
+### Appliance Playbooks (`TARGET=appliances`)
 
-### Check Logs
+Available in `ansible/appliances/playbooks/`:
+
+**TrueNAS Management**
+- `setup` - Initial TrueNAS configuration
+- `migrate-minio-truenas` - MinIO setup on TrueNAS
+- `migrate-minio-phase-a` - Phase A of MinIO migration
+- `migrate-minio-cutover` - MinIO migration cutover
+- `truenas-minio-deploy-and-migrate` - Complete MinIO deployment and migration
+
+## 🔧 Troubleshooting
+
+### Check Status
 ```bash
-make logs                    # Recent logs
-make logs-all               # All log files
+make help                       # Show all available commands
+make list                       # List server playbooks
+make list TARGET=appliances     # List appliance playbooks
+make logs                       # Check recent execution logs
 ```
 
 ### Backup and Recovery
 ```bash
-make backup                 # Create inventory backup
-make logs                  # Check for errors
-make restore BACKUP_FILE=inventory-20231201.bak  # Restore if needed
+# Create backups
+make backup                     # Backup servers inventory
+make backup TARGET=appliances   # Backup appliances inventory
+
+# Check backup files
+ls -la backups/
 ```
 
 ### Common Issues
 
-1. **Playbook not found**: Use `make list` to see available playbooks
-2. **Permission errors**: Ensure user has sudo access
-3. **Network issues**: Check Tailscale connectivity
-4. **Ansible errors**: Check logs with `make logs`
+1. **Playbook not found**: Use `make list [TARGET=target]` to see available playbooks
+2. **Permission errors**: Ensure `--ask-become-pass` is working (built into run commands)
+3. **Target confusion**: Remember to specify `TARGET=appliances` for TrueNAS operations
+4. **Missing inventory**: Use `make inventory [TARGET=target]` to create inventory files
 
-## File Locations
+## 📁 File Structure
 
-- **Playbooks**: `ansible/servers/playbooks/`
-- **Inventory**: `ansible/servers/inventory`
-- **Logs**: `logs/`
-- **Backups**: `backups/`
-
-## Advanced Usage
-
-For detailed information on advanced features:
-```bash
-make help-advanced
+```
+yamisskey-provision/
+├── ansible/
+│   ├── servers/                    # Server management
+│   │   ├── playbooks/             # Server playbooks
+│   │   ├── roles/                 # Server roles
+│   │   └── inventory              # Server inventory (created by make inventory)
+│   └── appliances/                # Appliance management
+│       ├── playbooks/             # Appliance playbooks (TrueNAS)
+│       ├── roles/                 # Appliance roles
+│       └── inventory              # Appliance inventory (created by make inventory TARGET=appliances)
+├── logs/                          # Execution logs
+├── backups/                       # Inventory backups
+│   ├── servers-inventory-*.bak    # Server inventory backups
+│   └── appliances-inventory-*.bak # Appliance inventory backups
+├── Makefile                       # Unified Ansible wrapper
+└── README.md                      # This documentation
 ```
 
-This includes complex examples, environment variable details, and expert tips for infrastructure management.
+## 🚀 Advanced Usage
+
+### Combining Parameters
+```bash
+# Run specific playbook with host limit and tags
+make run PLAYBOOK=security LIMIT=local TAGS=firewall,ssh
+
+# Check appliance configuration for specific tasks
+make check PLAYBOOK=migrate-minio-phase-a TARGET=appliances LIMIT=truenas.local
+
+# Deploy multiple playbooks with specific tags
+make deploy PLAYBOOKS='common security' TAGS=install,config
+```
+
+### Quick Reference
+```bash
+# Most common commands
+make help                                    # Get help
+make install                                 # Install Ansible
+make inventory                               # Setup servers
+make inventory TARGET=appliances             # Setup appliances
+make list                                    # List server playbooks
+make list TARGET=appliances                  # List appliance playbooks
+make run PLAYBOOK=common                     # Run server playbook
+make run PLAYBOOK=setup TARGET=appliances    # Run appliance playbook
+make backup                                  # Backup servers
+make backup TARGET=appliances                # Backup appliances
+```
+
+This unified system provides consistent, predictable commands that work the same way whether you're managing traditional servers or TrueNAS appliances.
