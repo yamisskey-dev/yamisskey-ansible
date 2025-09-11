@@ -72,7 +72,7 @@
 
     # Status Operation
     - name: Get Docker container status
-      shell: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      shell: docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}"
       register: docker_status
       changed_when: false
       when: operation == 'status'
@@ -117,7 +117,7 @@
         - operation == 'health'
         - (target_service in ['minio', 'all'])
         - inventory_hostname in host_services
-        - 'minio_api' in host_services[inventory_hostname]
+        - minio_api in host_services[inventory_hostname]
 
     - name: Check Misskey health endpoint
       uri:
@@ -134,7 +134,7 @@
         - operation == 'health'
         - (target_service in ['misskey', 'all'])
         - inventory_hostname in host_services
-        - 'misskey' in host_services[inventory_hostname]
+        - misskey in host_services[inventory_hostname]
 
     - name: Check Prometheus health endpoint
       uri:
@@ -147,7 +147,7 @@
         - operation == 'health'
         - (target_service in ['monitoring', 'all'])
         - inventory_hostname in host_services
-        - 'prometheus' in host_services[inventory_hostname]
+        - prometheus in host_services[inventory_hostname]
 
     - name: Check Grafana health endpoint
       uri:
@@ -160,7 +160,7 @@
         - operation == 'health'
         - (target_service in ['monitoring', 'all'])
         - inventory_hostname in host_services
-        - 'grafana' in host_services[inventory_hostname]
+        - grafana in host_services[inventory_hostname]
 
     - name: Display health check results
       debug:
@@ -187,7 +187,7 @@
     - name: Get service logs
       shell: |
         {% if target_service == 'all' %}
-        for container in $(docker ps --format "{{.Names}}"); do
+        for container in $(docker ps --format "{{ '{{' }}.Names{{ '}}' }}"); do
           echo "=== Logs for $container ==="
           docker logs --tail={{ log_lines }} $container 2>&1
           echo ""
@@ -338,7 +338,7 @@
       when: operation in ['restart', 'stop', 'start', 'update', 'cleanup']
 
     - name: Final status check
-      shell: docker ps --format "table {{.Names}}\t{{.Status}}"
+      shell: docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}"
       register: final_status
       changed_when: false
       when: operation in ['restart', 'start', 'update']

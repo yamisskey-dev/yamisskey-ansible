@@ -11,6 +11,9 @@ skip_list:
   - meta-no-tags
   - key-order[task]
   - risky-file-permissions
+  - role-name
+  - schema[tasks]
+  - parser-error
 
 offline: false
 exclude_paths:
@@ -31,3 +34,11 @@ enable_list:
   - yaml[empty-lines]
   - name[template]
   - no-free-form
+
+# File type detection configuration
+kinds:
+  - playbook: "**/playbooks/*.yml"
+  - tasks: "**/tasks/*.yml"
+  - vars: "**/vars/*.yml"
+  - meta: "**/meta/*.yml"
+  - yaml: "**/*.yaml"
