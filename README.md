@@ -39,6 +39,63 @@ Profile Level:   Production
 - **Role Structure**: Defaults standardization for maintainability
 - **Security Hardening**: Vault integration, permission optimization
 
+## 🔐 Security & Vault Configuration
+
+### Ansible Vault Setup
+
+This project uses Ansible Vault for secure secret management. Before running playbooks, set up your vault:
+
+```bash
+# Create vault password file
+echo "your-vault-password" > .vault_pass
+chmod 600 .vault_pass
+
+# Create encrypted vault file
+ansible-vault create group_vars/vault.yml --vault-password-file .vault_pass
+```
+
+### Required Vault Variables
+
+Add these encrypted variables to your vault files:
+
+```yaml
+# Production passwords (per host)
+vault_balthasar_sudo_password: "secure_password_here"
+vault_caspar_sudo_password: "secure_password_here"
+vault_joseph_sudo_password: "secure_password_here"
+vault_raspberrypi_sudo_password: "secure_password_here"
+vault_linode_prox_sudo_password: "secure_password_here"
+
+# MinIO credentials
+minio_root_user: "admin"
+minio_root_password: "secure_minio_password"
+minio_kms_master_key: "minio-master-key:base64-encoded-key"
+
+# TrueNAS credentials
+truenas_api_token: "api-token-here"
+truenas_minio_root_user: "admin"
+truenas_minio_root_password: "secure_password"
+truenas_minio_kms_key: "kms-encryption-key"
+
+# Cloudflare Tunnel
+cloudflare_tunnel_id: "tunnel-uuid-here"
+cloudflare_tunnel_token: "tunnel-token-here"
+cloudflare_tunnel_credentials: "credentials-json-here"
+```
+
+### Vault Usage Examples
+
+```bash
+# Edit vault file
+ansible-vault edit group_vars/vault.yml --vault-password-file .vault_pass
+
+# Run playbook with vault
+make run PLAYBOOK=common --extra-vars "@group_vars/vault.yml" --vault-password-file .vault_pass
+
+# Encrypt existing file
+ansible-vault encrypt host_vars/production_secrets.yml
+```
+
 ## Quick Start
 
 ### 1. Prerequisites
@@ -277,7 +334,152 @@ Available in `ansible/appliances/playbooks/`:
 - `migrate-minio-cutover` - MinIO migration cutover
 - `truenas-minio-deploy-and-migrate` - Complete MinIO deployment and migration
 
+## 🏗️ Infrastructure Architecture
+
+### Host Roles & Services
+
+**Production Environment (5 Hosts):**
+
+**balthasar** - Main Social & Application Server
+- ModSecurity-Nginx (8080) - Main reverse proxy
+- Misskey (3001) - Yamisskey social platform
+- Matrix Synapse (8008) - Matrix homeserver
+- Element (8081) - Matrix web client
+- Outline (3004) - Team wiki
+- CryptPad (3003) - Collaborative editing
+- Neo-Quesdon (3025) - Q&A service
+- Lemmy (8536) - Link aggregator
+- Vikunja (3456) - Task management
+- cAdvisor (8085) - Container monitoring
+
+**caspar** - Security & Monitoring Hub
+- ModSecurity-Nginx (8080) - Security proxy
+- Prometheus (9090) - Metrics collection
+- Grafana (3000) - Monitoring dashboard
+- AlertManager (9093) - Alert routing
+- Blackbox Exporter (9115) - Service probing
+- CTFd (8000) - Capture The Flag platform
+- Zitadel (8993) - Identity & access management
+- mCaptcha (7493) - Privacy-focused CAPTCHA
+- Uptime Kuma (3009) - Uptime monitoring
+- nayamisskey (3002) - Test Misskey instance
+- Nostream (8080) - Nostr relay
+
+**joseph** - Storage Server (TrueNAS SCALE)
+- MinIO API (9000) - S3-compatible storage
+- MinIO Console (9001) - Management interface
+- Node Exporter (9100) - System metrics
+
+**raspberrypi** - Gaming Server
+- Minecraft Java (25565) - Game server
+- playit.gg (8080) - Gaming proxy
+
+**linode_prox** - External Proxy Services
+- Nginx (80) - Web proxy for Summaly
+- Media Proxy RS (12766) - Media processing
+- Summaly (3030) - Link preview service
+- Squid (3128) - HTTP proxy
+
+### Role Dependencies & Relationships
+
+**Core Infrastructure Dependencies:**
+```
+security (UFW, fail2ban, SSH hardening)
+  ↳ common (Docker, system packages)
+    ↳ monitoring (Prometheus agents)
+```
+
+**Application Service Dependencies:**
+```
+misskey → minio (file storage)
+       → modsecurity-nginx (reverse proxy)
+       → security (firewall rules)
+
+matrix → modsecurity-nginx (reverse proxy)
+      → security (base hardening)
+
+monitoring → security (firewall configuration)
+          → common (Docker runtime)
+
+minio → security (port 9000/9001 access)
+      → common (Docker setup)
+```
+
+**Cross-Service Integration:**
+- All web services → ModSecurity-Nginx → Cloudflare Tunnel
+- All metrics → Prometheus → Grafana → AlertManager
+- Misskey + Matrix → MinIO (shared S3 storage)
+- All hosts → Security (centralized hardening)
+
+### Variable Compatibility Matrix
+
+**Cross-Platform Variables (servers ⟷ appliances):**
+| Purpose | servers | appliances | Status |
+|---------|---------|------------|--------|
+| MinIO Root User | `minio_root_user` | `truenas_minio_root_user` | ✅ Compatible |
+| MinIO Root Password | `minio_root_password` | `truenas_minio_root_password` | ✅ Compatible |
+| KMS Encryption | `minio_kms_master_key` | `truenas_minio_kms_key` | ✅ Compatible |
+| Public Domain | `minio_api_server_name` | `truenas_minio_domain` | ✅ Compatible |
+| Cloudflare Token | `cloudflare_tunnel_token` | `truenas_tunnel_token` | ✅ Compatible |
+| Bucket Names | `minio_bucket_name_for_*` | `minio_bucket_name_for_*` | ✅ Shared |
+
 ## 🔧 Troubleshooting
+
+### Infrastructure Health Checks
+
+**System-Wide Verification:**
+```bash
+# Check all services across infrastructure
+make run PLAYBOOK=system-test
+
+# Verify specific host configuration
+make run PLAYBOOK=operations LIMIT=joseph TAGS=health-check
+
+# Test inter-service connectivity
+make run PLAYBOOK=operations TAGS=connectivity-test
+```
+
+**Service-Specific Checks:**
+
+**balthasar (Social Platform):**
+```bash
+# Misskey API health
+curl -f http://localhost:3001/api/ping || echo "❌ Misskey down"
+
+# ModSecurity-Nginx proxy
+curl -f http://localhost:8080/healthz || echo "❌ Proxy down"
+
+# Matrix homeserver
+curl -f http://localhost:8008/_matrix/client/versions || echo "❌ Matrix down"
+```
+
+**joseph (Storage Server):**
+```bash
+# MinIO service health
+curl -f http://localhost:9000/minio/health/live || echo "❌ MinIO down"
+
+# Storage filesystem check
+df -h /mnt/tank/ || echo "❌ Storage issues"
+zpool status || echo "❌ ZFS pool problems"
+```
+
+**caspar (Monitoring Hub):**
+```bash
+# Prometheus metrics collection
+curl -f http://localhost:9090/-/healthy || echo "❌ Prometheus down"
+
+# Grafana dashboard
+curl -f http://localhost:3000/api/health || echo "❌ Grafana down"
+```
+
+**TrueNAS Appliances:**
+```bash
+# Custom App status check
+make run PLAYBOOK=operations TARGET=appliances TAGS=app-status
+
+# External tunnel connectivity
+curl -f https://drive.yami.ski/minio/health/live || echo "❌ Tunnel down"
+```
 
 ### Check Status
 ```bash
@@ -297,12 +499,38 @@ make backup TARGET=appliances   # Backup appliances inventory
 ls -la backups/
 ```
 
-### Common Issues
+### Common Issues & Solutions
 
 1. **Playbook not found**: Use `make list [TARGET=target]` to see available playbooks
 2. **Permission errors**: Ensure `--ask-become-pass` is working (built into run commands)
 3. **Target confusion**: Remember to specify `TARGET=appliances` for TrueNAS operations
 4. **Missing inventory**: Use `make inventory [TARGET=target]` to create inventory files
+5. **Vault errors**: Check `.vault_pass` exists and vault variables are encrypted properly
+6. **Service conflicts**: Verify no port conflicts with `netstat -tlnp | grep <port>`
+7. **Storage issues**: Check ZFS pool health: `zpool status` and dataset permissions
+8. **Network connectivity**: Verify Tailscale mesh and DNS resolution between hosts
+9. **Docker issues**: Check Docker daemon status and container logs: `docker logs <container>`
+10. **Cloudflare Tunnel**: Verify tunnel tokens and domain DNS records point correctly
+
+### Performance Tuning
+
+**MinIO Storage Optimization:**
+```bash
+# Check MinIO performance
+mc admin info truenas-tunnel
+
+# Optimize ZFS recordsize for MinIO
+zfs set recordsize=1M tank/minio
+```
+
+**Monitoring & Metrics:**
+```bash
+# Check Prometheus targets
+curl http://localhost:9090/api/v1/targets
+
+# View Grafana dashboard health
+curl http://localhost:3000/api/health
+```
 
 ## 📁 File Structure
 

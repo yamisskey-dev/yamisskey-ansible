@@ -1,0 +1,21 @@
+---
+# Raspberrypi - Minecraft dedicated server
+# Main services: Minecraft server, playit.gg proxy
+
+# Service-specific configurations
+minecraft_port: "{{ host_services.raspberrypi.minecraft }}"
+playit_port: "{{ host_services.raspberrypi.playit }}"
+
+# Environment-specific settings
+ansible_become_password: "{{ vault_raspberrypi_sudo_password | default('changeme') }}"
+
+# Minecraft server configuration
+minecraft_server_type: "java"
+minecraft_version: "latest"
+minecraft_memory: "2G"
+minecraft_data_dir: "/opt/minecraft"
+
+# Vault-encrypted secrets (use ansible-vault encrypt for production)
+# vault_raspberrypi_sudo_password: "actual_password_here"
+# vault_minecraft_rcon_password: "secure_rcon_password"
+# vault_playit_secret: "playit_tunnel_secret"
