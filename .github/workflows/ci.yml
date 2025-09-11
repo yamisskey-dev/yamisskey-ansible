@@ -147,7 +147,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
           scanners: misconfig,secret
-          skip-dirs: .git,.github
+          skip-dirs: .git,.github,.ansible,ansible_collections/community,ansible_collections/ansible
 
       - name: Check no AGE private keys committed
         run: |
