@@ -1,6 +1,6 @@
 # 移植されたAnsibleプレイブック
 
-このディレクトリには、Makefileから移植された本番品質のAnsibleプレイブックが含まれています。
+このディレクトリには、本番品質のAnsibleプレイブックが含まれています。
 
 ## 📦 プレイブック一覧
 
@@ -15,11 +15,14 @@
 
 **使用方法**:
 ```bash
-# 基本的な実行
-ansible-playbook -i inventory playbooks/system-init.yml --ask-become-pass
+# 統一コマンド体系での実行
+make run TARGET=servers PLAYBOOK=system-init
 
 # 特定のホストのみ対象
-ansible-playbook -i inventory playbooks/system-init.yml --limit production --ask-become-pass
+make run TARGET=servers PLAYBOOK=system-init LIMIT=production
+
+# 直接Ansible実行（従来方式）
+ansible-playbook -i inventory playbooks/system-init.yml --ask-become-pass
 ```
 
 **注意事項**:
@@ -39,15 +42,17 @@ ansible-playbook -i inventory playbooks/system-init.yml --limit production --ask
 
 **使用方法**:
 ```bash
-# 全リポジトリのクローン
-ansible-playbook -i inventory playbooks/clone-repos.yml
+# 統一コマンド体系での実行
+make run TARGET=servers PLAYBOOK=clone-repos
 
 # カスタムリポジトリリストで実行
-ansible-playbook -i inventory playbooks/clone-repos.yml \
-  -e "repo_list=[{name: 'custom-repo', url: 'https://github.com/user/repo.git', dest: '/tmp/custom', owner: 'user', required: true}]"
+make run TARGET=servers PLAYBOOK=clone-repos EXTRA_VARS="repo_list=[{name: 'custom-repo', url: 'https://github.com/user/repo.git', dest: '/tmp/custom', owner: 'user', required: true}]"
 
 # 特定のGitHub組織から
-ansible-playbook -i inventory playbooks/clone-repos.yml -e github_org=my-org
+make run TARGET=servers PLAYBOOK=clone-repos EXTRA_VARS="github_org=my-org"
+
+# 直接Ansible実行（従来方式）
+ansible-playbook -i inventory playbooks/clone-repos.yml
 ```
 
 **カスタマイズ**:
@@ -68,11 +73,14 @@ ansible-playbook -i inventory playbooks/clone-repos.yml -e github_org=my-org
 
 **使用方法**:
 ```bash
-# 全体テストの実行
-ansible-playbook -i inventory playbooks/system-test.yml
+# 統一コマンド体系での実行
+make run TARGET=servers PLAYBOOK=system-test
 
 # 特定ホストのテスト
-ansible-playbook -i inventory playbooks/system-test.yml --limit balthasar
+make run TARGET=servers PLAYBOOK=system-test LIMIT=balthasar
+
+# 直接Ansible実行（従来方式）
+ansible-playbook -i inventory playbooks/system-test.yml
 ```
 
 **テスト項目**:
@@ -96,29 +104,34 @@ ansible-playbook -i inventory playbooks/system-test.yml --limit balthasar
 
 **使用方法**:
 ```bash
+# 統一コマンド体系での実行
+
 # サービス状態確認
-ansible-playbook -i inventory playbooks/operations.yml -e op=status
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=status"
 
 # 特定サービスの状態確認
-ansible-playbook -i inventory playbooks/operations.yml -e op=status -e service=misskey
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=status service=misskey"
 
 # ヘルスチェック
-ansible-playbook -i inventory playbooks/operations.yml -e op=health
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=health"
 
 # ログ確認
-ansible-playbook -i inventory playbooks/operations.yml -e op=logs -e service=misskey -e lines=100
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=logs service=misskey lines=100"
 
 # サービス再起動
-ansible-playbook -i inventory playbooks/operations.yml -e op=restart -e service=misskey
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=restart service=misskey"
 
 # 全サービス再起動
-ansible-playbook -i inventory playbooks/operations.yml -e op=restart -e service=all
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=restart service=all"
 
 # サービス更新
-ansible-playbook -i inventory playbooks/operations.yml -e op=update -e service=all
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=update service=all"
 
 # Dockerクリーンアップ
-ansible-playbook -i inventory playbooks/operations.yml -e op=cleanup
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=cleanup"
+
+# 直接Ansible実行（従来方式）
+ansible-playbook -i inventory playbooks/operations.yml -e op=status
 ```
 
 **サポートする操作**:
@@ -136,22 +149,22 @@ ansible-playbook -i inventory playbooks/operations.yml -e op=cleanup
 ### 環境別実行
 ```bash
 # 本番環境のみ
-ansible-playbook -i inventory playbooks/system-test.yml --limit production
+make run TARGET=servers PLAYBOOK=system-test LIMIT=production
 
 # 開発環境のみ
-ansible-playbook -i inventory playbooks/operations.yml -e op=restart --limit development
+make run TARGET=servers PLAYBOOK=operations EXTRA_VARS="op=restart" LIMIT=development
 ```
 
 ### 並列実行
 ```bash
 # 複数ホストで並列実行
-ansible-playbook -i inventory playbooks/clone-repos.yml --forks 5
+make run TARGET=servers PLAYBOOK=clone-repos FORKS=5
 ```
 
 ### ドライラン
 ```bash
 # 実際に実行せずにチェック
-ansible-playbook -i inventory playbooks/system-init.yml --check --diff
+make run TARGET=servers PLAYBOOK=system-init CHECK=true
 ```
 
 ## 🔒 セキュリティ考慮事項
@@ -189,19 +202,8 @@ ssh -T git@github.com
 ### ログ確認
 ```bash
 # 詳細ログで実行
-ansible-playbook -i inventory playbooks/system-test.yml -vvv
+make run TARGET=servers PLAYBOOK=system-test VERBOSE=3
 ```
-
-## 🔄 Makefileとの関係
-
-これらのプレイブックは以下のMakefileターゲットを置き換えます：
-
-- `make sv-install` → `ansible-playbook playbooks/system-init.yml`
-- `make sv-clone` → `ansible-playbook playbooks/clone-repos.yml`
-- `make sv-test` → `ansible-playbook playbooks/system-test.yml`
-- 運用機能 → `ansible-playbook playbooks/operations.yml`
-
-Makefileは動的インベントリ生成とAnsibleプレイブック実行のラッパーとして引き続き使用されます。
 
 ## 📊 パフォーマンス
 
