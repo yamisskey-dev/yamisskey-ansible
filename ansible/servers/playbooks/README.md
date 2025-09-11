@@ -77,7 +77,7 @@ ansible-playbook -i inventory playbooks/clone-repos.yml
 make run TARGET=servers PLAYBOOK=system-test
 
 # 特定ホストのテスト
-make run TARGET=servers PLAYBOOK=system-test LIMIT=balthasar
+make run TARGET=servers PLAYBOOK=system-test LIMIT=your-host
 
 # 直接Ansible実行（従来方式）
 ansible-playbook -i inventory playbooks/system-test.yml

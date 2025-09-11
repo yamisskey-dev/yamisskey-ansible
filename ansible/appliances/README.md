@@ -80,8 +80,8 @@ truenas_minio_root_password: "REDACTED"
 truenas_minio_kms_key: "minio-master-key:base64-..."
 truenas_tunnel_token: "REDACTED"
 
-# Raspberry Pi (source)
-source_minio_address: "raspberrypi"  # or IP
+# Source MinIO host (example)
+source_minio_address: "source-host"  # or IP / DNS name
 source_minio_root_user: "admin"
 source_minio_root_password: "REDACTED"
 
