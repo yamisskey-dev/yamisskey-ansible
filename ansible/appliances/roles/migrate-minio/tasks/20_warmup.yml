@@ -17,4 +17,3 @@
   changed_when: false
   loop_control:
     label: "{{ item }}"
-

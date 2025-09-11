@@ -52,12 +52,6 @@
     state: restarted
   become: true
 
-- name: Restart systemd-resolved
-  systemd:
-    name: systemd-resolved
-    state: restarted
-  become: true
-
 - name: Restart Docker
   systemd:
     name: docker

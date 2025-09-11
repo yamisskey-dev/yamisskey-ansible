@@ -25,4 +25,3 @@
   command: df -h "{{ truenas_minio_data_path }}"
   register: df_out
   changed_when: false
-

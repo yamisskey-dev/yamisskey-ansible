@@ -54,4 +54,3 @@
   when: target_secrets.minio.kms_key_id is defined
   loop_control:
     label: "{{ item }}"
-

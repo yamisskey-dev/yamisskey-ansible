@@ -10,7 +10,7 @@
   no_log: true
   ignore_errors: yes
 
- - name: Create IAM policy for Misskey
+- name: Create IAM policy for Misskey
   template:
     src: "minio_iam_policy.json.j2"
     dest: "{{ migration_temp_dir }}/misskey-policy.json"
@@ -51,4 +51,3 @@
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   loop_control:
     label: "{{ item }}"
-

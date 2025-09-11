@@ -70,4 +70,3 @@
     mode: '0755'
     force: no
     checksum: "sha256:{{ mc_release_sha256 }}"
-
