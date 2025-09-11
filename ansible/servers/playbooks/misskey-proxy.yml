@@ -1,6 +1,6 @@
 ---
 - name: Deploy Misskey proxy services
-  hosts: linode-prox
+  hosts: linode_prox
   become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3
