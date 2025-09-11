@@ -1,0 +1,250 @@
+---
+- name: System initialization and dependency installation
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    os_name: "{{ ansible_distribution | lower }}"
+    codename: "{{ ansible_distribution_release }}"
+    arch: "{{ ansible_architecture }}"
+
+  tasks:
+    - name: Display system information
+      debug:
+        msg: |
+          🖥️ System Information:
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Architecture: {{ ansible_architecture }}
+          Hostname: {{ ansible_hostname }}
+          User: {{ ansible_user }}
+
+    - name: Update apt package index
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Check if common playbook exists
+      stat:
+        path: "{{ ansible_env.PWD }}/ansible/servers/playbooks/common.yml"
+      register: common_playbook_check
+      delegate_to: localhost
+
+    - name: Include common playbook for necessary packages
+      include_tasks: common.yml
+      vars:
+        ansible_become: true
+      when: common_playbook_check.stat.exists
+
+    - name: Install base packages if common playbook not available
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - gnupg
+          - lsb-release
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+        state: present
+        update_cache: true
+      when: not common_playbook_check.stat.exists and ansible_os_family == "Debian"
+
+    - name: Install Tailscale
+      block:
+        - name: Check if Tailscale is already installed
+          command: which tailscale
+          register: tailscale_check
+          failed_when: false
+          changed_when: false
+
+        - name: Download and install Tailscale
+          shell: curl -fsSL https://tailscale.com/install.sh | sh
+          when: tailscale_check.rc != 0
+
+    - name: Install Cloudflare WARP
+      block:
+        - name: Add Cloudflare WARP GPG key
+          get_url:
+            url: https://pkg.cloudflareclient.com/pubkey.gpg
+            dest: /tmp/cloudflare-warp.gpg
+            mode: '0644'
+
+        - name: Install Cloudflare WARP GPG key
+          shell: gpg --dearmor < /tmp/cloudflare-warp.gpg > /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          args:
+            creates: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+
+        - name: Set GPG key permissions
+          file:
+            path: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+            mode: '0644'
+
+        - name: Add Cloudflare WARP repository
+          apt_repository:
+            repo: "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ {{ codename }} main"
+            filename: cloudflare-client
+            state: present
+
+        - name: Clean up temporary GPG file
+          file:
+            path: /tmp/cloudflare-warp.gpg
+            state: absent
+
+        - name: Update apt cache
+          apt:
+            update_cache: true
+
+        - name: Install Cloudflare WARP
+          apt:
+            name: cloudflare-warp
+            state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Cloudflared
+      block:
+        - name: Download Cloudflared
+          get_url:
+            url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{{ 'amd64' if arch == 'x86_64' else arch }}.deb"
+            dest: "/tmp/cloudflared.deb"
+
+        - name: Install Cloudflared
+          apt:
+            deb: "/tmp/cloudflared.deb"
+            state: present
+
+        - name: Remove temporary deb file
+          file:
+            path: "/tmp/cloudflared.deb"
+            state: absent
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      block:
+        - name: Create keyrings directory
+          file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: '0755'
+
+        - name: Add Docker GPG key
+          get_url:
+            url: "https://download.docker.com/linux/{{ os_name }}/gpg"
+            dest: /etc/apt/keyrings/docker.asc
+            mode: '0644'
+
+        - name: Set Docker GPG key permissions
+          file:
+            path: /etc/apt/keyrings/docker.asc
+            mode: 'a+r'
+
+        - name: Add Docker repository
+          apt_repository:
+            repo: "deb [arch={{ 'amd64' if arch == 'x86_64' else arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ os_name }} {{ codename }} stable"
+            filename: docker
+            state: present
+
+        - name: Update apt cache for Docker
+          apt:
+            update_cache: true
+
+        - name: Install Docker packages
+          apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+              - docker-buildx-plugin
+              - docker-compose-plugin
+            state: present
+            update_cache: true
+
+        - name: Add user to docker group
+          user:
+            name: "{{ ansible_user }}"
+            groups: docker
+            append: true
+
+        - name: Enable and start Docker service
+          systemd:
+            name: docker
+            enabled: true
+            state: started
+      when: ansible_os_family == "Debian"
+
+    - name: Install Playit
+      block:
+        - name: Add Playit GPG key
+          get_url:
+            url: https://playit-cloud.github.io/ppa/key.gpg
+            dest: /tmp/playit.gpg
+            mode: '0644'
+
+        - name: Install Playit GPG key
+          shell: gpg --dearmor < /tmp/playit.gpg > /etc/apt/trusted.gpg.d/playit.gpg
+          args:
+            creates: /etc/apt/trusted.gpg.d/playit.gpg
+
+        - name: Set Playit GPG key permissions
+          file:
+            path: /etc/apt/trusted.gpg.d/playit.gpg
+            mode: '0644'
+
+        - name: Add Playit repository
+          apt_repository:
+            repo: "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./"
+            filename: playit-cloud
+            state: present
+
+        - name: Clean up temporary GPG file
+          file:
+            path: /tmp/playit.gpg
+            state: absent
+
+        - name: Update apt cache
+          apt:
+            update_cache: true
+
+        - name: Install Playit
+          apt:
+            name: playit
+            state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Verify installations
+      block:
+        - name: Check installation versions
+          shell: |
+            echo "📦 Installation Verification:"
+            echo "✅ Ansible: $(ansible --version | head -1)"
+            echo "✅ Docker: $(docker --version)"
+            echo "✅ Tailscale: $(tailscale version)"
+            echo "✅ Cloudflared: $(cloudflared version)"
+            if command -v warp-cli >/dev/null 2>&1; then
+              echo "✅ Cloudflare WARP: $(warp-cli --version)"
+            else
+              echo "⚠️ Cloudflare WARP: Installation may have failed"
+            fi
+            if command -v playit >/dev/null 2>&1; then
+              echo "✅ Playit: Installed"
+            else
+              echo "⚠️ Playit: Installation may have failed"
+            fi
+          register: verification_result
+
+        - name: Display verification results
+          debug:
+            msg: "{{ verification_result.stdout_lines }}"
+
+    - name: Display next steps
+      debug:
+        msg: |
+          🎉 System initialization completed!
+
+          📋 Next steps:
+          1. Configure Tailscale: sudo tailscale up
+          2. Configure Cloudflare WARP (optional): warp-cli register
+          3. Clone repositories: ansible-playbook -i inventory playbooks/clone-repos.yml
+          4. Run system test: ansible-playbook -i inventory playbooks/system-test.yml
+          5. Start provisioning: ansible-playbook -i inventory playbooks/common.yml

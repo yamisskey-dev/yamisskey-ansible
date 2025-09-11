@@ -1,0 +1,6 @@
+---
+- name: Deploy Lemmy
+  hosts: balthasar
+  become: true
+  roles:
+    - lemmy

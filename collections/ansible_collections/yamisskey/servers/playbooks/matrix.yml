@@ -1,0 +1,5 @@
+- name: Configure Matrix server
+  hosts: all
+  become: true
+  roles:
+    - matrix

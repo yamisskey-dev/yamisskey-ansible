@@ -1,0 +1,13 @@
+---
+# Cloudflare API Configuration
+# Encrypt this file with: ansible-vault encrypt group_vars/vault.yml
+
+# Cloudflare API Token (DNS management permissions)
+cloudflare_api_token: "your-cloudflare-api-token-here"
+
+# Cloudflare Zone ID for your domain
+cloudflare_zone_id: "your-cloudflare-zone-id-here"
+
+# Example additional secrets
+# cloudflare_email: "your-email@example.com"
+# cloudflare_global_api_key: "your-global-api-key-here"

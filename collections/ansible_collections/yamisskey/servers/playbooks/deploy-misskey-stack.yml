@@ -1,0 +1,57 @@
+---
+- name: Deploy Complete Misskey Infrastructure Stack
+  hosts: all
+  become: true
+  gather_facts: true
+  
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    docker_compose_cmd: 'docker compose'
+    
+  roles:
+    - role: yamisskey.servers.common
+      tags: [common, base]
+      
+    - role: yamisskey.servers.security  
+      tags: [security, hardening]
+      
+    - role: yamisskey.servers.minio
+      tags: [minio, storage]
+      when: "'storage' in group_names or inventory_hostname in groups.get('minio', [])"
+      
+    - role: yamisskey.servers.misskey
+      tags: [misskey, social]
+      
+    - role: yamisskey.servers.monitoring
+      tags: [monitoring, observability]
+      when: "'monitoring' in group_names or enable_monitoring | default(true) | bool"
+      
+    - role: yamisskey.servers.borgbackup
+      tags: [backup, recovery]
+      when: "enable_backup | default(true) | bool"
+      
+  post_tasks:
+    - name: Display comprehensive deployment summary
+      debug:
+        msg: |
+          🎉 Complete Misskey Infrastructure Stack Deployed!
+          
+          📦 Deployed Services:
+          - ✅ Core system packages and security hardening
+          - ✅ MinIO object storage backend
+          - ✅ Misskey social media platform
+          - ✅ Prometheus monitoring stack
+          - ✅ BorgBackup automated backups
+          
+          🌐 Service Endpoints:
+          - Misskey: https://{{ ansible_fqdn }}
+          - MinIO Console: https://{{ ansible_fqdn }}:9001
+          - Grafana Dashboard: https://{{ ansible_fqdn }}:3000
+          
+          🔐 Security Features:
+          - Automated security updates enabled
+          - Fail2ban intrusion detection active
+          - Firewall rules configured
+          - System audit logging enabled
+          
+          🚀 yamisskey.servers Collection - Production Ready!

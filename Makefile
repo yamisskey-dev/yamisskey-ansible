@@ -1,10 +1,11 @@
 .PHONY: help install inventory run check list logs backup deploy
 
-# Configuration
-SERVERS_DIR := ansible/servers
+# Configuration - Modern Collections Architecture
+COLLECTIONS_DIR := collections/ansible_collections/yamisskey
+SERVERS_DIR := $(COLLECTIONS_DIR)/servers
 SERVERS_INV := $(SERVERS_DIR)/inventory
 SERVERS_PLAY := $(SERVERS_DIR)/playbooks
-APPLIANCES_DIR := ansible/appliances
+APPLIANCES_DIR := $(COLLECTIONS_DIR)/appliances
 APPLIANCES_INV := $(APPLIANCES_DIR)/inventory
 APPLIANCES_PLAY := $(APPLIANCES_DIR)/playbooks
 LOG_DIR := logs
@@ -14,6 +15,7 @@ BACKUP_DIR := backups
 ANSIBLE_CMD := ansible-playbook
 TIMESTAMP := $(shell date +%Y%m%dT%H%M%S)
 PATH_WITH_ANSIBLE := $$HOME/.local/bin:$$PATH
+COLLECTIONS_PATH := collections
 
 # Default target (servers)
 TARGET ?= servers
@@ -23,35 +25,35 @@ $(shell mkdir -p $(LOG_DIR) $(BACKUP_DIR))
 
 # === Core Functions ===
 
-# Main playbook execution
+# Main playbook execution - Collections enabled
 run:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make run PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>] [TAGS=<tags>]" && exit 1)
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV=$(APPLIANCES_INV); PLAY=$(APPLIANCES_PLAY); ROLES=$(APPLIANCES_DIR)/roles; \
+		INV=$(APPLIANCES_INV); PLAY=$(APPLIANCES_PLAY); COLLECTION="yamisskey.appliances"; \
 	else \
-		INV=$(SERVERS_INV); PLAY=$(SERVERS_PLAY); ROLES=""; \
+		INV=$(SERVERS_INV); PLAY=$(SERVERS_PLAY); COLLECTION="yamisskey.servers"; \
 	fi; \
 	test -f "$$PLAY/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $$PLAY/" && exit 1); \
-	echo "🚀 Running $(TARGET): $(PLAYBOOK)"; \
+	echo "🚀 Running $$COLLECTION: $(PLAYBOOK)"; \
 	export PATH="$(PATH_WITH_ANSIBLE)"; \
-	$(if $(filter appliances,$(TARGET)),ANSIBLE_ROLES_PATH=$$ROLES) \
+	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
 	$(ANSIBLE_CMD) -i $$INV $$PLAY/$(PLAYBOOK).yml \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		$(if $(TAGS),--tags $(TAGS)) \
 		--ask-become-pass
 
-# Dry-run check
+# Dry-run check - Collections enabled
 check:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make check PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV=$(APPLIANCES_INV); PLAY=$(APPLIANCES_PLAY); ROLES=$(APPLIANCES_DIR)/roles; \
+		INV=$(APPLIANCES_INV); PLAY=$(APPLIANCES_PLAY); COLLECTION="yamisskey.appliances"; \
 	else \
-		INV=$(SERVERS_INV); PLAY=$(SERVERS_PLAY); ROLES=""; \
+		INV=$(SERVERS_INV); PLAY=$(SERVERS_PLAY); COLLECTION="yamisskey.servers"; \
 	fi; \
 	test -f "$$PLAY/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $$PLAY/" && exit 1); \
-	echo "🔍 Checking $(TARGET): $(PLAYBOOK)"; \
+	echo "🔍 Checking $$COLLECTION: $(PLAYBOOK)"; \
 	export PATH="$(PATH_WITH_ANSIBLE)"; \
-	$(if $(filter appliances,$(TARGET)),ANSIBLE_ROLES_PATH=$$ROLES) \
+	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
 	$(ANSIBLE_CMD) -i $$INV $$PLAY/$(PLAYBOOK).yml \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		--check --diff
@@ -66,14 +68,20 @@ deploy:
 
 # === Setup & Discovery ===
 
-# Install Ansible
+# Install Ansible and Collections
 install:
 	@echo "📦 Installing Ansible via uv..."
 	@command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
 	uv tool install ansible; \
 	uv tool install ansible-lint
-	@echo "✅ Ansible installed"
+	@echo "📦 Installing Collections..."
+	@export PATH="$(PATH_WITH_ANSIBLE)"; \
+	ansible-galaxy collection install -r requirements.yml
+	@echo "✅ Ansible and Collections installed"
+	@echo "🔍 Verifying Collections:"
+	@export PATH="$(PATH_WITH_ANSIBLE)"; \
+	ansible-galaxy collection list | grep yamisskey || echo "⚠️  yamisskey Collections not found"
 
 # Create basic inventory
 inventory:
@@ -142,18 +150,19 @@ help:
 	@echo "  deploy PLAYBOOKS='<p1> <p2>' [TARGET=servers|appliances] [LIMIT=<hosts>]"
 	@echo "  list [TARGET=servers|appliances]                                   # show playbooks"
 	@echo ""
-	@echo "🎯 Targets:"
-	@echo "  TARGET=servers     (default) - Use ansible/servers/"
-	@echo "  TARGET=appliances            - Use ansible/appliances/ (TrueNAS)"
+	@echo "🎯 Targets (Collections):"
+	@echo "  TARGET=servers     (default) - Use yamisskey.servers Collection"
+	@echo "  TARGET=appliances            - Use yamisskey.appliances Collection (TrueNAS)"
 	@echo ""
 	@echo "📊 Operations:"
 	@echo "  inventory [TARGET=servers|appliances]  # create inventory"
 	@echo "  backup [TARGET=servers|appliances]     # backup inventory"
 	@echo "  logs                                    # recent logs"
 	@echo ""
-	@echo "💡 Examples:"
-	@echo "  make run PLAYBOOK=common                          # servers"
-	@echo "  make run PLAYBOOK=setup TARGET=appliances        # appliances"
-	@echo "  make check PLAYBOOK=security LIMIT=local         # servers dry-run"
-	@echo "  make deploy PLAYBOOKS='common security'          # servers sequence"
-	@echo "  make list TARGET=appliances                       # list appliances"
+	@echo "💡 Examples (Collections):"
+	@echo "  make install                                      # Install Ansible + Collections"
+	@echo "  make run PLAYBOOK=common                          # yamisskey.servers"
+	@echo "  make run PLAYBOOK=setup TARGET=appliances        # yamisskey.appliances"
+	@echo "  make check PLAYBOOK=security LIMIT=local         # dry-run with Collections"
+	@echo "  make deploy PLAYBOOKS='common security'          # sequence deployment"
+	@echo "  make list TARGET=appliances                       # list appliances playbooks"

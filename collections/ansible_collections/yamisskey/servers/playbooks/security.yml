@@ -1,0 +1,5 @@
+- name: Configure CLoudflared and other secure services
+  hosts: all
+  become: true
+  roles:
+    - security

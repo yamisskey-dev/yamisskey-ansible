@@ -1,0 +1,45 @@
+---
+# yamisskey.appliances Ansible Collection
+namespace: yamisskey
+name: appliances
+version: 1.0.0
+readme: README.md
+authors:
+  - yamisskey-dev <https://github.com/yamisskey-dev>
+description: >-
+  Enterprise-grade appliance infrastructure automation collection for TrueNAS,
+  MinIO migration, and storage appliance management. Specialized for NAS and
+  storage appliance environments.
+
+license:
+  - MIT
+
+license_file: ''
+
+tags:
+  - infrastructure
+  - appliances
+  - truenas
+  - nas
+  - minio
+  - migration
+  - storage
+  - zfs
+  - backup
+  - appliance
+
+dependencies:
+  community.general: ">=9.0.0"
+  ansible.posix: ">=1.5.0"
+
+repository: https://github.com/yamisskey-dev/yamisskey-provision
+homepage: https://github.com/yamisskey-dev/yamisskey-provision
+issues: https://github.com/yamisskey-dev/yamisskey-provision/issues
+
+build_ignore:
+  - .gitignore
+  - .yamllint.yaml
+  - .ansible-lint
+  - docs/
+  - tests/
+  - '*.md'

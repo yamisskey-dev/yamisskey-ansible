@@ -1,0 +1,175 @@
+ufw_ports:
+  - 2222
+  - 80
+  - 443
+  - 9000
+
+tailscale_ports:
+  - 41641
+
+# Ports required for Cloudflare Tunnel (QUIC and optional HTTPS)
+cloudflared_quic_port: 7844
+cloudflared_https_port: 443
+
+# IPv4 and IPv6 addresses for region1 and region2 of Cloudflare’s network
+cloudflare_region1_ips_v4:
+  - 198.41.192.167
+  - 198.41.192.67
+  - 198.41.192.57
+  - 198.41.192.107
+  - 198.41.192.27
+  - 198.41.192.7
+  - 198.41.192.227
+  - 198.41.192.47
+  - 198.41.192.37
+  - 198.41.192.77
+cloudflare_region1_ips_v6:
+  - 2606:4700:a0::1
+  - 2606:4700:a0::2
+  - 2606:4700:a0::3
+  - 2606:4700:a0::4
+  - 2606:4700:a0::5
+  - 2606:4700:a0::6
+  - 2606:4700:a0::7
+  - 2606:4700:a0::8
+  - 2606:4700:a0::9
+  - 2606:4700:a0::10
+cloudflare_region2_ips_v4:
+  - 198.41.200.13
+  - 198.41.200.193
+  - 198.41.200.33
+  - 198.41.200.233
+  - 198.41.200.53
+  - 198.41.200.63
+  - 198.41.200.113
+  - 198.41.200.73
+  - 198.41.200.43
+  - 198.41.200.23
+cloudflare_region2_ips_v6:
+  - 2606:4700:a8::1
+  - 2606:4700:a8::2
+  - 2606:4700:a8::3
+  - 2606:4700:a8::4
+  - 2606:4700:a8::5
+  - 2606:4700:a8::6
+  - 2606:4700:a8::7
+  - 2606:4700:a8::8
+  - 2606:4700:a8::9
+  - 2606:4700:a8::10
+
+warp_wireguard_ports:
+  - 2408
+  - 500
+  - 1701
+  - 4500
+  - 51820
+
+cloudflare_warp_ips:
+  - '162.159.137.105'
+  - '162.159.138.105'
+  - '2606:4700:7::a29f:8969'
+  - '2606:4700:7::a29f:8a69'
+  - '162.159.36.1'
+  - '162.159.46.1'
+  - '2606:4700:4700::1111'
+  - '2606:4700:4700::1001'
+  - '162.159.193.0/24'
+  - '2606:4700:100::/48'
+
+sysctl_settings:
+  # ファイルシステム保護
+  - { name: 'dev.tty.ldisc_autoload', value: '0' }
+  - { name: 'fs.file-max', value: '1048576' }
+  - { name: 'fs.nr_open', value: '1048576' }
+  - { name: 'fs.protected_fifos', value: '2' }
+  - { name: 'fs.protected_hardlinks', value: '1' }
+  - { name: 'fs.protected_regular', value: '2' }
+  - { name: 'fs.protected_symlinks', value: '1' }
+  - { name: 'fs.suid_dumpable', value: '0' }
+
+  # カーネルセキュリティ
+  - { name: 'kernel.core_uses_pid', value: '1' }
+  - { name: 'kernel.dmesg_restrict', value: '1' }
+  - { name: 'kernel.kexec_load_disabled', value: '1' }
+  - { name: 'kernel.kptr_restrict', value: '2' }
+  - { name: 'kernel.panic_on_oops', value: '1' }
+  - { name: 'kernel.perf_event_paranoid', value: '3' }
+  - { name: 'kernel.pid_max', value: '65536' }
+  - { name: 'kernel.randomize_va_space', value: '2' }
+  - { name: 'kernel.sched_autogroup_enabled', value: '0' }
+  - { name: 'kernel.sysrq', value: '0' }
+  - { name: 'kernel.unprivileged_bpf_disabled', value: '1' }
+  - { name: 'kernel.unprivileged_userns_clone', value: '0' }
+  - { name: 'kernel.yama.ptrace_scope', value: '1' }
+
+  # BPFとトレース保護
+  - { name: 'net.core.bpf_jit_harden', value: '2' }
+
+  # ネットワークパフォーマンスとバッファ
+  - { name: 'net.core.netdev_max_backlog', value: '16384' }
+  - { name: 'net.core.rmem_max', value: '16777216' }
+  - { name: 'net.core.somaxconn', value: '32768' }
+  - { name: 'net.core.wmem_max', value: '16777216' }
+
+  # ネットワークセキュリティ（IPv4）
+  - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+  - { name: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+  - { name: 'net.ipv4.conf.all.arp_ignore', value: '1' }
+  - { name: 'net.ipv4.conf.all.forwarding', value: '0' }
+  - { name: 'net.ipv4.conf.all.log_martians', value: '1' }
+  - { name: 'net.ipv4.conf.all.proxy_arp', value: '0' }
+  - { name: 'net.ipv4.conf.all.rp_filter', value: '1' }
+  - { name: 'net.ipv4.conf.all.secure_redirects', value: '0' }
+  - { name: 'net.ipv4.conf.all.send_redirects', value: '0' }
+  - { name: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+  - { name: 'net.ipv4.conf.default.accept_source_route', value: '0' }
+  - { name: 'net.ipv4.conf.default.log_martians', value: '1' }
+  - { name: 'net.ipv4.conf.default.secure_redirects', value: '0' }
+  - { name: 'net.ipv4.icmp_echo_ignore_all', value: '1' }
+  - { name: 'net.ipv4.icmp_ignore_bogus_error_responses', value: '1' }
+  - { name: 'net.ipv4.ping_group_range', value: '0 2147483647' }
+
+  # TCPの最適化設定
+  - { name: 'net.ipv4.tcp_dsack', value: '0' }
+  - { name: 'net.ipv4.tcp_fastopen', value: '3' }
+  - { name: 'net.ipv4.tcp_fin_timeout', value: '15' }
+  - { name: 'net.ipv4.tcp_keepalive_intvl', value: '15' }
+  - { name: 'net.ipv4.tcp_keepalive_probes', value: '5' }
+  - { name: 'net.ipv4.tcp_keepalive_time', value: '300' }
+  - { name: 'net.ipv4.tcp_max_orphans', value: '262144' }
+  - { name: 'net.ipv4.tcp_max_syn_backlog', value: '20480' }
+  - { name: 'net.ipv4.tcp_max_tw_buckets', value: '262144' }
+  - { name: 'net.ipv4.tcp_rfc1337', value: '1' }
+  - { name: 'net.ipv4.tcp_rmem', value: '4096 87380 16777216' }
+  - { name: 'net.ipv4.tcp_sack', value: '0' }
+  - { name: 'net.ipv4.tcp_slow_start_after_idle', value: '0' }
+  - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+  - { name: 'net.ipv4.tcp_synack_retries', value: '2' }
+  - { name: 'net.ipv4.tcp_syn_retries', value: '3' }
+  - { name: 'net.ipv4.tcp_timestamps', value: '0' }
+  - { name: 'net.ipv4.tcp_tw_reuse', value: '1' }
+  - { name: 'net.ipv4.tcp_wmem', value: '4096 87380 16777216' }
+  - { name: 'net.ipv4.tcp_abort_on_overflow', value: '1' }
+
+  # ネットワークセキュリティ（IPv6）
+  - { name: 'net.ipv6.conf.all.accept_ra', value: '0' }
+  - { name: 'net.ipv6.conf.all.accept_redirects', value: '0' }
+  - { name: 'net.ipv6.conf.all.accept_source_route', value: '0' }
+  - { name: 'net.ipv6.conf.all.forwarding', value: '0' }
+  - { name: 'net.ipv6.conf.default.accept_ra', value: '0' }
+  - { name: 'net.ipv6.conf.default.accept_redirects', value: '0' }
+
+  # メモリ管理（28GB RAM向け）
+  - { name: 'vm.dirty_background_bytes', value: '474217728' }
+  - { name: 'vm.dirty_background_ratio', value: '5' }
+  - { name: 'vm.dirty_bytes', value: '742653184' }
+  - { name: 'vm.dirty_ratio', value: '10' }
+  - { name: 'vm.max_map_count', value: '262144' }
+  - { name: 'vm.min_free_kbytes', value: '65536' }
+  - { name: 'vm.mmap_min_addr', value: '65536' }
+  - { name: 'vm.mmap_rnd_bits', value: '32' }
+  - { name: 'vm.mmap_rnd_compat_bits', value: '16' }
+  - { name: 'vm.overcommit_memory', value: '1' }
+  - { name: 'vm.swappiness', value: '10' }
+  - { name: 'vm.unprivileged_userfaultfd', value: '0' }
+  - { name: 'vm.vfs_cache_pressure', value: '50' }

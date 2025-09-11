@@ -1,0 +1,5 @@
+- name: Setup Minio
+  hosts: all
+  become: true
+  roles:
+    - minio

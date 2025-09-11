@@ -1,0 +1,180 @@
+---
+- name: Clone all required repositories
+  hosts: all
+  become: false
+  gather_facts: false
+  vars:
+    github_org: "{{ github_org | default('yamisskey-dev') }}"
+    github_org_url: "https://github.com/{{ github_org }}"
+    # Repository configuration - can be overridden via extra vars
+    repositories: "{{ repo_list | default(default_repositories) }}"
+    default_repositories:
+      - name: yamisskey
+        url: "{{ github_org_url }}/yamisskey.git"
+        dest: /var/www/misskey
+        branch: master
+        owner: "{{ ansible_user }}"
+        become_required: true
+        required: true
+      - name: yamisskey-assets
+        url: "{{ github_org_url }}/yamisskey-assets.git"
+        dest: "{{ ansible_env.HOME }}/misskey-assets"
+        owner: "{{ ansible_user }}"
+        become_required: false
+        required: false
+      - name: yui
+        url: "{{ github_org_url }}/yui.git"
+        dest: "{{ ansible_env.HOME }}/ai"
+        owner: "{{ ansible_user }}"
+        become_required: false
+        required: false
+      - name: yamisskey-backup
+        url: "{{ github_org_url }}/yamisskey-backup.git"
+        dest: /opt/misskey-backup
+        owner: "{{ ansible_user }}"
+        become_required: true
+        required: true
+      - name: yamisskey-anonote
+        url: "{{ github_org_url }}/yamisskey-anonote.git"
+        dest: "{{ ansible_env.HOME }}/misskey-anonote"
+        owner: "{{ ansible_user }}"
+        become_required: false
+        required: false
+      - name: ctf.yami.ski
+        url: "{{ github_org_url }}/ctf.yami.ski.git"
+        dest: "{{ ansible_env.HOME }}/ctfd"
+        owner: "{{ ansible_user }}"
+        become_required: false
+        required: false
+
+  tasks:
+    - name: Display repository cloning plan
+      debug:
+        msg: |
+          Repository Cloning Plan:
+          {% for repo in repositories %}
+          - {{ repo.name }}: {{ repo.dest }}
+          {% endfor %}
+
+    - name: Create directories for repositories that require sudo
+      file:
+        path: "{{ item.dest }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: '0755'
+      loop: "{{ repositories }}"
+      when: item.become_required | default(false)
+      become: true
+
+    - name: Create directories for user repositories
+      file:
+        path: "{{ item.dest }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: '0755'
+      loop: "{{ repositories }}"
+      when: not (item.become_required | default(false))
+
+    - name: Check if repositories already exist
+      stat:
+        path: "{{ item.dest }}/.git"
+      register: repo_exists
+      loop: "{{ repositories }}"
+
+    - name: Clone repositories that don't exist yet
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ item.item.dest }}"
+        version: "{{ item.item.branch | default('HEAD') }}"
+        force: false
+        accept_hostkey: true
+      loop: "{{ repo_exists.results }}"
+      when: not item.stat.exists
+      become: "{{ item.item.become_required | default(false) }}"
+      register: clone_results
+      failed_when:
+        - clone_results.failed
+        - item.item.required | default(false)
+
+    - name: Set ownership for cloned repositories
+      file:
+        path: "{{ item.dest }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        recurse: true
+      loop: "{{ repositories }}"
+      become: "{{ item.become_required | default(false) }}"
+      when:
+        - clone_results is defined
+        - not clone_results.failed or not (item.required | default(false))
+
+    - name: Update existing repositories
+      git:
+        repo: "{{ item.item.url }}"
+        dest: "{{ item.item.dest }}"
+        version: "{{ item.item.branch | default('HEAD') }}"
+        force: false
+        update: true
+        accept_hostkey: true
+      loop: "{{ repo_exists.results }}"
+      when: item.stat.exists
+      become: "{{ item.item.become_required | default(false) }}"
+      register: repo_updates
+      failed_when:
+        - repo_updates.failed
+        - item.item.required | default(false)
+
+    - name: Display clone/update results
+      debug:
+        msg: |
+          📁 Repository Clone/Update Results:
+          {% if clone_results is defined %}
+          {% for result in clone_results.results %}
+          {% if result.item.item is defined %}
+          {{ result.item.item.name }}: {{ '✅ Cloned' if result.changed else ('❌ Failed' if result.failed else 'Skipped') }}
+          {% endif %}
+          {% endfor %}
+          {% endif %}
+          {% if repo_updates is defined %}
+          {% for result in repo_updates.results %}
+          {% if result.item.item is defined %}
+          {{ result.item.item.name }}: {{ '🔄 Updated' if result.changed else ('✅ Up-to-date' if not result.failed else '❌ Update failed') }}
+          {% endif %}
+          {% endfor %}
+          {% endif %}
+
+          📋 Next steps:
+          1. Configure specific repositories as needed
+          2. Run service-specific playbooks
+          3. Check repository status: git status (in each directory)
+
+  post_tasks:
+    - name: Verify all repositories are cloned
+      stat:
+        path: "{{ item.dest }}/.git"
+      register: final_check
+      loop: "{{ repositories }}"
+
+    - name: Check for failures in required repositories
+      fail:
+        msg: "Required repository '{{ item.item.name }}' failed to clone"
+      loop: "{{ final_check.results }}"
+      when:
+        - not item.stat.exists
+        - item.item.required | default(false)
+
+    - name: Display final verification
+      debug:
+        msg: |
+          📊 Final Verification:
+          {% for result in final_check.results %}
+          {{ result.item.name }}: {{ '✅ Ready' if result.stat.exists else ('❌ Missing' + (' (Required)' if result.item.required else ' (Optional)')) }}
+          {% endfor %}
+
+          🎉 Repository setup completed!
+          {% set failed_required = final_check.results | selectattr('item.required', 'equalto', true) | selectattr('stat.exists', 'equalto', false) | list %}
+          {% if failed_required | length > 0 %}
+          ⚠️ Some required repositories failed to clone. Please check network connectivity and permissions.
+          {% endif %}

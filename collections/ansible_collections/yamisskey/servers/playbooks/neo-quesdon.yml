@@ -1,0 +1,5 @@
+- name: Setup neo-quesdon
+  hosts: all
+  become: true
+  roles:
+    - neo-quesdon

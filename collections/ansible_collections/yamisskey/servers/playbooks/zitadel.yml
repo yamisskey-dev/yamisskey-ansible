@@ -1,0 +1,5 @@
+- name: Setup Zitadel
+  hosts: all
+  become: true
+  roles:
+    - zitadel

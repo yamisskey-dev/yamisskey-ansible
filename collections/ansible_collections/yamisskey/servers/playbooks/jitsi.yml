@@ -1,0 +1,5 @@
+- name: Configure Jitsi
+  hosts: all
+  become: true
+  roles:
+    - jitsi

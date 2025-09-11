@@ -1,0 +1,5 @@
+- name: Configure SearXNG
+  hosts: all
+  become: true
+  roles:
+    - searxng

@@ -1,0 +1,89 @@
+# TrueNAS SCALE 25.04 Core – Idempotent API-driven Setup
+
+- name: "TrueNAS Scale 25.04 Core – init"
+  debug:
+    msg: |
+      ==============================================
+      TrueNAS SCALE Core (API-driven)
+      Target: {{ inventory_hostname }}
+      ==============================================
+
+# 0) API/ミドルウェア応答確認（RESTじゃなく midclt で）
+- name: Check middleware is reachable
+  command:
+    argv: [midclt, -j, call, system.info]
+  register: sysinfo
+  changed_when: false
+
+# 1) データセット作成（存在チェック→作成）
+#    truenas_datasets の想定:
+#    - { name: "apps/minio", compression: "lz4", atime: false, recordsize: "1M", acl: "POSIX" }
+- name: Ensure datasets exist
+  include_tasks: ensure_dataset.yml
+  loop: "{{ truenas_datasets }}"
+  loop_control:
+    loop_var: dataset
+
+# 2) 権限設定（ACL前提の安全なやり方）
+#    POSIX運用なら stripacl=true でACLを剥がしてから mode/uid/gid を適用
+- name: Set permissions/ACL for datasets
+  vars:
+    path_ds: "/mnt/{{ truenas_pool_name }}/{{ item.name }}"
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - filesystem.setperm
+      - >-
+        {{ {
+             "path": path_ds,
+             "uid": (item.uid | default(0)),
+             "gid": (item.gid | default(0)),
+             "mode": (item.mode | default("0755")),
+             "stripacl": ((item.acl | default("POSIX")) == "POSIX")
+           } | to_json }}
+  loop: "{{ truenas_datasets }}"
+
+# 3) グループ/ユーザー（存在チェック→作成）
+#    truenas_groups: [ { name: "apps", gid: 1800 } ]
+#    truenas_users : [ { name: "minio", uid: 1801, gid: 1800, home: "/nonexistent", description: "MinIO SA" } ]
+- name: Ensure groups exist
+  include_tasks: ensure_group.yml
+  loop: "{{ truenas_groups | default([]) }}"
+  loop_control:
+    loop_var: group
+
+- name: Ensure users exist
+  include_tasks: ensure_user.yml
+  loop: "{{ truenas_users | default([]) }}"
+  loop_control:
+    loop_var: user
+  no_log: true
+
+# 4) スナップショットタスク（存在チェック→作成/更新）
+#    truenas_datasets内:
+#      snapshot: true/false, hour: "2", retention_days: 30, recursive: true
+# Snapshot task setup removed to keep minimal; manage snapshots separately if needed
+
+# 5) 構成バックアップ（本物の設定DBを保存）
+#    /mnt/… は事前に用意しておく（ZFSデータセット推奨）
+- name: Ensure backup directory
+  file:
+    path: "{{ truenas_backup_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Save system configuration (download to file)
+  vars:
+    cfgfile: "{{ truenas_backup_path }}/truenas-config-{{ ansible_date_time.iso8601_basic_short }}.db"
+  command:
+    argv:
+      - midclt
+      - call
+      - core.download
+      - system.config.save
+      - '[]'
+      - "{{ cfgfile }}"
+  register: cfgsave
+  changed_when: cfgsave.rc == 0

@@ -1,0 +1,16 @@
+---
+collections:
+  - name: yamisskey.servers
+    source: ./yamisskey-servers-1.0.0.tar.gz
+    type: file
+  - name: yamisskey.appliances
+    source: ./yamisskey-appliances-1.0.0.tar.gz
+    type: file
+  - name: community.docker
+    version: ">=3.0.0"
+  - name: community.sops
+    version: ">=1.6.0"
+  - name: community.general
+    version: ">=9.0.0"
+  - name: ansible.posix
+    version: ">=1.5.0"

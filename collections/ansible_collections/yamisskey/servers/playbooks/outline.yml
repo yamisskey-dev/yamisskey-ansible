@@ -1,0 +1,5 @@
+- name: Outline
+  hosts: all
+  become: true
+  roles:
+    - outline

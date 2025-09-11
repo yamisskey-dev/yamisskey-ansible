@@ -1,0 +1,6 @@
+---
+- name: Setup AI environment
+  hosts: all
+  become: true
+  roles:
+    - ai

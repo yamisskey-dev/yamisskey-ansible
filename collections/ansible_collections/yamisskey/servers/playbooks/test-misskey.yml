@@ -1,0 +1,35 @@
+---
+- name: Test yamisskey.servers collection - Misskey deployment
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  collections:
+    - yamisskey.servers
+  
+  vars:
+    # Test variables
+    ansible_check_mode: false
+    
+  tasks:
+    - name: Include compat role from collection
+      include_role:
+        name: compat
+      tags:
+        - compat
+        - test
+    
+    - name: Include misskey role from collection  
+      include_role:
+        name: misskey
+      tags:
+        - misskey
+        - test
+    
+    - name: Display collection info
+      debug:
+        msg: |
+          Successfully loaded roles from yamisskey.servers collection:
+          - compat: {{ ansible_role_names | default([]) | select('match', '.*compat.*') | list }}
+          - misskey: {{ ansible_role_names | default([]) | select('match', '.*misskey.*') | list }}
+      tags:
+        - info

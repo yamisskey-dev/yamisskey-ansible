@@ -1,0 +1,5 @@
+- name: Configure Vikunja
+  hosts: all
+  become: true
+  roles:
+    - vikunja

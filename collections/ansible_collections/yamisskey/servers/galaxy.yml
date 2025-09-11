@@ -1,0 +1,48 @@
+---
+# yamisskey.servers Ansible Collection
+namespace: yamisskey
+name: servers
+version: 1.0.0
+readme: README.md
+authors:
+  - yamisskey-dev <https://github.com/yamisskey-dev>
+description: >-
+  Enterprise-grade server infrastructure automation collection for Misskey, MinIO, 
+  monitoring, and supporting services. Optimized for Linux server environments
+  with Docker-based deployments.
+
+license:
+  - MIT
+
+license_file: ''
+
+tags:
+  - infrastructure
+  - servers
+  - misskey
+  - minio
+  - docker
+  - security
+  - monitoring
+  - backup
+  - social
+  - storage
+  - linux
+
+dependencies:
+  community.docker: ">=3.0.0"
+  community.sops: ">=1.6.0"
+  community.general: ">=9.0.0"
+  ansible.posix: ">=1.5.0"
+
+repository: https://github.com/yamisskey-dev/yamisskey-provision
+homepage: https://github.com/yamisskey-dev/yamisskey-provision
+issues: https://github.com/yamisskey-dev/yamisskey-provision/issues
+
+build_ignore:
+  - .gitignore
+  - .yamllint.yaml
+  - .ansible-lint
+  - docs/
+  - tests/
+  - '*.md'

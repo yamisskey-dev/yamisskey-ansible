@@ -120,15 +120,32 @@ git clone https://github.com/yamisskey-dev/yamisskey-provision.git
 cd yamisskey-provision
 ```
 
-Install Ansible and tools:
+Install Ansible and Collections:
 ```bash
-make install
+make install                      # Install Ansible via uv
+ansible-galaxy collection install -r requirements.yml  # Install Collections
 ```
 
 Create inventory (choose your target):
 ```bash
 make inventory                    # Create servers inventory (default)
 make inventory TARGET=appliances  # Create TrueNAS appliances inventory
+```
+
+### 2.1 Collections Installation
+
+The project uses modern Ansible Collections. Install them automatically:
+
+```bash
+# Install all Collections (yamisskey + community dependencies)
+ansible-galaxy collection install -r requirements.yml
+
+# Verify Collections installation
+ansible-galaxy collection list | grep yamisskey
+# Should show: yamisskey.servers, yamisskey.appliances
+
+# Check community dependencies
+ansible-galaxy collection list | grep -E "(community|ansible)"
 ```
 
 ### 3. Basic Usage

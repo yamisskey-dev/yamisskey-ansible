@@ -1,0 +1,19 @@
+---
+- name: Warm-up mirror (non-destructive)
+  shell: |
+    mc mirror \
+      --overwrite \
+      --preserve \
+      --workers {{ mc_workers | default(8) }} \
+      {{ source_minio_alias }}/{{ item }}/ \
+      {{ target_minio_alias }}/{{ item }}/
+  loop: "{{ buckets_to_migrate }}"
+  environment:
+    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
+  register: warmup_results
+  retries: 3
+  delay: 10
+  until: warmup_results.rc == 0
+  changed_when: false
+  loop_control:
+    label: "{{ item }}"

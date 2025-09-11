@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# ログ関数（stderr に出力）
+log() { 
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" >&2
+}
+
+# エラーハンドラ
+error_handler() {
+  log "エラー: $1"
+  # Discord通知
+  if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
+    curl -s -H "Content-Type: application/json" \
+      -d "{\"content\":\"⚠️ **Borgバックアップエラー** ($(hostname)): $1\"}" \
+      "$DISCORD_WEBHOOK_URL"
+  fi
+  # 強制的に終了（トラップを解除して終了）
+  rm -f "$LOCK_FILE" 2>/dev/null
+  trap '' EXIT INT TERM
+  exit 1
+}
+
+# バックアップ完了通知
+backup_completion() {
+  # 成功フラグが設定されている場合のみ通知
+  if [ "${BACKUP_SUCCESS:-0}" = "1" ]; then
+    local message="すべてのバックアップが正常に完了しました"
+    log "===== $message: $(date) ====="
+    
+    # Discord通知
+    if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
+      curl -s -H "Content-Type: application/json" \
+        -d "{\"content\":\"✅ **Borgバックアップ成功** ($(hostname)): $message\"}" \
+        "$DISCORD_WEBHOOK_URL"
+    fi
+  fi
+}
+
+# ロック機能
+create_lock() {
+  if [ -e "$LOCK_FILE" ]; then
+    PID=$(cat "$LOCK_FILE")
+    if ps -p "$PID" > /dev/null; then
+      echo "別のバックアッププロセスが実行中です (PID: $PID)" >&2
+      exit 1
+    else
+      rm -f "$LOCK_FILE"
+    fi
+  fi
+  echo $$ > "$LOCK_FILE"
+}

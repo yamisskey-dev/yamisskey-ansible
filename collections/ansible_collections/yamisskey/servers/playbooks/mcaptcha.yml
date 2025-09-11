@@ -1,0 +1,5 @@
+- name: Configure mCaptcha
+  hosts: all
+  become: true
+  roles:
+    - mcaptcha

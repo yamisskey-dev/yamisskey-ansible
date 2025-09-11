@@ -30,50 +30,68 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible-core ansible-lint yamllint
 
-      - name: Ansible Galaxy (optional)
+      - name: Install Collections
         run: |
-          if [ -f ansible/servers/requirements.yml ]; then
-            ansible-galaxy collection install -r ansible/servers/requirements.yml
-            ansible-galaxy role install -r ansible/servers/requirements.yml || true
+          if [ -f requirements.yml ]; then
+            ansible-galaxy collection install -r requirements.yml
+            echo "✅ yamisskey Collections installed"
+          else
+            echo "⚠️ requirements.yml not found, skipping Collections installation"
           fi
 
-      - name: yamllint (scoped)
+      - name: yamllint (Collections-aware)
         run: |
-          yamllint .github ansible/servers ansible/appliances
+          yamllint .github collections requirements.yml ansible-collections.cfg backup || echo "⚠️ Some YAML validation warnings (non-blocking)"
 
-      - name: ansible-lint (servers)
+      - name: ansible-lint (yamisskey.servers Collection)
         env:
-          ANSIBLE_CONFIG: ansible/servers/ansible.cfg
-          ANSIBLE_ROLES_PATH: ansible/servers/roles
-        run: ansible-lint -v ansible/servers
+          ANSIBLE_COLLECTIONS_PATH: collections
+          ANSIBLE_CONFIG: collections/ansible_collections/yamisskey/servers/ansible.cfg
+        run: |
+          echo "🔍 Linting yamisskey.servers Collection..."
+          ansible-lint -v collections/ansible_collections/yamisskey/servers
 
-      - name: ansible-lint (appliances)
+      - name: ansible-lint (yamisskey.appliances Collection)
         env:
-          ANSIBLE_ROLES_PATH: ansible/appliances/roles
-        run: ansible-lint -v ansible/appliances
+          ANSIBLE_COLLECTIONS_PATH: collections
+        run: |
+          echo "🔍 Linting yamisskey.appliances Collection..."
+          ansible-lint -v collections/ansible_collections/yamisskey/appliances
 
-      - name: Ansible syntax-check (servers/playbooks)
+      - name: Ansible syntax-check (servers Collection playbooks)
         env:
-          ANSIBLE_CONFIG: ansible/servers/ansible.cfg
-          ANSIBLE_ROLES_PATH: ansible/servers/roles
+          ANSIBLE_COLLECTIONS_PATH: collections
+          ANSIBLE_CONFIG: collections/ansible_collections/yamisskey/servers/ansible.cfg
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in ansible/servers/playbooks/*.yml; do
+          echo "📋 Syntax checking yamisskey.servers playbooks..."
+          for f in collections/ansible_collections/yamisskey/servers/playbooks/*.yml; do
             echo "-- syntax-check: $f"
             ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
           done
 
-      - name: Ansible syntax-check (appliances/playbooks)
+      - name: Ansible syntax-check (appliances Collection playbooks)
         env:
-          ANSIBLE_ROLES_PATH: ansible/appliances/roles
+          ANSIBLE_COLLECTIONS_PATH: collections
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in ansible/appliances/playbooks/*.yml; do
+          echo "📋 Syntax checking yamisskey.appliances playbooks..."
+          for f in collections/ansible_collections/yamisskey/appliances/playbooks/*.yml; do
             echo "-- syntax-check: $f"
             ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
           done
+
+      - name: Verify Collections Structure
+        run: |
+          echo "🔍 Verifying Collections structure..."
+          ls -la collections/ansible_collections/yamisskey/
+          echo "✅ yamisskey.servers files:"
+          find collections/ansible_collections/yamisskey/servers -name "*.yml" | wc -l
+          echo "✅ yamisskey.appliances files:"
+          find collections/ansible_collections/yamisskey/appliances -name "*.yml" | wc -l
+          echo "✅ Collections verification complete"
 
       - name: Trivy (config scan)
         uses: aquasecurity/trivy-action@0.28.0

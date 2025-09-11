@@ -1,0 +1,32 @@
+version: "3.8"
+networks: { appnet: {} }
+
+services:
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-08-10T00-00-00Z
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_REGION: ap-northeast-3
+      MINIO_DOMAIN: ${MINIO_DOMAIN}         # 例: s3.example.com
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL} # 例: https://s3.example.com
+      MINIO_BROWSER: "off"
+      MINIO_COMPRESS: "on"
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY}
+      MINIO_KMS_AUTO_ENCRYPTION: "on"
+    command: server /data --console-address ":9001"
+    volumes:
+      - {{ truenas_minio_data_path }}:/data:rw
+    networks: [appnet]
+    # healthcheck は未設定（必要なら sidecar で）
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    volumes:
+      - {{ truenas_cloudflared_config_path }}:/etc/cloudflared:ro
+    networks: [appnet]
