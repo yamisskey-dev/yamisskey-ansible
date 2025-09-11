@@ -98,6 +98,7 @@ jobs:
       - name: Ansible syntax-check (appliances deploy playbooks)
         env:
           ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_CONFIG: deploy/appliances/ansible.cfg
         run: |
           set -euo pipefail
           shopt -s nullglob
