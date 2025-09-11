@@ -1,4 +1,4 @@
-# ansible/servers/roles/borgbackup/vars
+# yamisskey.servers role: borgbackup - vars
 
 `borgbackup` ロールの変数定義を格納します。
 

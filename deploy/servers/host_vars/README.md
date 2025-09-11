@@ -1,4 +1,4 @@
-# ansible/servers/host_vars
+# deploy/servers/host_vars
 
 このディレクトリは、サーバ向けの Ansible ホスト変数 (`host_vars`) を格納します。
 
@@ -15,5 +15,4 @@
 
 参考:
 - ルートの `README.md`
-- `ansible/servers/README.md`
-
+- `ansible_collections/yamisskey/servers/README.md`

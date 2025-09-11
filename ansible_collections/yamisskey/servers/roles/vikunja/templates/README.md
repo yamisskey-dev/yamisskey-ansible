@@ -1,4 +1,4 @@
-# ansible/servers/roles/vikunja/templates
+# yamisskey.servers role: vikunja - templates
 
 `vikunja` ロールの Jinja2 テンプレートを格納します。
 

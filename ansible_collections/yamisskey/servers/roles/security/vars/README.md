@@ -1,4 +1,4 @@
-# ansible/servers/roles/security/vars
+# yamisskey.servers role: security - vars
 
 `security` ロールの変数定義を格納します。主要パラメータ例:
 

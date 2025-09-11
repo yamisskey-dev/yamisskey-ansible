@@ -1,4 +1,4 @@
-# ansible/servers/roles/security/templates
+# yamisskey.servers role: security - templates
 
 `security` ロールの Jinja2 テンプレートを格納します。主なテンプレートと配置先:
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/ai/tasks
+# yamisskey.servers role: ai - tasks
 
 このディレクトリは、`ai` ロールのタスク定義を格納します。
 

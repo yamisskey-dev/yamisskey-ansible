@@ -1,4 +1,4 @@
-# ansible/servers/group_vars
+# deploy/servers/group_vars
 
 このディレクトリは、サーバ向けの Ansible グループ変数 (`group_vars`) を格納します。
 
@@ -12,5 +12,4 @@
 
 参考:
 - ルートの `README.md`（Make コマンド集）
-- `ansible/servers/README.md`
-
+- `ansible_collections/yamisskey/servers/README.md`

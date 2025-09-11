@@ -1,4 +1,4 @@
-# ansible/servers/roles/monitoring/vars
+# yamisskey.servers role: monitoring - vars
 
 `monitoring` ロールの変数定義を格納します。
 

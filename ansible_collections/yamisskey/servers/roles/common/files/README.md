@@ -1,4 +1,4 @@
-# ansible/servers/roles/common/files
+# yamisskey.servers role: common - files
 
 `common` ロールで配布する静的ファイルを格納します。
 

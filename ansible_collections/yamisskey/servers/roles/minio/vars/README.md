@@ -1,4 +1,4 @@
-# ansible/servers/roles/minio/vars
+# yamisskey.servers role: minio - vars
 
 `minio` ロールの変数定義を格納します。`vars/main.yml` の主な値:
 

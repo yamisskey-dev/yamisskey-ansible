@@ -1,4 +1,4 @@
-# Cloudflared Role
+# yamisskey.servers role: cloudflared
 
 MinIO用のCloudflare Tunnel設定を管理するAnsibleロールです。
 

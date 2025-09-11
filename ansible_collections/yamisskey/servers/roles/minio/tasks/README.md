@@ -1,4 +1,4 @@
-# ansible/servers/roles/minio/tasks
+# yamisskey.servers role: minio - tasks
 
 `minio` ロールのタスク定義を格納します。`minio.yml` からロールが呼び出され、以下を実施します。
 

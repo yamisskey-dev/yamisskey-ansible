@@ -1,4 +1,4 @@
-# ansible/appliances/roles/apps
+# yamisskey.appliances role: apps
 
 このロールは、TrueNAS Scale 上のアプリ（MinIO + Cloudflared の Custom App）を管理します。`setup.yml` などのプレイブックから呼び出され、`midclt` API を用いてアプリの作成/更新/再配置を行います。
 

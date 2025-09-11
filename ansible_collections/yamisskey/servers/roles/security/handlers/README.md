@@ -1,4 +1,4 @@
-# ansible/servers/roles/security/handlers
+# yamisskey.servers role: security - handlers
 
 `security` ロールのハンドラを格納します。
 

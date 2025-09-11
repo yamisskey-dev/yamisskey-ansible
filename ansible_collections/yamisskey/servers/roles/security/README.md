@@ -1,4 +1,4 @@
-# ansible/servers/roles/security
+# yamisskey.servers role: security
 
 セキュリティ強化（Firewall、Fail2ban、CrowdSec 等）を行うロールです。
 

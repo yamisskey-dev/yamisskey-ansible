@@ -1,4 +1,4 @@
-# ansible/servers/roles/stalwart/tasks
+# yamisskey.servers role: stalwart - tasks
 
 `stalwart` ロールのタスク定義を格納します。
 

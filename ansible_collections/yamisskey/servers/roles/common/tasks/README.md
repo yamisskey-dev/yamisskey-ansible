@@ -1,4 +1,4 @@
-# ansible/servers/roles/common/tasks
+# yamisskey.servers role: common - tasks
 
 `common` ロールのタスク定義を格納します。基本セットアップ（パッケージ導入、無人アップデート）を行います。
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/impostor
+# yamisskey.servers role: impostor
 
 Among Us サーバ（Impostor）関連の導入・設定を行うロールです。
 

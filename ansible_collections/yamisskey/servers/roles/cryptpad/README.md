@@ -1,4 +1,4 @@
-# ansible/servers/roles/cryptpad
+# yamisskey.servers role: cryptpad
 
 CryptPad の導入・設定を行うロールです。
 

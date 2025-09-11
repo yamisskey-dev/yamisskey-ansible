@@ -1,4 +1,4 @@
-# ansible/servers/roles/uptime/tasks
+# yamisskey.servers role: uptime - tasks
 
 `uptime` ロールのタスク定義を格納します。
 

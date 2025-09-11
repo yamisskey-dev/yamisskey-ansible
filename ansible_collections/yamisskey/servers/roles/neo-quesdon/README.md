@@ -1,4 +1,4 @@
-# ansible/servers/roles/neo-quesdon
+# yamisskey.servers role: neo-quesdon
 
 Neo Quesdon 関連の導入・設定を行うロールです。
 

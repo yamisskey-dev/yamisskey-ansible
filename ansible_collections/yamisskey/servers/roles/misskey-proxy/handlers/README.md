@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey-proxy/handlers
+# yamisskey.servers role: misskey-proxy - handlers
 
 `misskey-proxy` ロールのハンドラを格納します。
 

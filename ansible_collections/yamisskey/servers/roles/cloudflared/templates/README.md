@@ -1,4 +1,4 @@
-# ansible/servers/roles/cloudflared/templates
+# yamisskey.servers role: cloudflared - templates
 
 `cloudflared` ロールのテンプレート（Jinja2）を格納します。
 

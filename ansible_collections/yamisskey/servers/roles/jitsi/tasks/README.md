@@ -1,4 +1,4 @@
-# ansible/servers/roles/jitsi/tasks
+# yamisskey.servers role: jitsi - tasks
 
 `jitsi` ロールのタスク定義を格納します。
 

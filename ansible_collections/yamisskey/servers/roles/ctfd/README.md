@@ -1,4 +1,4 @@
-# ansible/servers/roles/ctfd
+# yamisskey.servers role: ctfd
 
 CTFd の導入・設定を行うロールです。
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/jitsi
+# yamisskey.servers role: jitsi
 
 Jitsi（ビデオ会議）の導入・設定を行うロールです。
 

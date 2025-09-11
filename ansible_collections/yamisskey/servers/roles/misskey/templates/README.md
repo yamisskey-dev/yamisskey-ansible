@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey/templates
+# yamisskey.servers role: misskey - templates
 
 `misskey` ロールの Jinja2 テンプレートを格納します。`tasks/main.yml` から以下のテンプレートが展開されます。
 

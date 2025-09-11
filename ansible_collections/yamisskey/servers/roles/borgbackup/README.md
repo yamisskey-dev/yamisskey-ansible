@@ -1,4 +1,4 @@
-# ansible/servers/roles/borgbackup
+# yamisskey.servers role: borgbackup
 
 このロールは BorgBackup の導入・設定を行います。
 

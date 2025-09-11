@@ -1,4 +1,4 @@
-# ansible/servers/roles/import/tasks
+# yamisskey.servers role: import - tasks
 
 `import` ロールのタスク定義を格納します。宛先サーバでバックアップの展開と Compose 再起動を行います。
 

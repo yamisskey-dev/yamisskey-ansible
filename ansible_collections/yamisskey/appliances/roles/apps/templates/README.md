@@ -1,4 +1,4 @@
-# ansible/appliances/roles/apps/templates
+# yamisskey.appliances role: apps - templates
 
 このディレクトリは、`apps` ロールで使用する Jinja2 テンプレートを格納します。
 

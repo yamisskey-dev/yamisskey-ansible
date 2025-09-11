@@ -1,4 +1,4 @@
-# ansible/servers/roles/vikunja
+# yamisskey.servers role: vikunja
 
 Vikunja（タスク管理）の導入・設定を行うロールです。
 

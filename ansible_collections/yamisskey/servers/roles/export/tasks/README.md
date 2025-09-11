@@ -1,4 +1,4 @@
-# ansible/servers/roles/export/tasks
+# yamisskey.servers role: export - tasks
 
 `export` ロールのタスク定義を格納します。ソースサーバ上の Docker Compose プロジェクトを停止し、ディレクトリごとに `.tar.gz` を作成、宛先へコピーします。
 

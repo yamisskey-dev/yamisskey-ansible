@@ -1,4 +1,4 @@
-# ansible/servers/roles/mcaptcha/templates
+# yamisskey.servers role: mcaptcha - templates
 
 `mcaptcha` ロールの Jinja2 テンプレートを格納します。
 

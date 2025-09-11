@@ -1,4 +1,4 @@
-# ansible/servers/roles/stalwart
+# yamisskey.servers role: stalwart
 
 Stalwart（メールサーバ）の導入・設定を行うロールです。
 

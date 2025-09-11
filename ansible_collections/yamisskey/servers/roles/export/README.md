@@ -1,4 +1,4 @@
-# ansible/servers/roles/export
+# yamisskey.servers role: export
 
 エクスポート（バックアップ・データ出力）処理をまとめたロールです。
 

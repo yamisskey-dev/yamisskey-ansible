@@ -1,4 +1,4 @@
-# ansible/appliances/roles/core/tasks
+# yamisskey.appliances role: core - tasks
 
 このディレクトリは、`core` ロールのタスク定義を格納します。`setup.yml` から呼び出され、TrueNAS の基盤構成を行います。
 

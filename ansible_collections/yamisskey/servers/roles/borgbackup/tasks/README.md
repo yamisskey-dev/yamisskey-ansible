@@ -1,4 +1,4 @@
-# ansible/servers/roles/borgbackup/tasks
+# yamisskey.servers role: borgbackup - tasks
 
 `borgbackup` ロールのタスク定義を格納します。
 

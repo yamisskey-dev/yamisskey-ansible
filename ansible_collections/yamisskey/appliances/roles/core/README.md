@@ -1,4 +1,4 @@
-# TrueNAS Core Role
+# yamisskey.appliances role: core
 
 TrueNAS SCALE環境の基盤設定を担当するAnsibleロールです。API駆動による冪等的なシステム設定、データセット管理、ユーザー・グループ管理、設定バックアップを提供します。
 
@@ -137,7 +137,7 @@ make run TARGET=appliances PLAYBOOK=setup EXTRA_VARS="truenas_pool_name=storage"
 ## 📁 ディレクトリ構造
 
 ```
-ansible/appliances/roles/core/
+ansible_collections/yamisskey/appliances/roles/core/
 ├── tasks/
 │   ├── main.yml              # メインタスク
 │   ├── ensure_dataset.yml    # データセット作成
@@ -239,8 +239,8 @@ truenas_datasets:
 
 - [TrueNAS SCALE API](https://www.truenas.com/docs/scale/scaletutorials/apps/usingmidclt/)
 - [ZFS Dataset Management](https://openzfs.github.io/openzfs-docs/)
-- [ansible/appliances/roles/apps/README.md](../apps/README.md)
-- [ansible/appliances/playbooks/README.md](../../playbooks/README.md)
+- [ansible_collections/yamisskey/appliances/roles/apps/README.md](../apps/README.md)
+- [deploy/appliances/playbooks/README.md](../../../../deploy/appliances/playbooks)
 
 ## 🤝 貢献
 

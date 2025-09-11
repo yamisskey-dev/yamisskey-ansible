@@ -1,4 +1,4 @@
-# ansible/servers/roles/security/tasks
+# yamisskey.servers role: security - tasks
 
 `security` ロールのタスク定義を格納します。ログ整備、UFW、Fail2ban、Cloudflare/WARP対応、sysctl強化などのハードニングを行います。
 

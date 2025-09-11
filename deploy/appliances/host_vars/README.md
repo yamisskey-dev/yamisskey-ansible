@@ -1,4 +1,4 @@
-# ansible/appliances/host_vars
+# deploy/appliances/host_vars
 
 このディレクトリは、TrueNAS アプライアンス向けの Ansible ホスト変数 (`host_vars`) を格納します。`truenas.yml` がサンプルです。
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/minecraft/tasks
+# yamisskey.servers role: minecraft - tasks
 
 `minecraft` ロールのタスク定義を格納します。`minecraft.yml` プレイブックからロールが呼び出されます。
 

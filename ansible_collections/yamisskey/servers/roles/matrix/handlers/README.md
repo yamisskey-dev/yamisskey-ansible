@@ -1,4 +1,4 @@
-# ansible/servers/roles/matrix/handlers
+# yamisskey.servers role: matrix - handlers
 
 `matrix` ロールのハンドラを格納します。`handlers/main.yml` には以下が含まれます。
 

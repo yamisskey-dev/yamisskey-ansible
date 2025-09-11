@@ -1,4 +1,4 @@
-# ansible/servers/roles/monitoring/templates
+# yamisskey.servers role: monitoring - templates
 
 `monitoring` ロールの Jinja2 テンプレートを格納します。
 

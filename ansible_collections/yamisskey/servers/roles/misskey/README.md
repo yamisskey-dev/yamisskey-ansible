@@ -1,4 +1,4 @@
-# Misskey Role
+# yamisskey.servers role: misskey
 
 分散型SNSプラットフォーム「Misskey」の展開・管理を行うAnsibleロールです。
 

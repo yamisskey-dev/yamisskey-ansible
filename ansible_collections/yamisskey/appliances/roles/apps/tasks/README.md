@@ -1,4 +1,4 @@
-# ansible/appliances/roles/apps/tasks
+# yamisskey.appliances role: apps - tasks
 
 このディレクトリは、`apps` ロールのタスク定義を格納します。
 

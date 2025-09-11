@@ -1,4 +1,4 @@
-# ansible/appliances/roles/migrate-minio
+# yamisskey.appliances role: migrate-minio
 
 TrueNAS 向け MinIO 移行をロール化したものです（Phase A/B どちらにも対応）。
 

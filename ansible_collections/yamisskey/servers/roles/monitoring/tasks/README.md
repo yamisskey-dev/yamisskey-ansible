@@ -1,4 +1,4 @@
-# ansible/servers/roles/monitoring/tasks
+# yamisskey.servers role: monitoring - tasks
 
 `monitoring` ロールのタスク定義を格納します。Prometheus/Grafana と各種 Exporter を導入し、ヘルスチェックまで行います。
 

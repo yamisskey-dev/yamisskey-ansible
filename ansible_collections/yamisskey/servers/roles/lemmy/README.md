@@ -1,4 +1,4 @@
-# ansible/servers/roles/lemmy
+# yamisskey.servers role: lemmy
 
 Lemmy（リンク集約）の導入・設定を行うロールです。
 

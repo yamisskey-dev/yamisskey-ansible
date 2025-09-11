@@ -1,4 +1,4 @@
-# ansible/servers/roles/borgbackup/templates
+# yamisskey.servers role: borgbackup - templates
 
 `borgbackup` ロールで使用する Jinja2 テンプレートを格納します。
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/cloudflare-warp
+# yamisskey.servers role: cloudflare-warp
 
 Cloudflare WARP の導入・設定を行うロールです。
 

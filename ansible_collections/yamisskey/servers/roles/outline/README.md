@@ -1,4 +1,4 @@
-# ansible/servers/roles/outline
+# yamisskey.servers role: outline
 
 Outline（チーム Wiki）の導入・設定を行うロールです。
 

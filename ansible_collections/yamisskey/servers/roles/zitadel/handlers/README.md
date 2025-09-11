@@ -1,4 +1,4 @@
-# ansible/servers/roles/zitadel/handlers
+# yamisskey.servers role: zitadel - handlers
 
 `zitadel` ロールのハンドラを格納します。
 

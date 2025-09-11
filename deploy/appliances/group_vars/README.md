@@ -1,4 +1,4 @@
-# ansible/appliances/group_vars
+# deploy/appliances/group_vars
 
 このディレクトリは、TrueNAS アプライアンス向けの Ansible グループ変数 (`group_vars`) を格納します。`all.yml` に共通設定が定義されています。
 

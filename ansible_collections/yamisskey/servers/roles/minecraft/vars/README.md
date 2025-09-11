@@ -1,4 +1,4 @@
-# ansible/servers/roles/minecraft/vars
+# yamisskey.servers role: minecraft - vars
 
 `minecraft` ロールの変数定義を格納します。
 

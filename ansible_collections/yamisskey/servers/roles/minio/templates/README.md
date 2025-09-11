@@ -1,4 +1,4 @@
-# ansible/servers/roles/minio/templates
+# yamisskey.servers role: minio - templates
 
 `minio` ロールの Jinja2 テンプレートを格納します。`tasks/main.yml` から以下が展開されます。
 

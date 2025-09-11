@@ -1,4 +1,4 @@
-# ansible/servers/roles/cryptpad/tasks
+# yamisskey.servers role: cryptpad - tasks
 
 `cryptpad` ロールのタスク定義を格納します。
 

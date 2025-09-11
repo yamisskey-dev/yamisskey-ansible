@@ -1,4 +1,4 @@
-# ansible/servers/roles/impostor/templates
+# yamisskey.servers role: impostor - templates
 
 `impostor` ロールの Jinja2 テンプレートを格納します。
 

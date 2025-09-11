@@ -1,4 +1,4 @@
-# ansible/servers/roles/searxng
+# yamisskey.servers role: searxng
 
 SearXNG（検索エンジン）の導入・設定を行うロールです。
 

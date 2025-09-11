@@ -25,7 +25,7 @@
       block:
         - name: Check if inventory file exists
           stat:
-            path: "{{ ansible_env.PWD }}/ansible/servers/inventory"
+            path: "{{ ansible_env.PWD }}/deploy/servers/inventory"
           register: inventory_check
           delegate_to: localhost
 
@@ -116,13 +116,13 @@
       block:
         - name: Check migrate role directory
           stat:
-            path: "{{ ansible_env.PWD }}/ansible/servers/roles/migrate"
+            path: "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate"
           register: migrate_role_check
           delegate_to: localhost
 
         - name: Check migrate tasks file
           stat:
-            path: "{{ ansible_env.PWD }}/ansible/servers/roles/migrate/tasks/main.yml"
+            path: "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate/tasks/main.yml"
           register: migrate_tasks_check
           delegate_to: localhost
 
@@ -141,9 +141,9 @@
       block:
         - name: Check for async/poll patterns in migrate tasks
           shell: |
-            if [ -f "{{ ansible_env.PWD }}/ansible/servers/roles/migrate/tasks/main.yml" ]; then
-              async_count=$(grep -c "async:" "{{ ansible_env.PWD }}/ansible/servers/roles/migrate/tasks/main.yml" || echo "0")
-              poll_count=$(grep -c "poll:" "{{ ansible_env.PWD }}/ansible/servers/roles/migrate/tasks/main.yml" || echo "0")
+            if [ -f "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate/tasks/main.yml" ]; then
+              async_count=$(grep -c "async:" "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate/tasks/main.yml" || echo "0")
+              poll_count=$(grep -c "poll:" "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate/tasks/main.yml" || echo "0")
               echo "async:$async_count,poll:$poll_count"
             else
               echo "async:0,poll:0"

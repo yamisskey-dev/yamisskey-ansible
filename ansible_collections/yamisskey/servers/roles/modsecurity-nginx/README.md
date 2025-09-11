@@ -1,4 +1,4 @@
-# ModSecurity CRS NGINX Role
+# yamisskey.servers role: modsecurity-nginx
 
 This role deploys ModSecurity with OWASP Core Rule Set (CRS) running on NGINX as a Docker container.
 

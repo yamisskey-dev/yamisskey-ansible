@@ -1,4 +1,4 @@
-# ansible/servers/roles/uptime/handlers
+# yamisskey.servers role: uptime - handlers
 
 `uptime` ロールのハンドラを格納します。
 

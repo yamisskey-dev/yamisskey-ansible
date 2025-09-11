@@ -1,4 +1,4 @@
-# ansible/servers/roles/import/vars
+# yamisskey.servers role: import - vars
 
 `import` ロールの変数定義を格納します。`export` ロールと同一スキーマを使用します。
 

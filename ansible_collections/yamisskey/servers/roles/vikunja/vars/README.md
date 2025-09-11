@@ -1,4 +1,4 @@
-# ansible/servers/roles/vikunja/vars
+# yamisskey.servers role: vikunja - vars
 
 `vikunja` ロールの変数定義を格納します。`vars/main.yml` の主な値:
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/common/vars
+# yamisskey.servers role: common - vars
 
 `common` ロールの変数定義を格納します。代表値:
 

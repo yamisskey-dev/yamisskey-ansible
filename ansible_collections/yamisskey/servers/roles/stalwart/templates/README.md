@@ -1,4 +1,4 @@
-# ansible/servers/roles/stalwart/templates
+# yamisskey.servers role: stalwart - templates
 
 `stalwart` ロールで使用する Jinja2 テンプレートを格納します。`stalwart.yml` プレイブックからロールが呼び出され、以下のテンプレートが展開されます。
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/import
+# yamisskey.servers role: import
 
 インポート（復元・データ投入）処理をまとめたロールです。
 

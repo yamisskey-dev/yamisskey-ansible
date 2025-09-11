@@ -1,4 +1,4 @@
-# ansible/servers/roles/compat
+# yamisskey.servers role: compat
 
 互換性レイヤやディストリビューション差分の調整を行うロールです。
 

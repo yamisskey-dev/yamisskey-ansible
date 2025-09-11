@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey-proxy/vars
+# yamisskey.servers role: misskey-proxy - vars
 
 `misskey-proxy` ロールの変数定義を格納します。`vars/main.yml` には以下のような値が含まれます。
 

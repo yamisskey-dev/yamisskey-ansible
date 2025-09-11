@@ -1,4 +1,4 @@
-# ansible/servers/roles/cloudflared/tasks
+# yamisskey.servers role: cloudflared - tasks
 
 `cloudflared` ロールのタスク定義を格納します。インストール、トンネル作成、DNS更新、設定配備、systemd サービス設定、検証まで自動化（API 資格情報がある場合）。
 

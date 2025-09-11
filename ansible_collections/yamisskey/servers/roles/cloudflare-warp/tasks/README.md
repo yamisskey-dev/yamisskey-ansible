@@ -1,4 +1,4 @@
-# ansible/servers/roles/cloudflare-warp/tasks
+# yamisskey.servers role: cloudflare-warp - tasks
 
 `cloudflare-warp` ロールのタスク定義を格納します。`warp-cli` を利用し、WARP の登録/ライセンス適用/接続/モード設定/除外ホスト設定までを自動化します。
 

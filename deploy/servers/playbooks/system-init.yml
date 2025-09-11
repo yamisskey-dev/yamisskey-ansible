@@ -24,16 +24,15 @@
         cache_valid_time: 3600
       when: ansible_os_family == "Debian"
 
-    - name: Check if common playbook exists
+    - name: Check if deploy common playbook exists
       stat:
-        path: "{{ ansible_env.PWD }}/ansible/servers/playbooks/common.yml"
+        path: "{{ ansible_env.PWD }}/deploy/servers/playbooks/common.yml"
       register: common_playbook_check
       delegate_to: localhost
 
-    - name: Include common playbook for necessary packages
-      include_tasks: common.yml
-      vars:
-        ansible_become: true
+    - name: Apply common role for necessary packages
+      include_role:
+        name: yamisskey.servers.common
       when: common_playbook_check.stat.exists
 
     - name: Install base packages if common playbook not available

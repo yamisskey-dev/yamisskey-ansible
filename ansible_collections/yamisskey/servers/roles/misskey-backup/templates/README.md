@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey-backup/templates
+# yamisskey.servers role: misskey-backup - templates
 
 `misskey-backup` ロールの Jinja2 テンプレートを格納します。以下のテンプレートが `tasks/main.yml` から利用されます。
 

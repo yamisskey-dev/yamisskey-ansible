@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey-proxy/templates
+# yamisskey.servers role: misskey-proxy - templates
 
 `misskey-proxy` ロールの Jinja2 テンプレートを格納します。
 

@@ -100,7 +100,7 @@ make check PLAYBOOK=setup TARGET=appliances
 アプライアンス固有の設定は以下で管理します：
 
 ```yaml
-# ansible/appliances/group_vars/all.yml
+# deploy/appliances/group_vars/all.yml
 truenas_base_url: "https://truenas.local"
 api_key: "{{ vault_truenas_api_key }}"
 pool_name: "main-pool"
@@ -113,7 +113,7 @@ minio_dataset: "main-pool/minio"
 
 ### ホスト固有設定
 ```yaml
-# ansible/appliances/host_vars/truenas.yml
+# deploy/appliances/host_vars/truenas.yml
 ansible_host: "truenas.local"
 ansible_user: "root"
 ansible_python_interpreter: "/usr/bin/python3"
@@ -200,4 +200,4 @@ make check PLAYBOOK=setup TARGET=appliances
 make logs
 
 # インベントリ確認
-cat ansible/appliances/inventory
+cat deploy/appliances/inventory

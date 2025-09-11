@@ -1,4 +1,4 @@
-# ansible/servers/roles/zitadel
+# yamisskey.servers role: zitadel
 
 Zitadel（IDaaS）の導入・設定を行うロールです。
 

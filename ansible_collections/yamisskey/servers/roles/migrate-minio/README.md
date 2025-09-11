@@ -1,4 +1,4 @@
-# ansible/servers/roles/migrate-minio
+# yamisskey.servers role: migrate-minio
 
 MinIO の移行に関わる共通処理をまとめたロールです。
 

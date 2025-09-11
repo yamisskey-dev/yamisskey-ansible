@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey-proxy
+# yamisskey.servers role: misskey-proxy
 
 Misskey 向けのプロキシ設定（Nginx など）を行うロールです。
 

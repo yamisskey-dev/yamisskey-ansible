@@ -1,4 +1,4 @@
-# ansible/servers/roles/export/vars
+# yamisskey.servers role: export - vars
 
 `export` ロールの変数定義を格納します。
 

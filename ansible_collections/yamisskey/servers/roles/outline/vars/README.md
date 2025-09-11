@@ -1,4 +1,4 @@
-# ansible/servers/roles/outline/vars
+# yamisskey.servers role: outline - vars
 
 `outline` ロールの変数定義を格納します。
 

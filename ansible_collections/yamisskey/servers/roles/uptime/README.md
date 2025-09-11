@@ -1,4 +1,4 @@
-# ansible/servers/roles/uptime
+# yamisskey.servers role: uptime
 
 Uptime 監視の導入・設定を行うロールです。
 

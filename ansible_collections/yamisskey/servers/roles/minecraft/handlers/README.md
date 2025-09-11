@@ -1,4 +1,4 @@
-# ansible/servers/roles/minecraft/handlers
+# yamisskey.servers role: minecraft - handlers
 
 `minecraft` ロールのハンドラを格納します。
 

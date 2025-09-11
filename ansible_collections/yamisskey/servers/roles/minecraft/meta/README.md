@@ -1,4 +1,4 @@
-# ansible/servers/roles/minecraft/meta
+# yamisskey.servers role: minecraft - meta
 
 `minecraft` ロールのメタ情報（依存ロールや Galaxy 情報）を格納します。
 

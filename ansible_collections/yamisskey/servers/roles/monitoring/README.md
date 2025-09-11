@@ -1,4 +1,4 @@
-# Monitoring Role
+# yamisskey.servers role: monitoring
 
 包括的なシステム監視とアラート機能を提供するAnsibleロールです。Prometheus、Grafana、各種Exporterによる監視基盤を構築します。
 

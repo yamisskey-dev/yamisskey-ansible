@@ -1,4 +1,4 @@
-# MinIO Role
+# yamisskey.servers role: minio
 
 Secure MinIO object storage deployment with CLI-only management and ActivityPub federation support.
 

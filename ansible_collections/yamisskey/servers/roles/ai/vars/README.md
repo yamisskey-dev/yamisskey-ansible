@@ -1,4 +1,4 @@
-# ansible/servers/roles/ai/vars
+# yamisskey.servers role: ai - vars
 
 このディレクトリは、`ai` ロール固有の変数を格納します。
 

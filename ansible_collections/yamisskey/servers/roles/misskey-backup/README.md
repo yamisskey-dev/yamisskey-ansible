@@ -1,4 +1,4 @@
-# ansible/servers/roles/misskey-backup
+# yamisskey.servers role: misskey-backup
 
 Misskey のバックアップ処理を行うロールです。
 

@@ -1,4 +1,4 @@
-# ansible/servers/roles/matrix
+# yamisskey.servers role: matrix
 
 Matrix ホームサーバの導入・設定を行うロールです。
 

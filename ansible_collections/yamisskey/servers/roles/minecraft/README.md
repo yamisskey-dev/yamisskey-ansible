@@ -1,4 +1,4 @@
-# Minecraft Server (PaperMC + Geyser/Floodgate)
+# yamisskey.servers role: minecraft
 
 このロールは、Java版とBedrock版の両方からアクセス可能なクロスプラットフォームMinecraftサーバーを構築します。
 

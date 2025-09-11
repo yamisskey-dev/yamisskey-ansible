@@ -1,4 +1,4 @@
-# MinIO Migration Guide
+# yamisskey.servers role: migrate
 
 ## 概要
 

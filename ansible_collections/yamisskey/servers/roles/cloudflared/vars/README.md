@@ -1,4 +1,4 @@
-# ansible/servers/roles/cloudflared/vars
+# yamisskey.servers role: cloudflared - vars
 
 `cloudflared` ロールの変数定義を格納します。最低限必要な値の例:
 

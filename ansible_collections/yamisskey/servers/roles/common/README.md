@@ -1,4 +1,4 @@
-# ansible/servers/roles/common
+# yamisskey.servers role: common
 
 共通の基本セットアップ（パッケージ、ユーザ、時刻同期など）を行うロールです。
 

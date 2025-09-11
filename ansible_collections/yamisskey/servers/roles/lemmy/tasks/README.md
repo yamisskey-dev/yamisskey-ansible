@@ -1,4 +1,4 @@
-# ansible/servers/roles/lemmy/tasks
+# yamisskey.servers role: lemmy - tasks
 
 `lemmy` ロールのタスク定義を格納します。
 
