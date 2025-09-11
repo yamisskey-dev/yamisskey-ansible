@@ -30,14 +30,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible-core ansible-lint yamllint
 
-      - name: Install Collections
+      - name: Install external Collections (skip local yamisskey)
         run: |
-          if [ -f requirements.yml ]; then
-            ansible-galaxy collection install -r requirements.yml
-            echo "✅ yamisskey Collections installed"
-          else
-            echo "⚠️ requirements.yml not found, skipping Collections installation"
-          fi
+          set -euo pipefail
+          cat > requirements-ci.yml <<'YAML'
+          ---
+          collections:
+            - name: community.docker
+              version: ">=3.0.0"
+            - name: community.sops
+              version: ">=1.6.0"
+            - name: community.general
+              version: ">=9.0.0"
+            - name: ansible.posix
+              version: ">=1.5.0"
+          YAML
+          ansible-galaxy collection install -r requirements-ci.yml
+          echo "✅ External Collections installed"
 
       - name: yamllint (Collections-aware)
         run: |
