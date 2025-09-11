@@ -1,0 +1,8 @@
+ - name: Include migration preamble
+   import_tasks: 00_preamble.yml
+
+ - name: Include aliases and buckets
+   import_tasks: 10_aliases_and_buckets.yml
+
+ - name: Include warmup mirror
+   import_tasks: 20_warmup.yml

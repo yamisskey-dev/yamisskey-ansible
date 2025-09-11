@@ -205,12 +205,13 @@ MINIO_API_REQUESTS_DEADLINE: "10s"
 
 ## 🔄 Ansible Roles連携
 
-これらのプレイブックは以下のロールを使用します：
+これらのプレイブックは以下のロールを使用します（roles 中心の構造に統一済み）：
 
-- **ansible/appliances/roles/core**: TrueNAS基盤設定
-- **ansible/appliances/roles/apps**: MinIOアプリケーション展開
+- `roles/core`: TrueNAS基盤設定
+- `roles/apps`: MinIOアプリケーション展開
+- `roles/migrate-minio`: MinIOデータ移行（Phase A / Cutover / Full）
 
-詳細な設定は各ロールのREADME.mdを参照してください。
+詳細な設定は各ロールの README.md を参照してください。
 
 ## 📈 パフォーマンス指標
 

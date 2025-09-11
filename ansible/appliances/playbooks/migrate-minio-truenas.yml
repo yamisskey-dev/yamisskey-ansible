@@ -25,25 +25,8 @@
       - "{{ minio_bucket_name_for_misskey }}"
 
   tasks:
-    - import_tasks: tasks/migrate/00_preamble.yml
-      tags: [precheck]
-
-    - import_tasks: tasks/migrate/05_preflight.yml
-      tags: [preflight]
-
-    - import_tasks: tasks/migrate/10_aliases_and_buckets.yml
-      tags: [aliases, buckets, encryption]
-
-    - import_tasks: tasks/migrate/20_warmup.yml
-      tags: [warmup]
-
-    # Optional versioning/ILM and Misskey quiesce removed for simplicity
-
-    - import_tasks: tasks/migrate/40_final_mirror.yml
-      tags: [final]
-
-    - import_tasks: tasks/migrate/50_iam_and_cors.yml
-      tags: [iam, cors]
-
-    - import_tasks: tasks/migrate/90_verify_and_cleanup.yml
-      tags: [verify, cleanup]
+    - name: Run full migration sequence via role
+      include_role:
+        name: migrate-minio
+        tasks_from: main.yml
+      tags: [migration]

@@ -17,10 +17,7 @@
       - "{{ minio_bucket_name_for_misskey }}"
 
   tasks:
-    # Idempotent setup in case Phase B is run standalone
-    - import_tasks: tasks/migrate/00_preamble.yml
-    - import_tasks: tasks/migrate/10_aliases_and_buckets.yml
-
-    - import_tasks: tasks/migrate/40_final_mirror.yml
-    - import_tasks: tasks/migrate/50_iam_and_cors.yml
-    - import_tasks: tasks/migrate/90_verify_and_cleanup.yml
+    - name: Run Cutover sequence via role
+      include_role:
+        name: migrate-minio
+        tasks_from: cutover.yml

@@ -70,7 +70,7 @@ Common Variables (appliances ⇄ servers)
 
 Where the mapping happens
 - apps role: ansible/appliances/roles/apps/tasks/00_compat.yml（双方向の名称マッピング）
-- migration preamble: ansible/appliances/playbooks/tasks/migrate/00_preamble.yml（必要最低限の互換セット）
+- migration preamble: ansible/appliances/roles/migrate-minio/tasks/00_preamble.yml（必要最低限の互換セット）
 
 Recommended Vault entries (example)
 ```yaml

@@ -17,7 +17,8 @@
       - "{{ minio_bucket_name_for_misskey }}"
 
   tasks:
-    - import_tasks: tasks/migrate/00_preamble.yml
-    - import_tasks: tasks/migrate/10_aliases_and_buckets.yml
-    - import_tasks: tasks/migrate/20_warmup.yml
+    - name: Run Phase A sequence via role
+      include_role:
+        name: migrate-minio
+        tasks_from: phase-a.yml
     # Versioning/ILM skipped to keep minimal
