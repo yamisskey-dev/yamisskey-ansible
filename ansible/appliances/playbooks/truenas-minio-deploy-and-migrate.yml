@@ -27,7 +27,8 @@
     - role: apps
       tags: [apps]
 
-  tasks:
-    - name: Include migration playbook (Raspberry Pi → TrueNAS over Tunnel)
-      import_playbook: migrate-minio-truenas.yml
+  post_tasks:
+    - name: Include migration tasks (Raspberry Pi → TrueNAS over Tunnel)
+      include_tasks: ../roles/migrate-minio/tasks/main.yml
       tags: [migration]
+      when: perform_cutover | bool
