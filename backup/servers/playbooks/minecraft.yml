@@ -1,5 +1,0 @@
-- name: Setup Minecraft server
-  hosts: all
-  become: true
-  roles:
-    - minecraft

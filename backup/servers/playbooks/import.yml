@@ -1,5 +1,0 @@
-- name: import  destination host from source host
-  hosts: all
-  become: true
-  roles:
-    - import

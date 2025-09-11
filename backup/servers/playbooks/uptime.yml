@@ -1,5 +1,0 @@
-- name: Configure Uptime-kuma
-  hosts: all
-  become: true
-  roles:
-    - uptime

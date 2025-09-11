@@ -1,5 +1,0 @@
-- name: Configure Misskey server
-  hosts: all
-  become: true
-  roles:
-    - misskey

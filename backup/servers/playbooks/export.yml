@@ -1,5 +1,0 @@
-- name: export source host to destination host
-  hosts: all
-  become: true
-  roles:
-    - export

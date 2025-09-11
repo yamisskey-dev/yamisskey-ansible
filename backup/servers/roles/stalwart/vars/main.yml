@@ -1,5 +1,0 @@
----
-# Stalwart specific variables
-stalwart_dir: '/var/www/stalwart'
-stalwart_secrets_file: '{{ stalwart_dir }}/secrets.yml'
-stalwart_server_name: mail.{{ domain }}

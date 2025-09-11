@@ -1,5 +1,0 @@
-- name: Configure Stalwart mail server
-  hosts: all
-  become: true
-  roles:
-    - stalwart

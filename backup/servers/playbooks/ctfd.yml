@@ -1,5 +1,0 @@
-- name: Configure CTFd
-  hosts: all
-  become: true
-  roles:
-    - ctfd
