@@ -22,7 +22,7 @@
     chdir: '{{ ctfd_dir }}'
 
 - name: Check if CTFd Docker container is running
-  shell: docker ps --filter "name=ctfd_ctfd_1" --format "{{'{{'}}.Names{{'}}'}}"
+  shell: docker ps --filter "name=ctfd_ctfd_1" --format "{{ '{{' }}.Names{{ '}}' }}"
   register: ctfd_container_status
   ignore_errors: true
 

@@ -69,20 +69,20 @@
       block:
         - name: Check Ansible version
           command: ansible --version
-          register: ansible_version
+          register: ansible_version_check
           failed_when: false
           changed_when: false
 
         - name: Set Ansible test result
           set_fact:
-            ansible_test: "{{ '✅ Available' if ansible_version.rc == 0 else '❌ Not available' }}"
+            ansible_test: "{{ '✅ Available' if ansible_version_check.rc == 0 else '❌ Not available' }}"
 
         - name: Display Ansible test
           debug:
             msg: |
               🔍 Test 3: Ansible availability - {{ ansible_test }}
-              {% if ansible_version.rc == 0 %}
-              🤖 Version: {{ ansible_version.stdout_lines[0] }}
+              {% if ansible_version_check.rc == 0 %}
+              🤖 Version: {{ ansible_version_check.stdout_lines[0] }}
               {% endif %}
 
     - name: Test 4 - Docker availability

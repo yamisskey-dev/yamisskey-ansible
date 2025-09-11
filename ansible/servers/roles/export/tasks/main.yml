@@ -69,7 +69,7 @@
   loop: '{{ docker_services_opt }}'
   when: "'source' in group_names"
 
-- name: Create destination directories for /home/{{ ansible_user }} backups
+- name: "Create destination directories for backups: /home/{{ ansible_user }}"
   ansible.builtin.file:
     path: '{{ backup_dir }}/{{ item }}'
     state: directory

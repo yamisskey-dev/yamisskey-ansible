@@ -36,7 +36,7 @@
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
     pull: always
-    build: true
+    build: always
   when: not backup_container.exists or backup_container.container.State.Status != 'running'
   register: compose_pull_build
 
