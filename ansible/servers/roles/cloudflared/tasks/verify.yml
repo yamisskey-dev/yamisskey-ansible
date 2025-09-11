@@ -10,7 +10,7 @@
     url: "https://{{ item }}/cdn-cgi/trace"
     method: GET
     timeout: 30
-    validate_certs: yes
+    validate_certs: true
   loop: "{{ cloudflared_hostnames }}"
   register: connectivity_test
   retries: 5
@@ -30,7 +30,7 @@
     url: "https://{{ item }}/minio/health/live"
     method: GET
     timeout: 30
-    validate_certs: yes
+    validate_certs: true
   loop:
     - "drive.{{ domain }}"
   register: service_test
@@ -70,12 +70,12 @@
       ==============================================
       Tunnel Name: {{ cloudflared_tunnel_name }}
       Tunnel UUID: {{ cloudflared_tunnel_uuid }}
-      
+
       Status Checks:
       {% for result in connectivity_test.results %}
       - {{ result.item }}: {{ 'PASS' if result.status == 200 else 'FAIL' }}
       {% endfor %}
-      
+
       Next Steps:
       1. Verify all services are accessible
       2. Test application functionality

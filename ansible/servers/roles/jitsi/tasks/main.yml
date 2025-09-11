@@ -19,7 +19,7 @@
   unarchive:
     src: /var/www/jitsi/jitsi-docker.zip
     dest: /var/www/jitsi/
-    remote_src: yes
+    remote_src: true
   when: not jitsi_unzipped.stat.exists
 
 - name: Move Jitsi Meet files from subfolder to /var/www/jitsi
@@ -120,7 +120,6 @@
   lineinfile:
     path: /usr/share/jitsi-meet/plugin.head.html
     line: '<link rel="stylesheet" href="css/custom.css?v=1">'
-    state: present
 
 - name: Start Jitsi Meet with Docker Compose
   command: docker-compose up -d

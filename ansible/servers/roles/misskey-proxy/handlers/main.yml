@@ -3,10 +3,10 @@
   systemd:
     name: squid
     state: restarted
-  become: yes
+  become: true
 
 - name: reload squid
   systemd:
     name: squid
     state: reloaded
-  become: yes
+  become: true

@@ -31,14 +31,13 @@
   systemd:
     name: docker
     state: started
-    enabled: yes
+    enabled: true
   become: true
 
 - name: Deploy Impostor server
   community.docker.docker_compose_v2:
     project_src: "{{ impostor_dir }}"
-    state: present
-    pull: yes
+    pull: always
   register: compose_result
 
 - name: Create playit service
@@ -52,6 +51,6 @@
   systemd:
     name: playit
     state: started
-    enabled: yes
-    daemon_reload: yes
+    enabled: true
+    daemon_reload: true
   become: true

@@ -12,7 +12,7 @@
     cloudflare_api_token: "{{ vault_cloudflare_api_token | default(omit) }}"
     cloudflare_zone_id: "{{ vault_cloudflare_zone_id | default(omit) }}"
     cloudflare_account_id: "{{ vault_cloudflare_account_id | default(omit) }}"
-    
+
     # Override default settings if needed
     # cloudflared_skip_install: false  # Set to false to enable automatic installation
     # cloudflared_app_name: "custom-app"  # Override default "yaminio"
@@ -33,21 +33,21 @@
           =============================================================
           🎉 CLOUDFLARED SETUP COMPLETED
           =============================================================
-          
+
           {% if tunnel_uuid is defined %}
           ✅ Full automation mode: All tasks completed successfully
           ✅ Tunnel: {{ cloudflared_tunnel_name }} ({{ tunnel_uuid }})
           ✅ DNS: {{ cloudflared_hostname }} configured
           ✅ Service: Running and enabled
-          
+
           🔗 Test URL: https://{{ cloudflared_hostname }}
-          
+
           {% else %}
           ⚠️  Manual mode: Configuration deployed, manual steps required
-          
+
           📋 Next steps:
           1. make install  # Install cloudflared binary
           2. Complete tunnel setup as shown in role output
-          
+
           {% endif %}
           =============================================================

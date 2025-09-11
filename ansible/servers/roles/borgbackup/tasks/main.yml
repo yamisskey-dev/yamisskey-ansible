@@ -2,7 +2,6 @@
 - name: Install Borg Backup
   package:
     name: borgbackup
-    state: present
 
 # 2. ディレクトリ構造の作成
 - name: Create necessary directories
@@ -118,14 +117,14 @@
   register: parent_dir_create
   changed_when: parent_dir_create.rc == 0
   become: false
-  
+
 - name: Touch parent directory initialized flag
   file:
     path: "{{ borg_backup_dir }}/cache/.parent_dir_initialized"
     state: touch
     mode: '0644'
   when: parent_dir_create.rc == 0
-  
+
 - name: Create host-specific backup directory on Raspberry Pi
   shell: |
     tailscale ssh {{ raspberry_pi_user }}@{{ raspberry_pi_host }} "mkdir -p {{ raspberry_pi_backup_dir }}/{{ actual_hostname }} && \
@@ -177,4 +176,4 @@
     src: "{{ borg_backup_dir }}/borg-backup.sh"
     dest: "/usr/local/bin/borg-backup"
     state: link
-    force: yes
+    force: true

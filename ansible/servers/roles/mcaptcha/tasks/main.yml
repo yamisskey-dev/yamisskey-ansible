@@ -77,5 +77,4 @@
 - name: Start mCaptcha services
   community.docker.docker_compose_v2:
     project_src: '{{ mcaptcha_dir }}'
-    state: present
-    pull: yes
+    pull: always

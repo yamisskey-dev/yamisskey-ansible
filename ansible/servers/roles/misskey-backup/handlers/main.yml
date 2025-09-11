@@ -7,5 +7,4 @@
 - name: Restart backup container
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
-    state: present
   listen: Restart backup container

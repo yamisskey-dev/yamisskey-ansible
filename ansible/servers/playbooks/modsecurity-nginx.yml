@@ -1,7 +1,7 @@
 ---
 - name: Deploy ModSecurity CRS NGINX
   hosts: all
-  become: yes
+  become: true
   vars:
     modsecurity_nginx_name: "modsecurity-nginx"
     modsecurity_nginx_image: "owasp/modsecurity-crs"
@@ -16,6 +16,6 @@
     modsecurity_blocking_paranoia: 2
     modsecurity_detection_paranoia: 2
     modsecurity_log_level: "warn"
-    
+
   roles:
     - modsecurity-nginx

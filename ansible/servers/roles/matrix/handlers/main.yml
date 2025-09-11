@@ -12,5 +12,4 @@
 - name: Restart element
   community.docker.docker_compose_v2:
     project_src: /var/www/element
-    state: present
-    restarted: yes
+    state: restarted

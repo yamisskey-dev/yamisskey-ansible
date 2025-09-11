@@ -17,7 +17,7 @@
     repo: "https://github.com/yamisskey-dev/yamisskey-backup.git"
     dest: "/opt/misskey-backup"
     version: "main"
-    force: yes
+    force: true
   register: git_clone
 
 - name: Create rclone config file
@@ -28,23 +28,21 @@
   notify: Restart backup container
 
 - name: Check if backup service is already running
-  docker_container_info:
+  community.docker.docker_container_info:
     name: backup
   register: backup_container
 
 - name: Pull and build Docker images
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
-    state: present
-    pull: yes
-    build: yes
+    pull: always
+    build: true
   when: not backup_container.exists or backup_container.container.State.Status != 'running'
   register: compose_pull_build
 
 - name: Start Docker Compose services
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
-    state: present
   when: not backup_container.exists or backup_container.container.State.Status != 'running'
   register: compose_start
 

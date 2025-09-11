@@ -6,15 +6,14 @@
       - docker-compose
       - squid
       - git
-    state: present
-  become: yes
+  become: true
 
 - name: Start and enable Docker service
   systemd:
     name: docker
     state: started
-    enabled: yes
-  become: yes
+    enabled: true
+  become: true
 
 - name: Create proxy directories
   file:
@@ -25,30 +24,30 @@
     - '{{ proxy_dir }}'
     - '{{ squid_cache_dir }}'
     - '{{ squid_log_dir }}'
-  become: yes
+  become: true
 
 - name: Deploy Squid configuration
   template:
     src: squid.conf.j2
     dest: '{{ proxy_squid_config_dir }}/squid.conf'
-    backup: yes
+    backup: true
     mode: '0644'
-  become: yes
+  become: true
   notify: restart squid
 
 - name: Start and enable Squid service
   systemd:
     name: squid
     state: started
-    enabled: yes
-  become: yes
+    enabled: true
+  become: true
 
 - name: Clone summaly-docker repository
   git:
     repo: '{{ summaly_repo }}'
     dest: '{{ summaly_dir }}'
     version: main
-    force: yes
+    force: true
 
 - name: Initialize git submodules for summaly-docker
   shell: |
@@ -66,29 +65,29 @@
   changed_when: "'Creating' in summaly_deploy.stdout or 'Starting' in summaly_deploy.stdout"
 
 - name: Deploy media-proxy-rs container
-  docker_container:
+  community.docker.docker_container:
     name: media-proxy-rs-server
     image: 'ghcr.io/yamisskey/media-proxy-rs:main'
     ports:
       - '{{ host_services.linode_prox.media_proxy_rs }}:{{ host_services.linode_prox.media_proxy_rs }}'
     state: started
     restart_policy: always
-    detach: yes
-    pull: yes
+    detach: true
+    pull: always
 
 - name: Deploy nginx proxy container
-  docker_container:
+  community.docker.docker_container:
     name: proxy
     image: nginx
     ports:
       - '{{ host_services.linode_prox.nginx }}:{{ host_services.linode_prox.nginx }}'
     state: started
     restart_policy: always
-    detach: yes
-    pull: yes
+    detach: true
+    pull: always
 
 - name: Check running containers
-  command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  command: docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}\t{{ '{{' }}.Ports{{ '}}' }}"
   register: container_status
   changed_when: false
 

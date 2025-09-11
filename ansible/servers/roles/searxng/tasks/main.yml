@@ -11,7 +11,7 @@
     repo: '{{ searxng_repo }}'
     dest: '{{ searxng_dir }}'
     version: master
-    force: no
+    force: false
 
 - name: Configure .env file for SearXNG
   ansible.builtin.copy:
@@ -39,8 +39,7 @@
 - name: Start SearXNG Docker container
   community.docker.docker_compose_v2:
     project_src: '{{ searxng_dir }}'
-    state: present
-    restarted: true
+    state: restarted
 
 - name: Re-enable cap_drop for security
   ansible.builtin.replace:

@@ -1,8 +1,8 @@
 ---
 - name: MinIO Migration from balthasar to raspberrypi with Encryption
   hosts: raspberrypi
-  become: yes
-  gather_facts: yes
-  
+  become: true
+  gather_facts: true
+
   roles:
     - migrate-minio

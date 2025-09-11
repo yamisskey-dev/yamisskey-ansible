@@ -36,7 +36,7 @@
   when: secrets_file_stat.stat.exists
   set_fact:
     secrets: "{{ lookup('file', neo_quesdon_secrets_file) | from_yaml }}"
-    
+
 - name: Set secrets as variables
   when: secrets_file_stat.stat.exists
   set_fact:
@@ -77,4 +77,3 @@
 - name: Start Neo-Quesdon containers
   community.docker.docker_compose_v2:
     project_src: "{{ neo_quesdon_dir }}"
-    state: present

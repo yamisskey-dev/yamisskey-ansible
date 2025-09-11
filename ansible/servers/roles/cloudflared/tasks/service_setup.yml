@@ -9,7 +9,7 @@
 
 - name: Install cloudflared service
   command: cloudflared service install
-  become: yes
+  become: true
   when: cloudflared_service_status.status is not defined
   register: service_install_result
 
@@ -23,15 +23,15 @@
   systemd:
     name: cloudflared
     enabled: "{{ cloudflared_service_enable }}"
-    daemon_reload: yes
-  become: yes
+    daemon_reload: true
+  become: true
   when: cloudflared_service_enable
 
 - name: Start cloudflared service
   systemd:
     name: cloudflared
     state: "{{ 'started' if cloudflared_service_start else 'stopped' }}"
-  become: yes
+  become: true
   register: service_start_result
 
 - name: Wait for service to be active
@@ -41,14 +41,14 @@
   retries: 10
   delay: 3
   until: service_status.status.ActiveState == "active"
-  become: yes
+  become: true
   when: cloudflared_service_start
 
 - name: Get service status
   systemd:
     name: cloudflared
   register: final_service_status
-  become: yes
+  become: true
 
 - name: Display service status
   debug:
@@ -57,7 +57,7 @@
       State: {{ final_service_status.status.ActiveState }}
       Sub-state: {{ final_service_status.status.SubState }}
       Enabled: {{ final_service_status.status.UnitFileState }}
-      
+
       {% if final_service_status.status.ActiveState == "active" %}
       ✅ Service is running
       {% else %}

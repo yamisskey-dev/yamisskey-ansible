@@ -30,7 +30,7 @@
       - minecraft
       - stalwart
       - searxng
-    
+
   tasks:
     - name: Validate operation parameter
       fail:
@@ -51,13 +51,13 @@
         patterns: "{{ known_services }}"
       register: service_dirs
       when: target_service == 'all'
-      
+
     - name: Check if specific service directory exists
       stat:
         path: "/opt/{{ target_service }}"
       register: service_dir_check
       when: target_service != 'all'
-      
+
     - name: Fail if specific service directory doesn't exist
       fail:
         msg: "Service directory /opt/{{ target_service }} does not exist"
@@ -98,7 +98,7 @@
           {% endif %}
       when: operation == 'status'
 
-    # Health Check Operation  
+    # Health Check Operation
     - name: Check Docker service health
       systemd:
         name: docker
@@ -135,7 +135,7 @@
         - (target_service in ['misskey', 'all'])
         - inventory_hostname in host_services
         - 'misskey' in host_services[inventory_hostname]
-        
+
     - name: Check Prometheus health endpoint
       uri:
         url: "http://localhost:{{ host_services[inventory_hostname].prometheus | default(9090) }}/-/healthy"
@@ -148,7 +148,7 @@
         - (target_service in ['monitoring', 'all'])
         - inventory_hostname in host_services
         - 'prometheus' in host_services[inventory_hostname]
-        
+
     - name: Check Grafana health endpoint
       uri:
         url: "http://localhost:{{ host_services[inventory_hostname].grafana | default(3000) }}/api/health"
@@ -179,7 +179,7 @@
           {% if grafana_health is defined %}
           📈 Grafana: {{ 'OK' if grafana_health.status == 200 else 'Failed' }}
           {% endif %}
-          
+
           ℹ️ Only services configured for this host ({{ inventory_hostname }}) are checked.
       when: operation == 'health'
 
@@ -211,7 +211,7 @@
         path: "{{ single_service_dir }}/docker-compose.yml"
       register: compose_file_check
       when: operation in ['restart', 'stop', 'start', 'update'] and target_service != 'all'
-      
+
     - name: Restart specific service
       shell: |
         cd {{ single_service_dir }}
@@ -222,7 +222,7 @@
         - operation == 'restart'
         - target_service != 'all'
         - compose_file_check.stat.exists
-        
+
     - name: Warn if docker-compose.yml not found
       debug:
         msg: "⚠️ docker-compose.yml not found in {{ single_service_dir }}. Skipping {{ operation }} for {{ target_service }}."
@@ -237,7 +237,7 @@
       register: compose_files_check
       loop: "{{ service_dirs.files }}"
       when: operation in ['restart', 'stop', 'start', 'update'] and target_service == 'all'
-    
+
     - name: Restart all services
       shell: |
         cd {{ item.item.path }}

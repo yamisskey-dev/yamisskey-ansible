@@ -3,7 +3,7 @@
   args:
     chdir: '{{ ctfd_dir }}'
   register: yami_branch_exists
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Create yami branch if it doesn't exist
   command: git checkout -b yami origin/yami
@@ -24,19 +24,18 @@
 - name: Check if CTFd Docker container is running
   shell: docker ps --filter "name=ctfd_ctfd_1" --format "{{'{{'}}.Names{{'}}'}}"
   register: ctfd_container_status
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Start or restart CTFd Docker container
   block:
     - name: Restart existing CTFd Docker container
       community.docker.docker_compose_v2:
         project_src: '{{ ctfd_dir }}'
-        restarted: true
+        state: restarted
       when: ctfd_container_status.stdout is defined and ctfd_container_status.stdout != ""
 
     - name: Start new CTFd Docker container
       community.docker.docker_compose_v2:
         project_src: '{{ ctfd_dir }}'
-        state: present
-        restarted: true
+        state: restarted
       when: ctfd_container_status.stdout is not defined or ctfd_container_status.stdout == ""

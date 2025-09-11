@@ -1,6 +1,6 @@
 ---
 - name: Ensure Cloudflare WARP service enabled and started
-  become: yes
+  become: true
   ansible.builtin.systemd:
     name: "{{ warp_service_name }}"
     enabled: true
@@ -18,20 +18,20 @@
   when: warp_cli_check.rc != 0
 
 - name: Check registration status
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli registration show
   register: warp_registration
   changed_when: false
   failed_when: false
 
 - name: Register WARP (if not registered)
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli registration new
   when: warp_registration.rc != 0 or (warp_registration.stdout is defined and 'not registered' in warp_registration.stdout | lower)
   notify: restart warp
 
 - name: Apply WARP license (if provided)
-  become: yes
+  become: true
   no_log: true
   ansible.builtin.command: warp-cli registration license {{ warp_license_key }}
   when: (warp_license_key | default('')) | length > 0
@@ -40,19 +40,19 @@
   notify: restart warp
 
 - name: Ensure WARP is connected
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli connect
   register: warp_connect
   changed_when: "'connected' in (warp_connect.stdout | lower) or warp_connect.rc == 0"
 
 - name: Get current WARP settings
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli settings
   register: warp_settings
   changed_when: false
 
 - name: Set WARP mode
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli mode {{ warp_mode }}
   when: warp_settings.stdout is not defined or (warp_mode | lower) not in (warp_settings.stdout | lower)
   notify: restart warp
@@ -73,14 +73,14 @@
     success_msg: "WARP is active (warp=on)."
 
 - name: Get current excluded hosts
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli tunnel host list
   register: warp_excluded_current
   changed_when: false
   failed_when: false
 
 - name: Exclude hosts from WARP
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli tunnel host add {{ item }}
   loop: "{{ warp_excluded_hosts }}"
   when: warp_excluded_current.stdout is not defined or (item not in (warp_excluded_current.stdout | default('')))
@@ -92,7 +92,7 @@
   ansible.builtin.meta: flush_handlers
 
 - name: Show excluded hosts
-  become: yes
+  become: true
   ansible.builtin.command: warp-cli tunnel host list
   register: warp_excluded_final
   changed_when: false

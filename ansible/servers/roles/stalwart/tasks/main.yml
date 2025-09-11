@@ -68,8 +68,7 @@
 - name: Start Stalwart container
   community.docker.docker_compose_v2:
     project_src: '{{ stalwart_dir }}'
-    state: present
-    restarted: yes
+    state: restarted
 
 - name: Show admin credentials and next steps
   debug:

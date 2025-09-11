@@ -1,11 +1,11 @@
 ---
 - name: Deploy Misskey proxy services
   hosts: linode-prox
-  become: yes
+  become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3
     docker_compose_cmd: 'docker compose'
-  
+
   roles:
     - common
     - misskey-proxy

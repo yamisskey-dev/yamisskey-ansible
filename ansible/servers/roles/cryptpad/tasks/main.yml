@@ -61,14 +61,13 @@
 
 # 5. コンテナの管理
 - name: Pull CryptPad Docker image
-  docker_image:
+  community.docker.docker_image:
     name: cryptpad/cryptpad
     tag: version-2024.9.1
     source: pull
-    force_source: yes
+    force_source: true
 
 - name: Start CryptPad containers
   community.docker.docker_compose_v2:
     project_src: "{{ cryptpad_dir }}"
-    state: present
-    restarted: yes
+    state: restarted

@@ -136,14 +136,13 @@
 - name: Start Minecraft server
   community.docker.docker_compose_v2:
     project_src: '{{ minecraft_dir }}'
-    state: present
-    pull: yes
+    pull: always
 
 - name: Enable and start Docker service
   systemd:
     name: docker
     state: started
-    enabled: yes
+    enabled: true
 
 # プラグイン設定の強制上書き（プラグイン初期化後）
 - name: Wait for plugins to initialize
@@ -158,7 +157,7 @@
     mode: '0644'
     owner: '{{ ansible_user }}'
     group: '{{ ansible_user }}'
-    force: yes
+    force: true
   notify: restart minecraft
 
 - name: Force copy Floodgate config after initialization
@@ -168,7 +167,7 @@
     mode: '0644'
     owner: '{{ ansible_user }}'
     group: '{{ ansible_user }}'
-    force: yes
+    force: true
   notify: restart minecraft
 
 # PlayIt.gg APTパッケージのインストールと設定（ARM64対応）
@@ -179,8 +178,7 @@
         name:
           - curl
           - gnupg
-        state: present
-        update_cache: yes
+        update_cache: true
       become: true
 
     - name: Add PlayIt.gg APT repository key
@@ -194,14 +192,12 @@
       apt_repository:
         repo: "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./"
         filename: playit-cloud
-        state: present
-        update_cache: yes
+        update_cache: true
       become: true
 
     - name: Install PlayIt.gg package
       apt:
         name: playit
-        state: present
       become: true
 
     - name: Display PlayIt.gg manual setup information
@@ -210,19 +206,19 @@
           ===============================================
           🔗 PlayIt.gg セットアップ - 手動設定
           ===============================================
-          
+
           ✅ PlayIt.ggパッケージのインストール完了
-          
+
           📋 手動セットアップ手順:
           1. sudo /usr/local/bin/playit
              (初回実行でClaim CodeとURLが表示されます)
-          
+
           2. 表示されたURLにアクセスしてアカウント設定
-          
+
           3. サービス開始:
              sudo systemctl start playit.service
              sudo systemctl enable playit.service
-          
+
           ⚠️ 重要:
           - 初回セットアップは手動で行ってください
           - アカウント設定後、サービスを手動で開始してください
@@ -239,6 +235,6 @@
 
 - name: Reload systemd daemon for playit service
   systemd:
-    daemon_reload: yes
+    daemon_reload: true
   become: true
   when: playit_enabled | default(false)

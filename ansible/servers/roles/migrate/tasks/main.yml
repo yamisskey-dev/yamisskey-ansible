@@ -51,7 +51,7 @@
         owner: root
         group: root
       when: not mc_exists.stat.exists
-      become: yes
+      become: true
 
     - name: Verify MinIO CLI installation
       command: /usr/local/bin/mc --version
@@ -245,7 +245,7 @@
       command: /usr/local/bin/mc ls {{ source_minio_alias }}/{{ item }}/
       loop: "{{ buckets_to_migrate }}"
       register: source_bucket_check
-      ignore_errors: yes
+      ignore_errors: true
       changed_when: false
 
     - name: Display source bucket statistics
@@ -254,7 +254,7 @@
       loop_control:
         index_var: ansible_loop_index
       register: source_bucket_stats
-      ignore_errors: yes
+      ignore_errors: true
       changed_when: false
       when: source_bucket_check.results[ansible_loop_index].rc == 0
 
@@ -292,7 +292,7 @@
       📦 Buckets: {{ buckets_to_migrate | join(', ') }}
       🔐 Encryption: KMS enabled
       ==========================================
-      
+
       Progress will be displayed every 10 seconds...
 
 - name: Execute MinIO migration with encryption
@@ -309,14 +309,14 @@
       ==========================================
       ⏱️  Elapsed Time: {{ (ansible_date_time.epoch | int) - (migration_start_time | int) }}秒
       📊 Status: {{ migration_result.finished | default(0) | ternary('✅ 完了', '🔄 進行中') }}
-      
+
       Progress Checklist:
       - SSH Connection: ✅ Established
       - Source MinIO: ✅ Connected
       - Target MinIO: ✅ Connected
       - Migration Script: ✅ Generated
       - Data Transfer: {{ migration_result.finished | default(0) | ternary('✅ Complete', '🔄 In Progress') }}
-      
+
       Current Buckets: {{ buckets_to_migrate | join(', ') }}
       ==========================================
       {% if not migration_result.finished | default(false) %}
@@ -375,7 +375,7 @@
       ✅ Buckets migrated: {{ buckets_to_migrate | join(', ') }}
       ✅ Migration verification completed
       ✅ Temporary files cleaned up
-      
+
       🔑 Next Steps:
       1. Update application configurations with new endpoint
       2. Test file upload/download functionality
@@ -390,20 +390,20 @@
       ==============================================
       Migration Usage Examples
       ==============================================
-      
+
       🚀 Basic migration (default: source→destination):
       make migrate
-      
+
       🎯 Flexible host migration:
       ansible-playbook -i ansible/inventory ansible/playbooks/migrate.yml \
         -e "migrate_source=balthasar migrate_target=raspberrypi" \
         --limit raspberrypi --ask-become-pass
-      
+
       🔄 Reverse migration (raspberrypi→balthasar):
       ansible-playbook -i ansible/inventory ansible/playbooks/migrate.yml \
         -e "migrate_source=raspberrypi migrate_target=balthasar" \
         --limit balthasar --ask-become-pass
-      
+
       📡 Custom endpoints:
       ansible-playbook -i ansible/inventory ansible/playbooks/migrate.yml \
         -e "migrate_source=server1 migrate_target=server2" \

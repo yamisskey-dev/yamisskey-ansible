@@ -15,21 +15,21 @@
     method: GET
     return_content: true
   register: cloudflared_release
-  when: 
+  when:
     - cloudflared_installed.rc != 0
     - cloudflared_version == "latest"
 
 - name: Set cloudflared download URL for latest version
   set_fact:
     cloudflared_download_url: "{{ cloudflared_release.json.assets | selectattr('name', 'match', '.*linux-amd64$') | map(attribute='browser_download_url') | first }}"
-  when: 
+  when:
     - cloudflared_installed.rc != 0
     - cloudflared_version == "latest"
 
 - name: Set cloudflared download URL for specific version
   set_fact:
     cloudflared_download_url: "https://github.com/cloudflare/cloudflared/releases/download/{{ cloudflared_version }}/cloudflared-linux-amd64"
-  when: 
+  when:
     - cloudflared_installed.rc != 0
     - cloudflared_version != "latest"
 

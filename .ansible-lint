@@ -1,20 +1,33 @@
 skip_list:
-  # Relax style for now; tighten incrementally later
-  - yaml
-  - fqcn
+  # Keep some rules relaxed for now, tighten incrementally
+  - yaml[line-length]
+  - fqcn[action-core]
   - command-instead-of-module
   - no-changed-when
   - risky-shell-pipe
-  - var-naming
-  - name
-  - schema
+  - var-naming[no-role-prefix]
+  - name[casing]
+  - schema[meta]
   - meta-no-tags
-  - key-order
-  - args
-  - literal-compare
+  - key-order[task]
   - risky-file-permissions
-  - jinja
-  - experimental
-offline: true
+
+offline: false
 exclude_paths:
-  - ansible/appliances/
+  - .github/
+  - backups/
+  - .ansible/
+
+# Enable more strict checking for production
+warn_list:
+  - experimental
+  - args[module]
+  - literal-compare
+  - jinja[spacing]
+
+# Rules to enforce for production quality
+enable_list:
+  - yaml[comments-indentation]
+  - yaml[empty-lines]
+  - name[template]
+  - no-free-form

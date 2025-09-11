@@ -94,13 +94,12 @@
     owner: 991
     group: 991
     mode: '0755'
-    recurse: yes
+    recurse: true
   become: true
 
 # コンテナの起動
 - name: Start Lemmy Docker containers
   community.docker.docker_compose_v2:
     project_src: "{{ lemmy_dir }}"
-    state: present
     pull: always
     remove_orphans: true

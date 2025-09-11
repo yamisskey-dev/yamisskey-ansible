@@ -77,12 +77,11 @@
   community.docker.docker_image:
     name: "{{ modsecurity_nginx_image }}:{{ modsecurity_nginx_tag }}"
     source: pull
-    force_source: yes
+    force_source: true
 
 - name: Start ModSecurity NGINX container
   community.docker.docker_compose_v2:
     project_src: "/etc/modsecurity-nginx"
-    state: present
 
 - name: Ensure ModSecurity NGINX is running
   community.docker.docker_container_info:

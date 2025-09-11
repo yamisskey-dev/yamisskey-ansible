@@ -136,15 +136,13 @@
 - name: Start Synapse container
   community.docker.docker_compose_v2:
     project_src: /var/www/synapse
-    state: present
-    restarted: no
+    recreate: false
 
 # Elementコンテナの起動
 - name: Start element
   community.docker.docker_compose_v2:
     project_src: /var/www/element
-    state: present
-    restarted: yes
+    state: restarted
 
 # Element用カスタム設定ファイルのコピー
 - name: Copy element custom configuration file

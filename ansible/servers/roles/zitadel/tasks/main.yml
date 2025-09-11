@@ -48,7 +48,7 @@
     - name: Load secrets from file
       set_fact:
         existing_secrets: "{{ lookup('file', zitadel_secrets_file) | from_yaml }}"
-    
+
     - name: Set existing secrets as facts
       set_fact:
         masterkey: "{{ existing_secrets.masterkey }}"
@@ -93,5 +93,4 @@
 - name: Ensure Docker Compose services are running
   community.docker.docker_compose_v2:
     project_src: "{{ zitadel_dir }}"
-    state: present
-    pull: yes
+    pull: always

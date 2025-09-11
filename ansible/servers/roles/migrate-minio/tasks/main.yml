@@ -78,14 +78,14 @@
   command: /usr/local/bin/mc ls {{ source_minio_alias }}/{{ item }}/
   loop: "{{ buckets_to_migrate }}"
   register: source_bucket_check
-  ignore_errors: yes
+  ignore_errors: true
   changed_when: false
 
 - name: Display source bucket statistics
   command: /usr/local/bin/mc du {{ source_minio_alias }}/{{ item }}/
   loop: "{{ buckets_to_migrate }}"
   register: source_bucket_stats
-  ignore_errors: yes
+  ignore_errors: true
   changed_when: false
   when: source_bucket_check.results[ansible_loop.index0].rc == 0
 
@@ -98,7 +98,7 @@
 - name: Execute MinIO migration with encryption
   command: bash "{{ migration_temp_dir }}/migrate.sh"
   register: migration_result
-  
+
 - name: Display migration results
   debug:
     var: migration_result.stdout_lines
@@ -188,14 +188,14 @@
       MinIO Migration Complete
       ==============================================
       ✅ Source connectivity verified
-      ✅ Target connectivity verified  
+      ✅ Target connectivity verified
       ✅ Credentials loaded successfully
       ✅ Buckets migrated: {{ buckets_to_migrate | join(', ') }}
       ✅ Encryption enabled on target
       ✅ API access functional
       ✅ File counts verified
       ✅ Temporary files cleaned up
-      
+
       🔑 Next Steps:
       1. Update Misskey configuration with new credentials
       2. Test file upload/download functionality
@@ -209,17 +209,17 @@
       ==============================================
       Application Configuration Update Required
       ==============================================
-      
+
       🔧 Misskey Configuration ({{ source_minio_host }}):
       Update .env file:
       S3_ENDPOINT=http://{{ ansible_default_ipv4.address }}:{{ host_services.joseph.minio_api }}
       S3_ACCESS_KEY={{ target_secrets.minio.misskey_s3_access_key }}
       S3_SECRET_KEY={{ target_secrets.minio.misskey_s3_secret_key }}
-      
+
       🔧 Outline Configuration:
       AWS_ACCESS_KEY_ID={{ target_secrets.minio.misskey_s3_access_key }}
       AWS_SECRET_ACCESS_KEY={{ target_secrets.minio.misskey_s3_secret_key }}
-      
+
       📝 DNS Update:
       drive.yami.ski → {{ ansible_default_ipv4.address }}
       ==============================================

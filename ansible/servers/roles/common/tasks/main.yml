@@ -9,7 +9,6 @@
 - name: Install essential packages
   apt:
     name: '{{ packages }}'
-    state: present
   tags:
     - packages
 

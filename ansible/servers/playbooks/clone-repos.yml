@@ -88,8 +88,8 @@
         repo: "{{ item.item.url }}"
         dest: "{{ item.item.dest }}"
         version: "{{ item.item.branch | default('HEAD') }}"
-        force: no
-        accept_hostkey: yes
+        force: false
+        accept_hostkey: true
       loop: "{{ repo_exists.results }}"
       when: not item.stat.exists
       become: "{{ item.item.become_required | default(false) }}"
@@ -115,9 +115,9 @@
         repo: "{{ item.item.url }}"
         dest: "{{ item.item.dest }}"
         version: "{{ item.item.branch | default('HEAD') }}"
-        force: no
-        update: yes
-        accept_hostkey: yes
+        force: false
+        update: true
+        accept_hostkey: true
       loop: "{{ repo_exists.results }}"
       when: item.stat.exists
       become: "{{ item.item.become_required | default(false) }}"
@@ -144,7 +144,7 @@
           {% endif %}
           {% endfor %}
           {% endif %}
-          
+
           📋 Next steps:
           1. Configure specific repositories as needed
           2. Run service-specific playbooks
@@ -172,7 +172,7 @@
           {% for result in final_check.results %}
           {{ result.item.name }}: {{ '✅ Ready' if result.stat.exists else ('❌ Missing' + (' (Required)' if result.item.required else ' (Optional)')) }}
           {% endfor %}
-          
+
           🎉 Repository setup completed!
           {% set failed_required = final_check.results | selectattr('item.required', 'equalto', true) | selectattr('stat.exists', 'equalto', false) | list %}
           {% if failed_required | length > 0 %}

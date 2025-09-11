@@ -16,5 +16,4 @@
 - name: Deploy DeepLX container
   community.docker.docker_compose_v2:
     project_src: "{{ deeplx_dir }}"
-    state: present
-    pull: yes
+    pull: always

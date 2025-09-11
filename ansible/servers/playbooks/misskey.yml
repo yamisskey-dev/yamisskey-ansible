@@ -1,6 +1,5 @@
 - name: Configure Misskey server
   hosts: all
   become: true
-  become_method: sudo
   roles:
     - misskey
