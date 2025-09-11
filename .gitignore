@@ -12,6 +12,10 @@ ansible/group_vars/sudo_passwords.yml
 # Runtime directories created by Makefile
 backups/
 logs/
+dist/
+
+# Build artifacts
+yamisskey-*.tar.gz
 
 # OS generated files
 .DS_Store

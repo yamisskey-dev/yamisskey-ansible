@@ -2,6 +2,15 @@
 
 Enterprise-grade server infrastructure automation collection for Misskey, MinIO, monitoring, and supporting services. Optimized for Linux server environments with Docker-based deployments.
 
+## 🚀 Install & Use (Quick)
+```bash
+# From Galaxy
+ansible-galaxy collection install yamisskey.servers
+
+# Or from local tarball
+ansible-galaxy collection install dist/servers/yamisskey-servers-*.tar.gz
+```
+
 ## 🎯 Overview
 
 This collection provides production-ready Ansible roles for deploying and managing a complete Misskey social media platform infrastructure, including storage, security, monitoring, and backup solutions.
@@ -10,7 +19,7 @@ This collection provides production-ready Ansible roles for deploying and managi
 
 ### From Built Package
 ```bash
-ansible-galaxy collection install yamisskey-servers-1.0.0.tar.gz
+ansible-galaxy collection install dist/servers/yamisskey-servers-1.0.0.tar.gz
 ```
 
 ### From Requirements File
@@ -18,7 +27,7 @@ ansible-galaxy collection install yamisskey-servers-1.0.0.tar.gz
 # requirements.yml
 collections:
   - name: yamisskey.servers
-    source: ./yamisskey-servers-1.0.0.tar.gz
+    source: ./dist/servers/yamisskey-servers-1.0.0.tar.gz
     type: file
 ```
 
@@ -162,12 +171,16 @@ ansible-playbook playbook.yml --tags monitoring
 
 ### Building the Collection
 ```bash
-ansible-galaxy collection build collections/ansible_collections/yamisskey/servers/
+ansible-galaxy collection build ansible_collections/yamisskey/servers/
 ```
 
 ### Running Tests
 ```bash
-ansible-playbook collections/ansible_collections/yamisskey/servers/playbooks/test-core-infrastructure.yml --syntax-check
+# Syntax check deploy playbooks
+ansible-playbook -i 'localhost,' -c local deploy/servers/playbooks/test-core-infrastructure.yml --syntax-check
+
+# Sanity tests for the collection
+cd ansible_collections/yamisskey/servers && ansible-test sanity --python 3.11 -v
 ```
 
 ## 📋 Requirements

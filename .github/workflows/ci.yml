@@ -41,56 +41,76 @@ jobs:
 
       - name: yamllint (Collections-aware)
         run: |
-          yamllint .github collections requirements.yml ansible-collections.cfg backup || echo "⚠️ Some YAML validation warnings (non-blocking)"
+          yamllint .github ansible_collections deploy requirements.yml ansible-collections.cfg backups || echo "⚠️ Some YAML validation warnings (non-blocking)"
 
       - name: ansible-lint (yamisskey.servers Collection)
         env:
-          ANSIBLE_COLLECTIONS_PATH: collections
-          ANSIBLE_CONFIG: collections/ansible_collections/yamisskey/servers/ansible.cfg
+          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           echo "🔍 Linting yamisskey.servers Collection..."
-          ansible-lint -v collections/ansible_collections/yamisskey/servers
+          ansible-lint -v ansible_collections/yamisskey/servers
 
       - name: ansible-lint (yamisskey.appliances Collection)
         env:
-          ANSIBLE_COLLECTIONS_PATH: collections
+          ANSIBLE_COLLECTIONS_PATH: .
         run: |
           echo "🔍 Linting yamisskey.appliances Collection..."
-          ansible-lint -v collections/ansible_collections/yamisskey/appliances
+          ansible-lint -v ansible_collections/yamisskey/appliances
 
-      - name: Ansible syntax-check (servers Collection playbooks)
+      - name: Ansible syntax-check (servers deploy playbooks)
         env:
-          ANSIBLE_COLLECTIONS_PATH: collections
-          ANSIBLE_CONFIG: collections/ansible_collections/yamisskey/servers/ansible.cfg
+          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           set -euo pipefail
           shopt -s nullglob
-          echo "📋 Syntax checking yamisskey.servers playbooks..."
-          for f in collections/ansible_collections/yamisskey/servers/playbooks/*.yml; do
+          echo "📋 Syntax checking deploy servers playbooks..."
+          for f in deploy/servers/playbooks/*.yml; do
             echo "-- syntax-check: $f"
             ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
           done
 
-      - name: Ansible syntax-check (appliances Collection playbooks)
+      - name: Ansible syntax-check (appliances deploy playbooks)
         env:
-          ANSIBLE_COLLECTIONS_PATH: collections
+          ANSIBLE_COLLECTIONS_PATH: .
         run: |
           set -euo pipefail
           shopt -s nullglob
-          echo "📋 Syntax checking yamisskey.appliances playbooks..."
-          for f in collections/ansible_collections/yamisskey/appliances/playbooks/*.yml; do
+          echo "📋 Syntax checking deploy appliances playbooks..."
+          for f in deploy/appliances/playbooks/*.yml; do
             echo "-- syntax-check: $f"
             ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
           done
+
+      - name: ansible-test sanity (yamisskey.servers)
+        env:
+          ANSIBLE_COLLECTIONS_PATH: .
+        run: |
+          set -euo pipefail
+          echo "🧪 ansible-test sanity for yamisskey.servers"
+          pushd ansible_collections/yamisskey/servers
+          ansible-test sanity --python 3.11 -v
+          popd
+
+      - name: ansible-test sanity (yamisskey.appliances)
+        env:
+          ANSIBLE_COLLECTIONS_PATH: .
+        run: |
+          set -euo pipefail
+          echo "🧪 ansible-test sanity for yamisskey.appliances"
+          pushd ansible_collections/yamisskey/appliances
+          ansible-test sanity --python 3.11 -v
+          popd
 
       - name: Verify Collections Structure
         run: |
           echo "🔍 Verifying Collections structure..."
-          ls -la collections/ansible_collections/yamisskey/
+          ls -la ansible_collections/yamisskey/
           echo "✅ yamisskey.servers files:"
-          find collections/ansible_collections/yamisskey/servers -name "*.yml" | wc -l
+          find ansible_collections/yamisskey/servers -name "*.yml" | wc -l
           echo "✅ yamisskey.appliances files:"
-          find collections/ansible_collections/yamisskey/appliances -name "*.yml" | wc -l
+          find ansible_collections/yamisskey/appliances -name "*.yml" | wc -l
           echo "✅ Collections verification complete"
 
       - name: Trivy (config scan)

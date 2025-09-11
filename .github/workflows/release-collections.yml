@@ -1,0 +1,60 @@
+name: "📦 Build & Publish Ansible Collections"
+
+on:
+  push:
+    tags:
+      - "servers-v*"
+      - "appliances-v*"
+  workflow_dispatch: {}
+
+jobs:
+  sanity-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        coll: [servers, appliances]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ansible tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ansible-core>=2.15" ansible-lint
+      - name: Sanity test
+        working-directory: ansible_collections/yamisskey/${{ matrix.coll }}
+        run: ansible-test sanity --python 3.11
+      - name: Build
+        working-directory: ansible_collections/yamisskey/${{ matrix.coll }}
+        run: |
+          ansible-galaxy collection build --force
+          mkdir -p ../../../dist/${{ matrix.coll }}
+          mv yamisskey-${{ matrix.coll }}-*.tar.gz ../../../dist/${{ matrix.coll }}/
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.coll }}-tarball
+          path: dist/${{ matrix.coll }}/*.tar.gz
+
+  publish:
+    needs: sanity-and-build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    env:
+      GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+      - name: Publish to Galaxy (matched tag only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" == servers-v* ]]; then coll="servers"; else coll="appliances"; fi
+          f=$(ls dist/${coll}/*yamisskey-${coll}-*.tar.gz | tail -n1)
+          test -n "${GALAXY_API_KEY}"
+          ansible-galaxy collection publish "$f" --token "${GALAXY_API_KEY}"

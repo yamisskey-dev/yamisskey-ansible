@@ -1,21 +1,30 @@
 .PHONY: help install inventory run check list logs backup deploy
+ .PHONY: build publish sanity
 
 # Configuration - Modern Collections Architecture
-COLLECTIONS_DIR := collections/ansible_collections/yamisskey
+COLLECTIONS_DIR := ansible_collections/yamisskey
+# Legacy collection paths (still used for roles)
 SERVERS_DIR := $(COLLECTIONS_DIR)/servers
-SERVERS_INV := $(SERVERS_DIR)/inventory
-SERVERS_PLAY := $(SERVERS_DIR)/playbooks
 APPLIANCES_DIR := $(COLLECTIONS_DIR)/appliances
-APPLIANCES_INV := $(APPLIANCES_DIR)/inventory
-APPLIANCES_PLAY := $(APPLIANCES_DIR)/playbooks
+DEPLOY_SERVERS_DIR := deploy/servers
+DEPLOY_SERVERS_INV := $(DEPLOY_SERVERS_DIR)/inventory
+DEPLOY_SERVERS_PLAY := $(DEPLOY_SERVERS_DIR)/playbooks
+DEPLOY_APPLIANCES_DIR := deploy/appliances
+DEPLOY_APPLIANCES_INV := $(DEPLOY_APPLIANCES_DIR)/inventory
+DEPLOY_APPLIANCES_PLAY := $(DEPLOY_APPLIANCES_DIR)/playbooks
 LOG_DIR := logs
 BACKUP_DIR := backups
+
+# Collections build/publish settings
+COLL_BASE=ansible_collections/yamisskey
+COLLS=servers appliances
+VERSION?=1.0.0
 
 # Core variables
 ANSIBLE_CMD := ansible-playbook
 TIMESTAMP := $(shell date +%Y%m%dT%H%M%S)
 PATH_WITH_ANSIBLE := $$HOME/.local/bin:$$PATH
-COLLECTIONS_PATH := collections
+COLLECTIONS_PATH := .
 
 # Default target (servers)
 TARGET ?= servers
@@ -25,35 +34,37 @@ $(shell mkdir -p $(LOG_DIR) $(BACKUP_DIR))
 
 # === Core Functions ===
 
-# Main playbook execution - Collections enabled
+# Main playbook execution - Deploy-first
 run:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make run PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>] [TAGS=<tags>]" && exit 1)
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV=$(APPLIANCES_INV); PLAY=$(APPLIANCES_PLAY); COLLECTION="yamisskey.appliances"; \
+		INV=$(DEPLOY_APPLIANCES_INV); PLAY=$(DEPLOY_APPLIANCES_PLAY); COLLECTION="yamisskey.appliances"; CONFIG=$(DEPLOY_APPLIANCES_DIR)/ansible.cfg; \
 	else \
-		INV=$(SERVERS_INV); PLAY=$(SERVERS_PLAY); COLLECTION="yamisskey.servers"; \
+		INV=$(DEPLOY_SERVERS_INV); PLAY=$(DEPLOY_SERVERS_PLAY); COLLECTION="yamisskey.servers"; CONFIG=$(DEPLOY_SERVERS_DIR)/ansible.cfg; \
 	fi; \
 	test -f "$$PLAY/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $$PLAY/" && exit 1); \
 	echo "🚀 Running $$COLLECTION: $(PLAYBOOK)"; \
 	export PATH="$(PATH_WITH_ANSIBLE)"; \
 	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
+	if [ -n "$$CONFIG" ]; then export ANSIBLE_CONFIG="$$CONFIG"; fi; \
 	$(ANSIBLE_CMD) -i $$INV $$PLAY/$(PLAYBOOK).yml \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		$(if $(TAGS),--tags $(TAGS)) \
 		--ask-become-pass
 
-# Dry-run check - Collections enabled
+# Dry-run check - Deploy-first
 check:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make check PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV=$(APPLIANCES_INV); PLAY=$(APPLIANCES_PLAY); COLLECTION="yamisskey.appliances"; \
+		INV=$(DEPLOY_APPLIANCES_INV); PLAY=$(DEPLOY_APPLIANCES_PLAY); COLLECTION="yamisskey.appliances"; CONFIG=$(DEPLOY_APPLIANCES_DIR)/ansible.cfg; \
 	else \
-		INV=$(SERVERS_INV); PLAY=$(SERVERS_PLAY); COLLECTION="yamisskey.servers"; \
+		INV=$(DEPLOY_SERVERS_INV); PLAY=$(DEPLOY_SERVERS_PLAY); COLLECTION="yamisskey.servers"; CONFIG=$(DEPLOY_SERVERS_DIR)/ansible.cfg; \
 	fi; \
 	test -f "$$PLAY/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $$PLAY/" && exit 1); \
 	echo "🔍 Checking $$COLLECTION: $(PLAYBOOK)"; \
 	export PATH="$(PATH_WITH_ANSIBLE)"; \
 	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
+	if [ -n "$$CONFIG" ]; then export ANSIBLE_CONFIG="$$CONFIG"; fi; \
 	$(ANSIBLE_CMD) -i $$INV $$PLAY/$(PLAYBOOK).yml \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		--check --diff
@@ -87,12 +98,12 @@ install:
 inventory:
 	@echo "📋 Creating $(TARGET) inventory..."
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV=$(APPLIANCES_INV); \
+		INV=$(DEPLOY_APPLIANCES_INV); \
 		echo "[truenas]" > $$INV; \
 		echo "truenas.local" >> $$INV; \
 		echo "✅ Appliances inventory created at $$INV"; \
 	else \
-		INV=$(SERVERS_INV); \
+		INV=$(DEPLOY_SERVERS_INV); \
 		CURRENT_HOST=$$(hostname); \
 		echo "[local]" > $$INV; \
 		echo "$$CURRENT_HOST ansible_connection=local" >> $$INV; \
@@ -110,9 +121,9 @@ inventory:
 list:
 	@echo "📋 Available $(TARGET) playbooks:"
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		PLAY=$(APPLIANCES_PLAY); \
+		PLAY=$(DEPLOY_APPLIANCES_PLAY); \
 	else \
-		PLAY=$(SERVERS_PLAY); \
+		PLAY=$(DEPLOY_SERVERS_PLAY); \
 	fi; \
 	ls $$PLAY/*.yml 2>/dev/null | sed 's|.*/||; s|\.yml$$||' | sort | sed 's/^/  /'
 
@@ -127,9 +138,9 @@ logs:
 backup:
 	@echo "💾 Backing up $(TARGET) inventory..."
 	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV=$(APPLIANCES_INV); \
+		INV=$(DEPLOY_APPLIANCES_INV); \
 	else \
-		INV=$(SERVERS_INV); \
+		INV=$(DEPLOY_SERVERS_INV); \
 	fi; \
 	test -f "$$INV" && cp "$$INV" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak" || true
 	@echo "✅ Backup created"
@@ -166,3 +177,26 @@ help:
 	@echo "  make check PLAYBOOK=security LIMIT=local         # dry-run with Collections"
 	@echo "  make deploy PLAYBOOKS='common security'          # sequence deployment"
 	@echo "  make list TARGET=appliances                       # list appliances playbooks"
+
+# === Collections Release Helpers ===
+
+build:
+	@for c in $(COLLS); do \
+		( cd $(COLL_BASE)/$$c && \
+		  ansible-galaxy collection build --force && \
+		  mkdir -p ../../../dist/$$c && \
+		  mv yamisskey-$$c-*.tar.gz ../../../dist/$$c/ \
+		); \
+	done
+
+publish:
+	@test -n "$$GALAXY_API_KEY" || (echo "GALAXY_API_KEY が未設定"; exit 1)
+	@for c in $(COLLS); do \
+		f=$$(ls dist/$$c/yamisskey-$$c-*.tar.gz | tail -n1) ; \
+		ansible-galaxy collection publish $$f --token $$GALAXY_API_KEY ; \
+	done
+
+sanity:
+	@for c in $(COLLS); do \
+		( cd $(COLL_BASE)/$$c && ansible-test sanity --python 3.11 ); \
+	done

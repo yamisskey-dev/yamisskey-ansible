@@ -51,7 +51,7 @@ echo "your-vault-password" > .vault_pass
 chmod 600 .vault_pass
 
 # Create encrypted vault file
-ansible-vault create group_vars/vault.yml --vault-password-file .vault_pass
+ansible-vault create deploy/servers/group_vars/vault.yml --vault-password-file .vault_pass
 ```
 
 ### Required Vault Variables
@@ -87,13 +87,13 @@ cloudflare_tunnel_credentials: "credentials-json-here"
 
 ```bash
 # Edit vault file
-ansible-vault edit group_vars/vault.yml --vault-password-file .vault_pass
+ansible-vault edit deploy/servers/group_vars/vault.yml --vault-password-file .vault_pass
 
 # Run playbook with vault
-make run PLAYBOOK=common --extra-vars "@group_vars/vault.yml" --vault-password-file .vault_pass
+make run PLAYBOOK=common --extra-vars "@deploy/servers/group_vars/vault.yml" --vault-password-file .vault_pass
 
 # Encrypt existing file
-ansible-vault encrypt host_vars/production_secrets.yml
+ansible-vault encrypt deploy/servers/host_vars/production_secrets.yml
 ```
 
 ## Quick Start
@@ -204,13 +204,13 @@ Add these parameters to any `run`, `check`, or `deploy` command:
 ## 🎯 Target Types
 
 ### Servers (Default - TARGET=servers)
-- **Path**: `ansible/servers/`
-- **Inventory**: `ansible/servers/inventory`
+- **Path**: `deploy/servers/`
+- **Inventory**: `deploy/servers/inventory`
 - **Use case**: Traditional server management, web services, applications
 
 ### Appliances (TARGET=appliances)
-- **Path**: `ansible/appliances/`
-- **Inventory**: `ansible/appliances/inventory`
+- **Path**: `deploy/appliances/`
+- **Inventory**: `deploy/appliances/inventory`
 - **Use case**: TrueNAS management, storage appliances
 
 ## 📋 Complete Provisioning Workflows
@@ -292,7 +292,7 @@ make backup TARGET=appliances
 
 ### Server Playbooks (`TARGET=servers`)
 
-Available in `ansible/servers/playbooks/`:
+Available in `deploy/servers/playbooks/`:
 
 **Essential Services**
 - `common` - Base system configuration and essential packages
@@ -342,7 +342,7 @@ Available in `ansible/servers/playbooks/`:
 
 ### Appliance Playbooks (`TARGET=appliances`)
 
-Available in `ansible/appliances/playbooks/`:
+Available in `deploy/appliances/playbooks/`:
 
 **TrueNAS Management**
 - `setup` - Initial TrueNAS configuration

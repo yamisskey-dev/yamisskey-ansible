@@ -1,10 +1,10 @@
 ---
 collections:
   - name: yamisskey.servers
-    source: ./yamisskey-servers-1.0.0.tar.gz
+    source: ./dist/servers/yamisskey-servers-1.0.0.tar.gz
     type: file
   - name: yamisskey.appliances
-    source: ./yamisskey-appliances-1.0.0.tar.gz
+    source: ./dist/appliances/yamisskey-appliances-1.0.0.tar.gz
     type: file
   - name: community.docker
     version: ">=3.0.0"
