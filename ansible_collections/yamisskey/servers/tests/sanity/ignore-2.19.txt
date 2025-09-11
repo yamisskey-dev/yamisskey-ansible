@@ -1,0 +1,5 @@
+shebang roles/borgbackup/templates/backup.sh.j2
+shebang roles/borgbackup/templates/config.sh.j2
+shebang roles/borgbackup/templates/helpers.sh.j2
+shebang roles/migrate-minio/templates/minio_migration_script.sh.j2
+shebang roles/migrate/templates/minio_migration_script.sh.j2

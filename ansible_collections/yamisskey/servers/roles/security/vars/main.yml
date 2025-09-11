@@ -11,7 +11,7 @@ tailscale_ports:
 cloudflared_quic_port: 7844
 cloudflared_https_port: 443
 
-# IPv4 and IPv6 addresses for region1 and region2 of Cloudflare’s network
+# IPv4 and IPv6 addresses for region1 and region2 of Cloudflare's network
 cloudflare_region1_ips_v4:
   - 198.41.192.167
   - 198.41.192.67
