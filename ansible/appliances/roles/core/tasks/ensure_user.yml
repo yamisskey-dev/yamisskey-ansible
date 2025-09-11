@@ -2,7 +2,7 @@
 - name: Query user
   command:
     argv: [midclt, -j, call, user.query,
-           "{{ [[ 'uid','=', user.uid ]] | to_json }}"]
+           "{{ [['uid', '=', user.uid]] | to_json }}"]
   register: uq
   changed_when: false
 

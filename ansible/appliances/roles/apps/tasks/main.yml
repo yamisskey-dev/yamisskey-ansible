@@ -82,7 +82,7 @@
       - -j
       - call
       - app.query
-      - "{{ ([[ 'name','=', truenas_minio_app_name ]] ) | to_json }}"
+      - "{{ ([['name', '=', truenas_minio_app_name]]) | to_json }}"
   register: app_query
 
 - name: Set app_exists flag
@@ -162,7 +162,7 @@
 # 6) RUNNING になるまで待つ（jq不要）
 - name: Poll app state until RUNNING
   vars:
-    query_payload: "{{ ([[ 'name','=', truenas_minio_app_name ]] ) | to_json }}"
+    query_payload: "{{ ([['name', '=', truenas_minio_app_name]]) | to_json }}"
   command:
     argv: [midclt, -j, call, app.query, "{{ query_payload }}"]
   register: app_state_raw

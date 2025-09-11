@@ -8,7 +8,7 @@
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   no_log: true
-  ignore_errors: yes
+  failed_when: false
 
 - name: Create IAM policy for Misskey
   template:

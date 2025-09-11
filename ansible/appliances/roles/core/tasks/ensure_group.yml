@@ -2,7 +2,7 @@
 - name: Query group
   command:
     argv: [midclt, -j, call, group.query,
-           "{{ [[ 'group','=', group.gid ]] | to_json }}"]
+           "{{ [['group', '=', group.gid]] | to_json }}"]
   register: gq
   changed_when: false
 
@@ -14,5 +14,5 @@
       - call
       - group.create
       - >-
-        {{ { "name": group.name, "gid": group.gid } | to_json }}
+        {{ {"name": group.name, "gid": group.gid} | to_json }}
   when: (gq.stdout | from_json | length) == 0
