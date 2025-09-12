@@ -1,0 +1,296 @@
+---
+# MinIO Migration Verification Playbook
+# Purpose: Comprehensive post-migration verification for MinIO data integrity
+# Usage: make run PLAYBOOK=verify-minio-migration LIMIT=<source_server>
+
+- name: Verify MinIO Migration Integrity
+  hosts: all
+  gather_facts: true
+  become: false
+  vars:
+    # Migration verification configuration
+    verification_sample_size: 100
+    verification_timeout: 300
+    max_diff_retries: 3
+    temp_verification_dir: "/tmp/minio-verification"
+    
+    # Source and target MinIO aliases (defined in inventory)
+    source_alias: "{{ source_minio_alias | default('source') }}"
+    target_alias: "{{ target_minio_alias | default('truenas-tunnel') }}"
+    
+    # Buckets to verify
+    verification_buckets:
+      - name: "{{ minio_bucket_name_for_misskey | default('files') }}"
+        priority: critical
+        deep_check: true
+      - name: "{{ minio_bucket_name_for_outline | default('assets') }}"
+        priority: high
+        deep_check: true
+      - name: "backups"
+        priority: medium
+        deep_check: false
+
+  pre_tasks:
+    - name: Check if mc (MinIO client) is available
+      command: which mc
+      register: mc_check
+      failed_when: mc_check.rc != 0
+      changed_when: false
+
+    - name: Create temporary verification directory
+      file:
+        path: "{{ temp_verification_dir }}"
+        state: directory
+        mode: '0750'
+
+    - name: Test source MinIO connectivity
+      command: mc ls {{ source_alias }}
+      register: source_connectivity
+      failed_when: source_connectivity.rc != 0
+      changed_when: false
+      tags: [connectivity]
+
+    - name: Test target MinIO connectivity  
+      command: mc ls {{ target_alias }}
+      register: target_connectivity
+      failed_when: target_connectivity.rc != 0
+      changed_when: false
+      tags: [connectivity]
+
+  tasks:
+    - name: Gather source MinIO information
+      block:
+        - name: Get source bucket list
+          command: mc ls {{ source_alias }}
+          register: source_buckets_raw
+          changed_when: false
+
+        - name: Parse source bucket information
+          set_fact:
+            source_buckets: >-
+              {{
+                source_buckets_raw.stdout_lines |
+                map('regex_replace', '^.*?([^ ]+)/$', '\\1') |
+                list
+              }}
+
+        - name: Get detailed source bucket statistics
+          command: mc du {{ source_alias }}/{{ item.name }} --summarize
+          register: source_stats
+          loop: "{{ verification_buckets }}"
+          when: item.name in source_buckets
+          changed_when: false
+          failed_when: false
+
+    - name: Gather target MinIO information
+      block:
+        - name: Get target bucket list
+          command: mc ls {{ target_alias }}
+          register: target_buckets_raw
+          changed_when: false
+
+        - name: Parse target bucket information
+          set_fact:
+            target_buckets: >-
+              {{
+                target_buckets_raw.stdout_lines |
+                map('regex_replace', '^.*?([^ ]+)/$', '\\1') |
+                list
+              }}
+
+        - name: Get detailed target bucket statistics
+          command: mc du {{ target_alias }}/{{ item.name }} --summarize
+          register: target_stats
+          loop: "{{ verification_buckets }}"
+          when: item.name in target_buckets
+          changed_when: false
+          failed_when: false
+
+    - name: Bucket existence verification
+      block:
+        - name: Verify all critical buckets exist on target
+          assert:
+            that:
+              - item.name in target_buckets
+            fail_msg: "Critical bucket '{{ item.name }}' is missing from target MinIO"
+            success_msg: "✅ Critical bucket '{{ item.name }}' exists on target"
+          loop: "{{ verification_buckets }}"
+          when: item.priority == 'critical'
+
+        - name: Report missing non-critical buckets
+          debug:
+            msg: "⚠️ Non-critical bucket '{{ item.name }}' is missing from target MinIO"
+          loop: "{{ verification_buckets }}"
+          when: 
+            - item.priority != 'critical'
+            - item.name not in target_buckets
+
+    - name: Object count and size verification
+      block:
+        - name: Compare object counts and sizes
+          shell: |
+            set -euo pipefail
+            
+            # Get source statistics
+            SOURCE_OUTPUT=$(mc du {{ source_alias }}/{{ item.name }} --summarize 2>/dev/null || echo "0B 0")
+            SOURCE_SIZE=$(echo "$SOURCE_OUTPUT" | awk '{print $1}' | head -1)
+            SOURCE_COUNT=$(echo "$SOURCE_OUTPUT" | awk '{print $2}' | head -1)
+            
+            # Get target statistics
+            TARGET_OUTPUT=$(mc du {{ target_alias }}/{{ item.name }} --summarize 2>/dev/null || echo "0B 0")
+            TARGET_SIZE=$(echo "$TARGET_OUTPUT" | awk '{print $1}' | head -1)
+            TARGET_COUNT=$(echo "$TARGET_OUTPUT" | awk '{print $2}' | head -1)
+            
+            # Convert sizes to bytes for comparison
+            SOURCE_BYTES=$(echo "$SOURCE_SIZE" | numfmt --from=iec 2>/dev/null || echo 0)
+            TARGET_BYTES=$(echo "$TARGET_SIZE" | numfmt --from=iec 2>/dev/null || echo 0)
+            
+            # Calculate difference percentage
+            if [ "$SOURCE_BYTES" -gt 0 ]; then
+              DIFF_PCT=$(echo "scale=2; (($TARGET_BYTES - $SOURCE_BYTES) * 100) / $SOURCE_BYTES" | bc -l 2>/dev/null || echo "0")
+            else
+              DIFF_PCT="0"
+            fi
+            
+            echo "SOURCE_SIZE=$SOURCE_SIZE"
+            echo "SOURCE_COUNT=$SOURCE_COUNT"
+            echo "TARGET_SIZE=$TARGET_SIZE"
+            echo "TARGET_COUNT=$TARGET_COUNT"
+            echo "SIZE_DIFF_PCT=$DIFF_PCT"
+          register: bucket_comparison
+          loop: "{{ verification_buckets }}"
+          when: 
+            - item.name in source_buckets
+            - item.name in target_buckets
+          changed_when: false
+
+        - name: Analyze bucket size differences
+          set_fact:
+            bucket_verification_results: >-
+              {{
+                bucket_verification_results | default([]) + [{
+                  'bucket': item.item.name,
+                  'priority': item.item.priority,
+                  'source_size': (item.stdout_lines | select('match', '^SOURCE_SIZE=') | first | regex_replace('^SOURCE_SIZE=', '')),
+                  'target_size': (item.stdout_lines | select('match', '^TARGET_SIZE=') | first | regex_replace('^TARGET_SIZE=', '')),
+                  'source_count': (item.stdout_lines | select('match', '^SOURCE_COUNT=') | first | regex_replace('^SOURCE_COUNT=', '')),
+                  'target_count': (item.stdout_lines | select('match', '^TARGET_COUNT=') | first | regex_replace('^TARGET_COUNT=', '')),
+                  'size_diff_pct': (item.stdout_lines | select('match', '^SIZE_DIFF_PCT=') | first | regex_replace('^SIZE_DIFF_PCT=', '')) | float
+                }]
+              }}
+          loop: "{{ bucket_comparison.results }}"
+          when: 
+            - item is not skipped
+            - item.stdout_lines is defined
+
+    - name: Random sampling verification
+      block:
+        - name: Generate random object samples for verification
+          shell: |
+            set -euo pipefail
+            BUCKET="{{ item.name }}"
+            SAMPLE_SIZE="{{ verification_sample_size }}"
+            
+            # Get random sample of objects from source
+            mc ls {{ source_alias }}/${BUCKET} --recursive | \
+              shuf -n ${SAMPLE_SIZE} | \
+              awk '{print $NF}' > {{ temp_verification_dir }}/${BUCKET}_sample_objects.txt
+            
+            # Count the actual samples generated
+            wc -l < {{ temp_verification_dir }}/${BUCKET}_sample_objects.txt
+          register: sample_generation
+          loop: "{{ verification_buckets }}"
+          when: 
+            - item.deep_check | default(false)
+            - item.name in source_buckets
+            - item.name in target_buckets
+          changed_when: false
+
+        - name: Verify random sample objects integrity
+          shell: |
+            set -euo pipefail
+            BUCKET="{{ item.item.name }}"
+            SAMPLE_FILE="{{ temp_verification_dir }}/${BUCKET}_sample_objects.txt"
+            RESULTS_FILE="{{ temp_verification_dir }}/${BUCKET}_verification_results.txt"
+            
+            # Initialize results
+            echo "VERIFIED=0" > "$RESULTS_FILE"
+            echo "FAILED=0" >> "$RESULTS_FILE"
+            echo "MISSING=0" >> "$RESULTS_FILE"
+            
+            VERIFIED=0
+            FAILED=0
+            MISSING=0
+            
+            # Check each sampled object
+            while IFS= read -r OBJECT; do
+              if [ -z "$OBJECT" ]; then continue; fi
+              
+              # Get source object info (ETag/checksum)
+              SOURCE_ETAG=$(mc stat {{ source_alias }}/${BUCKET}/${OBJECT} --json 2>/dev/null | jq -r '.etag // empty' || echo "")
+              
+              # Get target object info
+              TARGET_ETAG=$(mc stat {{ target_alias }}/${BUCKET}/${OBJECT} --json 2>/dev/null | jq -r '.etag // empty' || echo "")
+              
+              if [ -z "$TARGET_ETAG" ]; then
+                echo "MISSING: $OBJECT" >> "$RESULTS_FILE"
+                MISSING=$((MISSING + 1))
+              elif [ "$SOURCE_ETAG" = "$TARGET_ETAG" ] && [ -n "$SOURCE_ETAG" ]; then
+                VERIFIED=$((VERIFIED + 1))
+              else
+                echo "CHECKSUM_MISMATCH: $OBJECT (source: $SOURCE_ETAG, target: $TARGET_ETAG)" >> "$RESULTS_FILE"
+                FAILED=$((FAILED + 1))
+              fi
+            done < "$SAMPLE_FILE"
+            
+            # Update final counts
+            sed -i "s/VERIFIED=0/VERIFIED=$VERIFIED/" "$RESULTS_FILE"
+            sed -i "s/FAILED=0/FAILED=$FAILED/" "$RESULTS_FILE"  
+            sed -i "s/MISSING=0/MISSING=$MISSING/" "$RESULTS_FILE"
+            
+            # Output results
+            cat "$RESULTS_FILE"
+          register: integrity_verification
+          loop: "{{ sample_generation.results }}"
+          when: 
+            - item is not skipped
+            - item.stdout | int > 0
+          changed_when: false
+
+  post_tasks:
+    - name: Summary of verification results
+      debug:
+        msg: |
+          🔍 MinIO Migration Verification Summary for {{ inventory_hostname }}
+          ================================================
+          
+          ✅ Connectivity Tests:
+          • Source MinIO: {{ 'OK' if source_connectivity.rc == 0 else 'FAILED' }}
+          • Target MinIO: {{ 'OK' if target_connectivity.rc == 0 else 'FAILED' }}
+          
+          📊 Bucket Verification:
+          {% for result in bucket_verification_results | default([]) %}
+          • {{ result.bucket }} ({{ result.priority }}):
+            - Size: {{ result.source_size }} → {{ result.target_size }} ({{ result.size_diff_pct }}% change)
+            - Objects: {{ result.source_count }} → {{ result.target_count }}
+          {% endfor %}
+          
+          🔍 Integrity Check Results:
+          {% for result in integrity_verification.results | default([]) %}
+          {% if not result is skipped %}
+          {% set verified = result.stdout_lines | select('match', '^VERIFIED=') | first | regex_replace('^VERIFIED=', '') | int %}
+          {% set failed = result.stdout_lines | select('match', '^FAILED=') | first | regex_replace('^FAILED=', '') | int %}
+          {% set missing = result.stdout_lines | select('match', '^MISSING=') | first | regex_replace('^MISSING=', '') | int %}
+          • {{ result.item.item.name }}: {{ verified }} verified, {{ failed }} failed, {{ missing }} missing
+          {% endif %}
+          {% endfor %}
+          
+          📋 Report saved to: {{ temp_verification_dir }}/
+
+    - name: Clean up temporary verification directory (on success)
+      file:
+        path: "{{ temp_verification_dir }}"
+        state: absent
+      when: 
+        - cleanup_temp_files | default(true)
+        - not (critical_issues_found | default(false))

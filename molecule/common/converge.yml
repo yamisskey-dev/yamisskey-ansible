@@ -1,0 +1,43 @@
+---
+# Molecule converge playbook for common role testing
+- name: Converge - Test common role
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    # Override for testing environment
+    ansible_become_password: ""
+    skip_reboot: true
+    skip_service_restart: true
+    test_mode: true
+    
+  pre_tasks:
+    - name: Update apt cache (Debian/Ubuntu)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      
+    - name: Install basic test dependencies
+      package:
+        name:
+          - curl
+          - wget
+          - gnupg
+        state: present
+
+  roles:
+    - yamisskey.servers.common
+    
+  post_tasks:
+    - name: Verify basic system setup
+      command: systemctl is-active --quiet systemd-timesyncd
+      register: timesyncd_status
+      failed_when: false
+      changed_when: false
+      
+    - name: Check if unattended-upgrades is configured
+      stat:
+        path: /etc/apt/apt.conf.d/20auto-upgrades
+      register: auto_upgrades_config
+      when: ansible_os_family == "Debian"

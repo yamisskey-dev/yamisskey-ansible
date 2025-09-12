@@ -1,0 +1,255 @@
+# ========================================
+# Yamisskey Provision - Servers Inventory
+# ========================================
+# このファイルを inventory にコピーして本番環境の値に変更してください
+# 必須変数が不足している場合、LIMIT や TAGS での安全実行が失敗します
+
+# === Production Servers ===
+[production:children]
+social_servers
+monitoring_servers
+proxy_servers
+storage_servers
+game_servers
+
+# --- Social & Apps (Main Production) ---
+[social_servers]
+balthasar ansible_host=BALTHASAR_IP_PLACEHOLDER
+
+# --- Security & Monitoring Hub ---
+[monitoring_servers]
+caspar ansible_host=CASPAR_IP_PLACEHOLDER
+
+# --- External Proxy Services ---
+[proxy_servers]
+linode-proxy ansible_host=LINODE_IP_PLACEHOLDER
+
+# --- Storage Servers ---
+[storage_servers]
+# Note: joseph is managed via appliances inventory
+# リンク用に定義（実際の管理は deploy/appliances/inventory で行う）
+joseph ansible_host=JOSEPH_IP_PLACEHOLDER
+
+# --- Game & Special Services ---
+[game_servers]
+raspberrypi ansible_host=RASPBERRY_IP_PLACEHOLDER
+
+# === Development/Testing ===
+[development]
+# 開発・テスト環境用（必要に応じて追加）
+# staging-balthasar ansible_host=10.0.2.10
+# staging-caspar ansible_host=10.0.2.20
+
+# === Local Testing ===
+[local]
+HOSTNAME_PLACEHOLDER ansible_connection=local
+
+# ========================================
+# Global Variables - 必須設定項目
+# ========================================
+[all:vars]
+# --- Basic Connection Settings ---
+ansible_user=USER_PLACEHOLDER
+ansible_python_interpreter=/usr/bin/python3
+ansible_become=true
+ansible_become_method=sudo
+ansible_become_user=root
+
+# --- Network Configuration (必須) ---
+# Internal network range
+internal_network=NETWORK_PLACEHOLDER
+external_interface=eth0
+internal_interface=eth1
+
+# --- Domain Configuration (必須) ---
+primary_domain=DOMAIN_PLACEHOLDER
+misskey_domain="{{ primary_domain }}"
+
+# --- Cloudflare Tunnel Configuration (必須) ---
+# これらの値は group_vars/vault.yml で暗号化してください
+cloudflare_account_id="{{ vault_cloudflare_account_id }}"
+cloudflare_api_token="{{ vault_cloudflare_api_token }}"
+cloudflare_zone_id="{{ vault_cloudflare_zone_id }}"
+
+# --- WARP/Proxy Configuration (必須) ---
+# egress routing: warp, squid, direct
+default_egress_route=warp
+warp_enabled=true
+squid_proxy_enabled=true
+
+# --- Service Role Tags (必須) ---
+# タグベースの実行に必要
+service_tags:
+  social: ["misskey", "neo-quesdon", "outline"]
+  monitoring: ["prometheus", "grafana", "uptime-kuma"]
+  security: ["modsecurity", "crowdsec", "fail2ban"]
+  proxy: ["squid", "cloudflared", "warp"]
+  storage: ["minio", "backup"]
+
+# ========================================
+# Host-Specific Network & Role Configuration
+# ========================================
+
+# --- Balthasar (Social & Apps Server) ---
+[social_servers:vars]
+# Network Configuration
+internal_ip=10.0.1.10
+external_ip="{{ vault_balthasar_external_ip }}"
+cloudflare_tunnel_id="{{ vault_balthasar_tunnel_id }}"
+cloudflare_tunnel_token="{{ vault_balthasar_tunnel_token }}"
+
+# Egress Configuration
+egress_route=warp
+warp_team_name="{{ vault_warp_team_name }}"
+warp_device_id="{{ vault_balthasar_warp_device_id }}"
+
+# Service Roles
+host_roles:
+  - social_frontend
+  - app_hosting
+  - reverse_proxy
+service_priority=primary
+
+# Security Tags
+security_level=high
+modsecurity_enabled=true
+crowdsec_enabled=true
+
+# --- Caspar (Security & Monitoring) ---
+[monitoring_servers:vars]
+# Network Configuration  
+internal_ip=10.0.1.20
+external_ip="{{ vault_caspar_external_ip }}"
+cloudflare_tunnel_id="{{ vault_caspar_tunnel_id }}"
+cloudflare_tunnel_token="{{ vault_caspar_tunnel_token }}"
+
+# Egress Configuration
+egress_route=warp
+warp_team_name="{{ vault_warp_team_name }}"
+warp_device_id="{{ vault_caspar_warp_device_id }}"
+
+# Service Roles
+host_roles:
+  - monitoring_hub
+  - security_center
+  - ctf_environment
+service_priority=critical
+
+# Security Tags
+security_level=maximum
+modsecurity_enabled=true
+crowdsec_enabled=true
+additional_monitoring=true
+
+# --- Linode Proxy (External Services) ---
+[proxy_servers:vars]
+# Network Configuration (External VPS)
+internal_ip=10.8.0.1
+external_ip="{{ vault_linode_proxy_external_ip }}"
+# No Cloudflare tunnel - direct exposure with security
+
+# Egress Configuration
+egress_route=direct
+squid_upstream_proxy="{{ vault_squid_upstream_proxy | default('') }}"
+
+# Service Roles
+host_roles:
+  - external_proxy
+  - media_proxy
+  - summaly_proxy
+service_priority=high
+
+# Security Tags
+security_level=high
+modsecurity_enabled=true
+rate_limiting_enabled=true
+
+# --- Raspberry Pi (Game Server) ---
+[game_servers:vars]
+# Network Configuration
+internal_ip=10.0.1.60
+# No external IP - internal only
+
+# Egress Configuration
+egress_route=playit
+playit_enabled=true
+playit_secret="{{ vault_playit_secret }}"
+
+# Service Roles
+host_roles:
+  - game_hosting
+  - minecraft_server
+service_priority=low
+
+# Security Tags
+security_level=medium
+basic_security_only=true
+
+# ========================================
+# Environment-Specific Overrides
+# ========================================
+
+# --- Development Environment ---
+[development:vars]
+# 開発環境用の設定オーバーライド
+environment=development
+debug_mode=true
+security_level=low
+modsecurity_audit_only=true
+
+# --- Production Environment ---
+[production:vars]
+# 本番環境用の厳格な設定
+environment=production
+debug_mode=false
+security_level=maximum
+modsecurity_blocking_mode=true
+backup_enabled=true
+monitoring_enabled=true
+
+# ========================================
+# Service-Specific Connection Overrides
+# ========================================
+
+# SSH接続設定のカスタマイズ例
+[proxy_servers:vars]
+ansible_ssh_port=2222
+ansible_ssh_private_key_file="~/.ssh/linode_rsa"
+
+[game_servers:vars]
+ansible_ssh_port=22
+ansible_ssh_private_key_file="~/.ssh/raspberry_pi_rsa"
+
+# ========================================
+# 必須変数チェック用コメント
+# ========================================
+# 以下の Ansible Vault 暗号化変数が group_vars/vault.yml に必須:
+#
+# Network & External:
+# - vault_balthasar_external_ip
+# - vault_caspar_external_ip  
+# - vault_linode_proxy_external_ip
+#
+# Cloudflare:
+# - vault_cloudflare_account_id
+# - vault_cloudflare_api_token
+# - vault_cloudflare_zone_id
+# - vault_balthasar_tunnel_id
+# - vault_balthasar_tunnel_token
+# - vault_caspar_tunnel_id
+# - vault_caspar_tunnel_token
+#
+# WARP/Proxy:
+# - vault_warp_team_name
+# - vault_balthasar_warp_device_id
+# - vault_caspar_warp_device_id
+# - vault_squid_upstream_proxy
+#
+# Game Services:
+# - vault_playit_secret
+#
+# Auth/Sudo:
+# - vault_balthasar_sudo_password
+# - vault_caspar_sudo_password
+# - vault_linode_proxy_sudo_password
+# - vault_raspberry_sudo_password

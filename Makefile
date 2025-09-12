@@ -94,28 +94,67 @@ install:
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
 	ansible-galaxy collection list | grep yamisskey || echo "⚠️  yamisskey Collections not found"
 
-# Create basic inventory
+# Create inventory from template with environment variable substitution
 inventory:
-	@echo "📋 Creating $(TARGET) inventory..."
-	@if [ "$(TARGET)" = "appliances" ]; then \
-		INV_PATH="$(INV)"; \
-		echo "[truenas]" > "$$INV_PATH"; \
-		echo "truenas.local" >> "$$INV_PATH"; \
-		echo "✅ Appliances inventory created at $$INV_PATH"; \
+	@echo "📋 Creating $(TARGET) inventory from template..."
+	@INV_PATH="$(INV)"; \
+	TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example"; \
+	if [ ! -f "$$TEMPLATE_PATH" ]; then \
+		echo "❌ Template not found: $$TEMPLATE_PATH"; \
+		exit 1; \
+	fi; \
+	if [ -f "$$INV_PATH" ]; then \
+		echo "⚠️  Inventory already exists. Creating backup..."; \
+		cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; \
+	fi; \
+	echo "📄 Processing template with environment variables..."; \
+	cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
+	CURRENT_HOST=$$(hostname); \
+	DOMAIN="$${YAMISSKEY_DOMAIN:-yami.ski}"; \
+	USER="$${YAMISSKEY_USER:-taka}"; \
+	BALTHASAR_IP="$${BALTHASAR_IP:-10.0.1.10}"; \
+	CASPAR_IP="$${CASPAR_IP:-10.0.1.20}"; \
+	LINODE_IP="$${LINODE_IP:-45.79.XXX.XXX}"; \
+	JOSEPH_IP="$${JOSEPH_IP:-10.0.1.50}"; \
+	RASPBERRY_IP="$${RASPBERRY_IP:-10.0.1.60}"; \
+	NETWORK="$${INTERNAL_NETWORK:-10.0.1.0/24}"; \
+	sed -i.bak \
+		-e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" \
+		-e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" \
+		-e "s|USER_PLACEHOLDER|$$USER|g" \
+		-e "s|BALTHASAR_IP_PLACEHOLDER|$$BALTHASAR_IP|g" \
+		-e "s|CASPAR_IP_PLACEHOLDER|$$CASPAR_IP|g" \
+		-e "s|LINODE_IP_PLACEHOLDER|$$LINODE_IP|g" \
+		-e "s|JOSEPH_IP_PLACEHOLDER|$$JOSEPH_IP|g" \
+		-e "s|RASPBERRY_IP_PLACEHOLDER|$$RASPBERRY_IP|g" \
+		-e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" \
+		"$$INV_PATH"; \
+	rm "$$INV_PATH.bak" 2>/dev/null || true; \
+	echo "✅ $(TARGET) inventory created from template at $$INV_PATH"; \
+	echo ""; \
+	echo "🔧 Customization completed with environment variables:"; \
+	echo "   - Domain: $$DOMAIN (YAMISSKEY_DOMAIN)"; \
+	echo "   - User: $$USER (YAMISSKEY_USER)"; \
+	echo "   - Network: $$NETWORK (INTERNAL_NETWORK)"; \
+	if [ "$(TARGET)" = "servers" ]; then \
+		echo "   - Balthasar IP: $$BALTHASAR_IP (BALTHASAR_IP)"; \
+		echo "   - Caspar IP: $$CASPAR_IP (CASPAR_IP)"; \
+		echo "   - Linode IP: $$LINODE_IP (LINODE_IP)"; \
+		echo "   - Raspberry IP: $$RASPBERRY_IP (RASPBERRY_IP)"; \
 	else \
-		INV_PATH="$(INV)"; \
-		CURRENT_HOST=$$(hostname); \
-		echo "[local]" > "$$INV_PATH"; \
-		echo "$$CURRENT_HOST ansible_connection=local" >> "$$INV_PATH"; \
-		echo "" >> "$$INV_PATH"; \
-		echo "[all:vars]" >> "$$INV_PATH"; \
-		echo "ansible_python_interpreter=/usr/bin/python3" >> "$$INV_PATH"; \
-		echo "ansible_become=true" >> "$$INV_PATH"; \
-		echo "ansible_become_method=sudo" >> "$$INV_PATH"; \
-		echo "ansible_become_user=root" >> "$$INV_PATH"; \
-		echo "✅ Servers inventory created at $$INV_PATH"; \
-	fi
-	@echo "💡 Edit inventory file to add remote hosts as needed"
+		echo "   - Joseph IP: $$JOSEPH_IP (JOSEPH_IP)"; \
+	fi; \
+	echo ""; \
+	echo "💡 Environment Variables for Customization:"; \
+	if [ "$(TARGET)" = "servers" ]; then \
+		echo "   YAMISSKEY_DOMAIN=example.com BALTHASAR_IP=192.168.1.10 make inventory"; \
+	else \
+		echo "   YAMISSKEY_DOMAIN=example.com JOSEPH_IP=192.168.1.50 make inventory TARGET=appliances"; \
+	fi; \
+	echo ""; \
+	echo "📋 Still Required (manual):"; \
+	echo "   - Create and encrypt group_vars/vault.yml with vault_* variables"; \
+	echo "   - Run: ansible-vault encrypt $(DEPLOY_DIR)/group_vars/vault.yml"
 
 # List available playbooks
 list:

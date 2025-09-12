@@ -1,0 +1,580 @@
+# Security Operations Manual
+
+## 概要
+
+本書は Yamisskey Provision 環境のセキュリティ運用手順を定めるものです。特にシークレット管理、KMS キー回転、災害復旧（DR）について詳細に記載しています。
+
+## 目次
+
+1. [セキュリティアーキテクチャ概要](#セキュリティアーキテクチャ概要)
+2. [Ansible Vault 管理](#ansible-vault-管理)
+3. [MinIO KMS キー管理](#minio-kms-キー管理)
+4. [Cloudflare セキュリティ](#cloudflare-セキュリティ)
+5. [災害復旧（DR）手順](#災害復旧dr手順)
+6. [セキュリティインシデント対応](#セキュリティインシデント対応)
+7. [定期メンテナンス](#定期メンテナンス)
+
+---
+
+## セキュリティアーキテクチャ概要
+
+### 多層防御モデル
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Layer 1: Cloudflare (WAF, DDoS Protection, Zero Trust) │
+├─────────────────────────────────────────────────────────┤
+│ Layer 2: ModSecurity + CrowdSec (Application Firewall) │
+├─────────────────────────────────────────────────────────┤  
+│ Layer 3: UFW + fail2ban (Host-based Firewall)          │
+├─────────────────────────────────────────────────────────┤
+│ Layer 4: Encrypted Storage (MinIO KMS + Age)           │
+├─────────────────────────────────────────────────────────┤
+│ Layer 5: Secure Backup (R2 + Filen with encryption)    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### セキュリティ責任マトリックス
+
+| コンポーネント | 暗号化 | アクセス制御 | バックアップ | モニタリング |
+|-------------|-------|-----------|-----------|------------|
+| Ansible Vault | ✅ AES256 | 🔐 Vault Password | ✅ Git + 分離保管 | ✅ Commit hooks |
+| MinIO KMS | ✅ AES256-GCM | 🔐 IAM Policy | ✅ Cross-region | ✅ Audit logs |
+| Cloudflare | ✅ TLS 1.3 | 🔐 Zero Trust | ✅ Config backup | ✅ Security events |
+| Database | ✅ At-rest + TLS | 🔐 User roles | ✅ Point-in-time | ✅ Query logs |
+
+---
+
+## Ansible Vault 管理
+
+### Vault パスワード管理
+
+#### 初期設定
+
+```bash
+# Vault パスワードファイル作成（ローカル環境のみ）
+echo "your-secure-vault-password" > ~/.ansible-vault-yamisskey
+chmod 600 ~/.ansible-vault-yamisskey
+
+# 環境変数設定（推奨）
+export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-yamisskey
+```
+
+#### Vault ファイルの暗号化
+
+```bash
+# 新規作成時の暗号化
+ansible-vault create deploy/servers/group_vars/vault.yml
+
+# 既存ファイルの暗号化
+ansible-vault encrypt deploy/servers/group_vars/vault.yml
+
+# 内容確認（復号して表示）
+ansible-vault view deploy/servers/group_vars/vault.yml
+
+# インプレース編集
+ansible-vault edit deploy/servers/group_vars/vault.yml
+```
+
+#### Vault パスワード回転手順
+
+**実行頻度**: 6ヶ月に1回、またはセキュリティインシデント時
+
+1. **新パスワード準備**
+   ```bash
+   # 新しいパスワードファイル作成
+   echo "new-secure-vault-password" > ~/.ansible-vault-yamisskey-new
+   chmod 600 ~/.ansible-vault-yamisskey-new
+   ```
+
+2. **段階的移行**
+   ```bash
+   # 現在のパスワードで復号し、新パスワードで再暗号化
+   ansible-vault rekey deploy/servers/group_vars/vault.yml \
+     --vault-password-file ~/.ansible-vault-yamisskey \
+     --new-vault-password-file ~/.ansible-vault-yamisskey-new
+   
+   # appliances も同様に実行
+   ansible-vault rekey deploy/appliances/group_vars/vault.yml \
+     --vault-password-file ~/.ansible-vault-yamisskey \
+     --new-vault-password-file ~/.ansible-vault-yamisskey-new
+   ```
+
+3. **環境更新**
+   ```bash
+   # 旧パスワードファイルをバックアップ
+   mv ~/.ansible-vault-yamisskey ~/.ansible-vault-yamisskey.$(date +%Y%m%d)
+   
+   # 新パスワードファイルを有効化
+   mv ~/.ansible-vault-yamisskey-new ~/.ansible-vault-yamisskey
+   ```
+
+4. **検証**
+   ```bash
+   # 復号テスト
+   ansible-vault view deploy/servers/group_vars/vault.yml
+   
+   # プレイブック実行テスト
+   make check PLAYBOOK=common
+   ```
+
+---
+
+## MinIO KMS キー管理
+
+### KMS アーキテクチャ
+
+MinIO は KMS-managed keys と server-side encryption を使用:
+
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│   Client    │───▶│    MinIO     │───▶│ KMS Master  │
+│ (App/User)  │    │  (Gateway)   │    │    Key      │
+└─────────────┘    └──────────────┘    └─────────────┘
+                          │
+                          ▼
+                   ┌──────────────┐
+                   │   Encrypted  │
+                   │   Storage    │
+                   └──────────────┘
+```
+
+### KMS キー回転手順
+
+**実行頻度**: 3ヶ月に1回、または年次セキュリティレビュー時
+
+#### 1. 事前準備
+
+```bash
+# 現在のキー状態確認
+mc admin kms key status minio
+
+# バケット一覧とサイズ確認
+mc ls --summarize minio --recursive
+
+# 現在のKMS設定バックアップ
+kubectl get secret minio-kms-config -o yaml > kms-config-backup-$(date +%Y%m%d).yaml
+```
+
+#### 2. 新キー生成
+
+```bash
+# 新しいマスターキーを生成（32文字）
+NEW_KMS_KEY=$(openssl rand -base64 32)
+echo "Generated new KMS key: $NEW_KMS_KEY"
+
+# Ansible Vault に新キー追加
+ansible-vault edit deploy/servers/group_vars/vault.yml
+# vault_minio_kms_secret_key_new: "new-key-here"
+```
+
+#### 3. 二重キー許容期間の開始
+
+```bash
+# MinIO に新キーを追加（既存キーと並行稼働）
+mc admin kms key create minio yamisskey-key-v2 
+
+# 両キーが利用可能なことを確認
+mc admin kms key list minio
+```
+
+#### 4. 新キーでの暗号化開始
+
+```bash
+# 新しいオブジェクトは新キーで暗号化
+mc encrypt set SSE-KMS yamisskey-key-v2 minio/files
+mc encrypt set SSE-KMS yamisskey-key-v2 minio/assets
+
+# 設定確認
+mc encrypt info minio/files
+mc encrypt info minio/assets
+```
+
+#### 5. 既存データの再暗号化
+
+```bash
+# 段階的再暗号化（大容量の場合は分割実行）
+# Phase 1: 最新30日のデータ
+mc cp --encrypt-with-new-key --newer-than 30d minio/files minio/files-temp/
+mc mirror minio/files-temp/ minio/files/ --overwrite
+mc rm --recursive minio/files-temp/
+
+# Phase 2: 残りのデータ（夜間・週末実行推奨）
+mc cp --encrypt-with-new-key minio/files minio/files-temp/
+mc mirror minio/files-temp/ minio/files/ --overwrite
+mc rm --recursive minio/files-temp/
+```
+
+#### 6. 検証とクリーンアップ
+
+```bash
+# データ整合性検証
+mc admin heal minio --recursive --dry-run
+
+# 新キーでのアクセステスト
+curl -I https://drive.yami.ski/files/test-object
+
+# 旧キー無効化（慎重に！）
+mc admin kms key disable minio yamisskey-key-v1
+
+# 7日間様子見後、旧キー削除
+# mc admin kms key delete minio yamisskey-key-v1
+```
+
+### キー緊急回転手順（セキュリティインシデント時）
+
+**緊急時**: キー漏洩が疑われる場合の即座対応
+
+```bash
+# 1. 既存キーの緊急無効化
+mc admin kms key disable minio yamisskey-key-current
+
+# 2. 新キー即座生成・適用
+EMERGENCY_KEY=$(openssl rand -base64 32)
+mc admin kms key create minio emergency-key-$(date +%Y%m%d)
+
+# 3. バケットアクセス一時制限
+mc policy set none minio/files
+mc policy set none minio/assets
+
+# 4. インシデント調査後、通常回転手順で復旧
+```
+
+---
+
+## Cloudflare セキュリティ
+
+### API トークン管理
+
+#### トークン回転手順
+
+**実行頻度**: 6ヶ月に1回
+
+```bash
+# 1. Cloudflare ダッシュボードで新トークン作成
+# - DNS:Edit, Zone:Read permissions
+# - Specific zones: yami.ski
+
+# 2. Ansible Vault 更新
+ansible-vault edit deploy/servers/group_vars/vault.yml
+# vault_cloudflare_api_token: "new-token-here"
+
+# 3. デプロイテスト
+make check PLAYBOOK=cloudflared
+
+# 4. 旧トークン無効化（Cloudflare dashboard）
+```
+
+### Tunnel 認証情報管理
+
+#### Tunnel Token 回転
+
+```bash
+# 1. 新しいトンネル作成
+cloudflared tunnel create yamisskey-balthasar-v2
+
+# 2. 設定ファイル更新
+cloudflared tunnel route dns yamisskey-balthasar-v2 yami.ski
+
+# 3. Ansible 変数更新
+ansible-vault edit deploy/servers/group_vars/vault.yml
+
+# 4. 段階的切り替え
+make run PLAYBOOK=cloudflared LIMIT=balthasar
+
+# 5. 旧トンネル削除
+cloudflared tunnel delete yamisskey-balthasar-v1
+```
+
+---
+
+## 災害復旧（DR）手順
+
+### DR シナリオ分類
+
+| シナリオ | 復旧時間目標 (RTO) | データ損失許容 (RPO) | 優先度 |
+|---------|------------------|-------------------|-------|
+| KMS キー紛失 | 4時間 | 0分 | Critical |
+| データベース障害 | 2時間 | 15分 | Critical |
+| MinIO ストレージ障害 | 6時間 | 1時間 | High |
+| 全サーバ障害 | 24時間 | 4時間 | Medium |
+
+### KMS キー災害復旧
+
+#### シナリオ: KMS マスターキーが失われた場合
+
+**影響**: MinIO データが復号できず、サービス停止
+
+**復旧手順**:
+
+1. **緊急事態宣言**
+   ```bash
+   # インシデントチケット作成
+   echo "KMS_KEY_LOSS_$(date +%Y%m%d_%H%M)" > /tmp/incident_id
+   
+   # 関係者通知（Slack/Teams）
+   curl -X POST -H 'Content-type: application/json' \
+     --data '{"text":"🚨 KMS Key Loss Incident - DR procedures initiated"}' \
+     $SLACK_WEBHOOK_URL
+   ```
+
+2. **Age暗号化バックアップから復旧**
+   ```bash
+   # 最新のAge暗号化バックアップ確認
+   mc ls r2-backup/encrypted-backups/ --recursive | tail -5
+   
+   # Age秘密鍵で復号
+   mc cp r2-backup/encrypted-backups/latest-kms.age /tmp/
+   age --decrypt -i ~/.age/key.txt /tmp/latest-kms.age > /tmp/kms-recovery.json
+   
+   # KMS設定復元
+   kubectl create secret generic minio-kms-config \
+     --from-file=kms.json=/tmp/kms-recovery.json
+   ```
+
+3. **MinIO サービス復旧**
+   ```bash
+   # MinIO 再起動（KMS設定読み込み）
+   make run PLAYBOOK=minio TAGS=restart
+   
+   # データアクセステスト
+   mc ls minio/files | head -5
+   ```
+
+4. **データ整合性検証**
+   ```bash
+   # ヘルスチェック実行
+   mc admin heal minio --recursive --verbose
+   
+   # ランダムサンプリング検証
+   for i in {1..10}; do
+     RANDOM_FILE=$(mc ls minio/files --recursive | shuf -n1 | awk '{print $NF}')
+     mc head minio/files/$RANDOM_FILE || echo "FAILED: $RANDOM_FILE"
+   done
+   ```
+
+### データベース災害復旧
+
+#### PostgreSQL Point-in-Time Recovery
+
+```bash
+# 1. R2から最新ベースバックアップ取得
+mc cp r2-backup/postgres/base-backup-latest.tar.gz /tmp/
+
+# 2. WALファイル同期
+mc mirror r2-backup/postgres/wal/ /var/lib/postgresql/wal-restore/
+
+# 3. PostgreSQL復旧開始
+sudo systemctl stop postgresql
+sudo rm -rf /var/lib/postgresql/14/main/*
+sudo tar -xzf /tmp/base-backup-latest.tar.gz -C /var/lib/postgresql/14/main/
+
+# 4. recovery.conf設定
+cat > /var/lib/postgresql/14/main/recovery.conf <<EOF
+restore_command = 'cp /var/lib/postgresql/wal-restore/%f %p'
+recovery_target_time = '2024-01-15 14:00:00 JST'
+EOF
+
+# 5. PostgreSQL 起動・復旧完了待ち
+sudo systemctl start postgresql
+sudo -u postgres psql -c "SELECT pg_is_in_recovery();"
+```
+
+### 全環境再構築手順
+
+#### Complete Infrastructure Recovery
+
+```bash
+# 1. Emergency Kit から認証情報復元
+gpg --decrypt emergency-kit.gpg > emergency-credentials.json
+
+# 2. 基本インフラ再構築
+make run PLAYBOOK=system-init LIMIT=all
+make run PLAYBOOK=security LIMIT=all
+
+# 3. ストレージ復旧
+make run PLAYBOOK=minio TARGET=appliances
+
+# 4. アプリケーション復旧
+make run PLAYBOOK=misskey
+make run PLAYBOOK=monitoring
+
+# 5. 外部接続復旧
+make run PLAYBOOK=cloudflared
+make run PLAYBOOK=modsecurity-nginx
+```
+
+---
+
+## セキュリティインシデント対応
+
+### インシデント分類
+
+| レベル | 定義 | 対応時間 | エスカレーション |
+|-------|------|---------|----------------|
+| P0-Critical | データ漏洩、サービス完全停止 | 15分以内 | 即座に全チーム |
+| P1-High | 部分的データアクセス異常 | 1時間以内 | セキュリティチーム |
+| P2-Medium | 異常ログ検出、軽微な脆弱性 | 4時間以内 | 運用チーム |
+
+### 緊急連絡先
+
+```yaml
+# 緊急連絡リスト（平文で保管、定期更新）
+emergency_contacts:
+  primary_admin:
+    name: "Main Administrator"
+    phone: "+81-90-XXXX-XXXX"
+    email: "admin@yami.ski"
+    signal: "@admin_signal"
+  
+  security_team:
+    name: "Security Response Team"
+    phone: "+81-90-YYYY-YYYY" 
+    email: "security@yami.ski"
+    
+  vendor_support:
+    cloudflare: "enterprise-support@cloudflare.com"
+    linode: "+1-855-4-LINODE"
+```
+
+---
+
+## 定期メンテナンス
+
+### セキュリティメンテナンススケジュール
+
+| タスク | 頻度 | 実行時期 | 責任者 |
+|--------|------|----------|--------|
+| Vault パスワード回転 | 6ヶ月 | 6月/12月 | Admin |
+| MinIO KMS キー回転 | 3ヶ月 | 四半期末 | Admin |
+| TLS証明書更新 | 自動 | Let's Encrypt | System |
+| セキュリティパッチ適用 | 週次 | 日曜深夜 | Unattended |
+| 脆弱性スキャン | 月次 | 月初 | Security |
+| DRテスト実行 | 6ヶ月 | 3月/9月 | Team |
+
+### 月次セキュリティレビュー
+
+```bash
+#!/bin/bash
+# monthly-security-review.sh
+
+echo "=== Monthly Security Review $(date +%Y-%m) ==="
+
+# 1. アクセスログ異常検知
+echo "1. Analyzing access logs..."
+zcat /var/log/nginx/access.log.*.gz | \
+  awk '{print $1}' | sort | uniq -c | sort -nr | head -20
+
+# 2. 失敗ログイン試行
+echo "2. Failed authentication attempts..."
+sudo grep "Failed password" /var/log/auth.log | wc -l
+
+# 3. Vault ファイル整合性チェック
+echo "3. Vault integrity check..."
+ansible-vault view deploy/servers/group_vars/vault.yml > /dev/null && echo "✅ Vault OK"
+
+# 4. MinIO KMS 健全性
+echo "4. MinIO KMS health..."
+mc admin kms key status minio
+
+# 5. バックアップ検証
+echo "5. Backup verification..."
+mc ls r2-backup/ | tail -5
+
+echo "=== Review completed ==="
+```
+
+---
+
+## Emergency Kit (緊急時パッケージ)
+
+### 構成内容
+
+```
+emergency-kit/
+├── credentials/
+│   ├── ssh-keys/              # SSH秘密鍵（パスフレーズ保護）
+│   ├── age-keys/              # Age暗号化鍵
+│   ├── vault-passwords        # Ansible Vault パスワード
+│   └── recovery-tokens        # 各種API トークン
+├── procedures/
+│   ├── quick-start.md         # 緊急時クイックスタート
+│   ├── contact-list.md        # 連絡先一覧
+│   └── escalation-tree.png    # エスカレーション体系図
+├── backups/
+│   ├── config-snapshots/      # 設定ファイルスナップショット
+│   └── minimal-inventory/     # 最小インベントリファイル
+└── tools/
+    ├── verify-integrity.sh    # 整合性確認スクリプト
+    └── emergency-restore.sh   # 緊急復旧スクリプト
+```
+
+### Emergency Kit 更新手順
+
+```bash
+# 1. キット内容更新（月次）
+./scripts/update-emergency-kit.sh
+
+# 2. GPG暗号化
+tar czf emergency-kit-$(date +%Y%m%d).tar.gz emergency-kit/
+gpg --armor --cipher-algo AES256 --compress-algo 2 \
+  --symmetric emergency-kit-*.tar.gz
+
+# 3. オフライン保管場所へ分散保管
+# - 物理USBメモリ（防火金庫）
+# - クラウドストレージ（別アカウント）
+# - 信頼できる第三者保管
+```
+
+---
+
+## 付録
+
+### A. コマンドリファレンス
+
+```bash
+# よく使用するセキュリティコマンド
+ansible-vault encrypt group_vars/vault.yml
+ansible-vault decrypt group_vars/vault.yml --output=-
+ansible-vault rekey group_vars/vault.yml
+mc admin kms key list minio
+mc admin heal minio --recursive
+age --encrypt -R ~/.age/public-key.txt < secrets.txt > secrets.age
+age --decrypt -i ~/.age/key.txt secrets.age
+```
+
+### B. 監査ログ形式
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "event_type": "kms_key_rotation",
+  "severity": "info", 
+  "actor": "admin@yami.ski",
+  "resource": "minio/yamisskey-key-v1",
+  "action": "rotate",
+  "result": "success",
+  "metadata": {
+    "old_key_id": "yamisskey-key-v1",
+    "new_key_id": "yamisskey-key-v2",
+    "rotation_reason": "scheduled_maintenance"
+  }
+}
+```
+
+### C. セキュリティ設定チェックリスト
+
+- [ ] Ansible Vault パスワード強度（20文字以上）
+- [ ] MinIO KMS キー定期回転（3ヶ月以内）
+- [ ] TLS 証明書有効期限（30日以上残存）
+- [ ] バックアップ暗号化検証（週次）
+- [ ] アクセスログ異常監視（日次）
+- [ ] Emergency Kit 更新（月次）
+
+---
+
+**文書管理**
+- 作成日: 2024-01-15
+- 最終更新: 2024-01-15  
+- バージョン: 1.0
+- 次回レビュー: 2024-04-15

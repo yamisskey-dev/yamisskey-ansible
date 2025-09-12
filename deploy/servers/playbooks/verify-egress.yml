@@ -1,0 +1,311 @@
+---
+# Egress Route Verification Playbook
+# Purpose: Verify and test external connectivity routes (WARP, Squid, Direct)
+# Usage: make run PLAYBOOK=verify-egress TAGS=<egress_type>
+
+- name: Verify Egress Connectivity Routes
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    # Test endpoints for connectivity verification
+    test_endpoints:
+      - url: "https://www.cloudflare.com/cdn-cgi/trace"
+        description: "Cloudflare Trace (WARP detection)"
+        expected_patterns:
+          warp: ["warp=on", "warp=plus"]
+          direct: ["warp=off"]
+        timeout: 10
+      - url: "https://ipinfo.io/json"
+        description: "IP Information Service"  
+        timeout: 10
+      - url: "https://api.github.com"
+        description: "GitHub API (SSL/TLS test)"
+        timeout: 15
+      - url: "http://httpbin.org/ip"
+        description: "HTTP IP Service"
+        timeout: 10
+      - url: "https://1.1.1.1"
+        description: "Cloudflare DNS over HTTPS"
+        timeout: 5
+
+    # Egress route configuration per host
+    expected_routes:
+      balthasar: "warp"
+      caspar: "warp"  
+      linode_prox: "direct"
+      raspberrypi: "playit"
+
+  pre_tasks:
+    - name: Install required packages for connectivity testing
+      package:
+        name:
+          - curl
+          - dig
+          - jq
+          - netcat-openbsd
+        state: present
+      tags: [setup]
+
+    - name: Check current host egress configuration
+      set_fact:
+        expected_egress: "{{ expected_routes[inventory_hostname] | default('unknown') }}"
+        actual_egress: "{{ egress_route | default('unknown') }}"
+
+    - name: Display egress configuration
+      debug:
+        msg: |
+          🌐 Egress Route Verification for {{ inventory_hostname }}
+          Expected: {{ expected_egress }}
+          Configured: {{ actual_egress }}
+          Testing external connectivity...
+
+  tasks:
+    - name: Test direct connectivity (baseline)
+      block:
+        - name: Basic connectivity test
+          uri:
+            url: "{{ item.url }}"
+            method: GET
+            timeout: "{{ item.timeout }}"
+            return_content: true
+            validate_certs: true
+          register: baseline_connectivity
+          loop: "{{ test_endpoints }}"
+          failed_when: false
+          changed_when: false
+          tags: [connectivity, baseline]
+
+        - name: Analyze baseline connectivity results
+          set_fact:
+            baseline_results: >-
+              {{
+                baseline_results | default([]) + [{
+                  'endpoint': item.item.url,
+                  'description': item.item.description,
+                  'status': item.status | default(0),
+                  'response_time': item.elapsed | default(0),
+                  'accessible': (item.status | default(0) == 200),
+                  'content': item.content | default('') | truncate(200)
+                }]
+              }}
+          loop: "{{ baseline_connectivity.results }}"
+          tags: [connectivity, baseline]
+
+    - name: WARP route verification
+      block:
+        - name: Test Cloudflare WARP connectivity
+          uri:
+            url: "https://www.cloudflare.com/cdn-cgi/trace"
+            method: GET
+            timeout: 10
+            return_content: true
+          register: warp_trace
+          failed_when: false
+          changed_when: false
+
+        - name: Verify WARP status
+          set_fact:
+            warp_status: >-
+              {{
+                'on' if (warp_trace.content | default('') | regex_search('warp=(on|plus)'))
+                else 'off'
+              }}
+            warp_team: >-
+              {{
+                warp_trace.content | default('') | 
+                regex_search('warp-team=([^\n]+)') | 
+                default('none')
+              }}
+
+        - name: Validate WARP route expectation
+          assert:
+            that:
+              - warp_status == "on"
+            fail_msg: |
+              ❌ WARP route verification failed for {{ inventory_hostname }}
+              Expected: WARP enabled
+              Actual: {{ warp_status }}
+              Trace output: {{ warp_trace.content | default('No content') | truncate(200) }}
+            success_msg: "✅ WARP route verified: {{ warp_status }} (team: {{ warp_team }})"
+          when: expected_egress == "warp"
+
+        - name: Report WARP status for non-WARP hosts
+          debug:
+            msg: |
+              ℹ️ WARP status for {{ inventory_hostname }}: {{ warp_status }}
+              (Expected egress: {{ expected_egress }})
+          when: expected_egress != "warp"
+
+      tags: [warp, egress]
+      when: 
+        - baseline_results is defined
+        - (baseline_results | selectattr('endpoint', 'equalto', 'https://www.cloudflare.com/cdn-cgi/trace') | selectattr('accessible') | list | length > 0)
+
+    - name: DNS resolution verification
+      block:
+        - name: Test DNS resolution through different servers
+          shell: |
+            set -euo pipefail
+            
+            # Test primary DNS (systemd-resolved)
+            DIG_SYSTEM=$(dig +short +time=5 @1.1.1.1 cloudflare.com A 2>/dev/null | head -1 || echo "failed")
+            
+            # Test Cloudflare DNS
+            DIG_CF=$(dig +short +time=5 @1.1.1.1 cloudflare.com A 2>/dev/null | head -1 || echo "failed")
+            
+            # Test Google DNS  
+            DIG_GOOGLE=$(dig +short +time=5 @8.8.8.8 cloudflare.com A 2>/dev/null | head -1 || echo "failed")
+            
+            echo "SYSTEM_DNS=$DIG_SYSTEM"
+            echo "CLOUDFLARE_DNS=$DIG_CF"
+            echo "GOOGLE_DNS=$DIG_GOOGLE"
+          register: dns_tests
+          changed_when: false
+          failed_when: false
+
+        - name: Analyze DNS resolution results
+          set_fact:
+            dns_results: >-
+              {{
+                {
+                  'system': (dns_tests.stdout_lines | select('match', '^SYSTEM_DNS=') | first | regex_replace('^SYSTEM_DNS=', '')),
+                  'cloudflare': (dns_tests.stdout_lines | select('match', '^CLOUDFLARE_DNS=') | first | regex_replace('^CLOUDFLARE_DNS=', '')),
+                  'google': (dns_tests.stdout_lines | select('match', '^GOOGLE_DNS=') | first | regex_replace('^GOOGLE_DNS=', ''))
+                }
+              }}
+
+        - name: Verify DNS functionality
+          assert:
+            that:
+              - dns_results.cloudflare != "failed"
+              - dns_results.google != "failed"
+            fail_msg: |
+              ❌ DNS resolution issues detected
+              System DNS: {{ dns_results.system }}
+              Cloudflare DNS: {{ dns_results.cloudflare }}
+              Google DNS: {{ dns_results.google }}
+            success_msg: "✅ DNS resolution verified across multiple servers"
+
+      tags: [dns, egress]
+
+    - name: Port connectivity verification
+      block:
+        - name: Test critical external ports
+          wait_for:
+            host: "{{ item.host }}"
+            port: "{{ item.port }}"
+            timeout: 10
+            state: started
+          register: port_tests
+          loop:
+            - { host: "1.1.1.1", port: 53, description: "Cloudflare DNS" }
+            - { host: "8.8.8.8", port: 53, description: "Google DNS" }
+            - { host: "github.com", port: 443, description: "GitHub HTTPS" }
+            - { host: "api.cloudflare.com", port: 443, description: "Cloudflare API" }
+          failed_when: false
+          changed_when: false
+
+        - name: Summarize port connectivity
+          set_fact:
+            port_results: >-
+              {{
+                port_results | default([]) + [{
+                  'host': item.item.host,
+                  'port': item.item.port,
+                  'description': item.item.description,
+                  'accessible': not item.failed
+                }]
+              }}
+          loop: "{{ port_tests.results }}"
+
+      tags: [ports, egress]
+
+    - name: Performance and latency tests
+      block:
+        - name: Measure response times to key endpoints
+          shell: |
+            set -euo pipefail
+            
+            # Test latency to various endpoints
+            CF_TIME=$(curl -o /dev/null -s -w '%{time_total}' -m 10 https://www.cloudflare.com/cdn-cgi/trace || echo "timeout")
+            GITHUB_TIME=$(curl -o /dev/null -s -w '%{time_total}' -m 10 https://api.github.com || echo "timeout")
+            GOOGLE_TIME=$(curl -o /dev/null -s -w '%{time_total}' -m 10 https://www.google.com || echo "timeout")
+            
+            echo "CLOUDFLARE_TIME=$CF_TIME"
+            echo "GITHUB_TIME=$GITHUB_TIME"
+            echo "GOOGLE_TIME=$GOOGLE_TIME"
+          register: performance_tests
+          changed_when: false
+          failed_when: false
+
+        - name: Analyze performance results
+          set_fact:
+            performance_results: >-
+              {{
+                {
+                  'cloudflare': (performance_tests.stdout_lines | select('match', '^CLOUDFLARE_TIME=') | first | regex_replace('^CLOUDFLARE_TIME=', '')),
+                  'github': (performance_tests.stdout_lines | select('match', '^GITHUB_TIME=') | first | regex_replace('^GITHUB_TIME=', '')),
+                  'google': (performance_tests.stdout_lines | select('match', '^GOOGLE_TIME=') | first | regex_replace('^GOOGLE_TIME=', ''))
+                }
+              }}
+
+      tags: [performance, egress]
+
+  post_tasks:
+    - name: Generate egress verification report
+      debug:
+        msg: |
+          🌐 Egress Route Verification Report - {{ inventory_hostname }}
+          ================================================================
+          
+          📋 Configuration:
+          • Expected Route: {{ expected_egress }}
+          • Configured Route: {{ actual_egress }}
+          
+          🔗 Connectivity Summary:
+          {% for result in baseline_results | default([]) %}
+          • {{ result.description }}: {{ '✅' if result.accessible else '❌' }} ({{ result.response_time }}s)
+          {% endfor %}
+          
+          🛡️ WARP Status: {{ warp_status | default('unknown') }}
+          {% if warp_team | default('none') != 'none' %}• Team: {{ warp_team }}{% endif %}
+          
+          🔍 DNS Resolution:
+          {% for server, result in dns_results.items() %}
+          • {{ server | title }}: {{ '✅' if result != 'failed' else '❌' }} {{ result }}
+          {% endfor %}
+          
+          🚪 Port Connectivity:
+          {% for result in port_results | default([]) %}
+          • {{ result.description }}: {{ '✅' if result.accessible else '❌' }}
+          {% endfor %}
+          
+          ⚡ Performance:
+          {% for service, time in performance_results.items() %}
+          • {{ service | title }}: {{ time }}s {{ '⚠️' if (time | float > 3) else '✅' }}
+          {% endfor %}
+          
+          {{ '🎉 All egress routes verified successfully!' if all_tests_passed | default(true) else '⚠️ Some issues detected - see details above' }}
+
+    - name: Fail on critical egress issues
+      fail:
+        msg: |
+          🚨 Critical egress connectivity issues detected!
+          
+          Issues found:
+          {% if expected_egress == "warp" and warp_status != "on" %}
+          • WARP expected but not active: {{ warp_status }}
+          {% endif %}
+          {% if dns_results.cloudflare == "failed" and dns_results.google == "failed" %}
+          • DNS resolution completely failed
+          {% endif %}
+          {% if baseline_results | selectattr('accessible') | list | length == 0 %}
+          • No external connectivity available
+          {% endif %}
+          
+          Please investigate network configuration and routing.
+      when:
+        - (expected_egress == "warp" and warp_status | default("off") != "on") or
+          (dns_results.cloudflare | default("") == "failed" and dns_results.google | default("") == "failed") or
+          (baseline_results | selectattr('accessible') | list | length == 0)
