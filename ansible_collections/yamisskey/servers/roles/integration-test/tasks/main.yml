@@ -1,0 +1,48 @@
+---
+# Integration Test Role - Main Tasks
+# Comprehensive end-to-end testing suite
+
+- name: Display integration test plan
+  debug:
+    msg: |
+      🧪 Integration Test Suite Starting:
+      Test Phase: {{ test_phase | default('full') }}
+      Test Categories: {{ test_categories | default('all') }}
+      Target Host: {{ inventory_hostname }}
+      Scope: {{ test_scope | default('system') }}
+  tags: ['info', 'plan']
+
+- name: Infrastructure integration tests
+  include_tasks: infrastructure_tests.yml
+  when: test_categories in ['infrastructure', 'all']
+  tags: ['test', 'infrastructure']
+
+- name: Application integration tests
+  include_tasks: application_tests.yml
+  when: test_categories in ['application', 'all']
+  tags: ['test', 'application']
+
+- name: Service integration tests
+  include_tasks: service_tests.yml
+  when: test_categories in ['service', 'all']
+  tags: ['test', 'service']
+
+- name: Performance tests
+  include_tasks: performance_tests.yml
+  when: test_categories in ['performance', 'all']
+  tags: ['test', 'performance']
+
+- name: Security tests
+  include_tasks: security_tests.yml
+  when: test_categories in ['security', 'all']
+  tags: ['test', 'security']
+
+- name: End-to-end workflow tests
+  include_tasks: e2e_tests.yml
+  when: test_categories in ['e2e', 'all']
+  tags: ['test', 'e2e']
+
+- name: Generate comprehensive test report
+  include_tasks: test_report.yml
+  when: generate_test_report | default(true)
+  tags: ['test', 'report']

@@ -1,0 +1,59 @@
+---
+- name: Comprehensive integration testing suite
+  hosts: all
+  become: false
+  gather_facts: true
+  
+  vars:
+    # Test configuration
+    test_phase: "{{ test_phase | default('full') }}"
+    test_categories: "{{ categories | default('all') }}"
+    
+  pre_tasks:
+    - name: Display integration test execution plan
+      debug:
+        msg: |
+          🧪 Integration Test Execution Plan:
+          📦 Test Categories: {{ test_categories }}
+          🔍 Test Phase: {{ test_phase }}
+          🖥️ Target Hosts: {{ ansible_play_hosts | join(', ') }}
+          
+          📋 Available Test Categories:
+          - infrastructure: Docker, disk, memory, network tests
+          - application: Misskey, MinIO, web interface tests  
+          - service: Container status, logs, backup tests
+          - performance: Response time, resource usage tests
+          - security: SSL, ports, permissions tests
+          - e2e: End-to-end workflow tests
+          - all: Run all test categories
+          
+          💡 Usage examples:
+          - All tests: ansible-playbook integration-test.yml
+          - Specific category: ansible-playbook integration-test.yml -e "categories=infrastructure"
+          - Multiple categories: ansible-playbook integration-test.yml -e "categories=infrastructure,e2e"
+          - Tag-based: ansible-playbook integration-test.yml --tags "infra,e2e"
+      tags: ['info', 'plan']
+
+  roles:
+    - role: integration-test
+      tags: ['test', 'integration']
+
+  post_tasks:
+    - name: Integration test completion summary
+      debug:
+        msg: |
+          🎉 Integration Test Suite Completed!
+          
+          📊 Execution Summary:
+          📅 Completed at: {{ ansible_date_time.iso8601 }}
+          🖥️ Host: {{ inventory_hostname }}
+          📦 Categories tested: {{ test_categories }}
+          🔍 Phase: {{ test_phase }}
+          
+          💡 Next steps:
+          1. Review test results above
+          2. Check generated report in /tmp/
+          3. Address any failed tests before deployment
+          4. Run specific test categories if needed:
+             ansible-playbook integration-test.yml --tags "infra"
+      tags: ['info', 'summary']
