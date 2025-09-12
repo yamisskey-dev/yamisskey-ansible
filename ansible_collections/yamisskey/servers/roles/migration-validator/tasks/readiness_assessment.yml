@@ -1,0 +1,36 @@
+---
+# Migration Validator - Readiness Assessment
+# Aggregates earlier validation categories into a readiness score.
+
+- name: Compute readiness score from validation results
+  ansible.builtin.set_fact:
+    readiness_score: |
+      {%- set score = 0 -%}
+      {%- set total = 0 -%}
+      {%- set results = validation_results | default({}) -%}
+      {%- for key in ['parameters','connectivity','services','capacity','integrity'] -%}
+        {%- if results.get(key) is defined -%}
+          {%- set total = total + 1 -%}
+          {%- set status = results.get(key).status | default('skipped') -%}
+          {%- if status in ['passed','ok'] -%}
+            {%- set score = score + 1 -%}
+          {%- elif status in ['warning','warn'] -%}
+            {%- set score = score + 0.5 -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ( (score / (total if total > 0 else 1)) * 100 ) | int }}
+
+- name: Determine readiness status
+  ansible.builtin.set_fact:
+    readiness_results:
+      status: "{{ 'passed' if readiness_score | int >= 80 else ('warning' if readiness_score | int >= 60 else 'failed') }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      details: "Aggregated readiness score: {{ readiness_score }}%"
+      critical: true
+      score: "{{ readiness_score | int }}"
+
+- name: Merge readiness assessment into overall validation
+  ansible.builtin.set_fact:
+    validation_results: "{{ validation_results | default({}) | combine({'readiness': readiness_results}, recursive=True) }}"
+
