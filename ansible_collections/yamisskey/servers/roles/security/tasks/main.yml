@@ -45,19 +45,16 @@
 
 - name: Configure UFW rules and service
   block:
-    - name: Gather UFW status
-      ansible.builtin.command: ufw status verbose
-      register: ufw_status
-      changed_when: false
-
-    - name: Set default deny policy for incoming traffic if not already set
-      ansible.builtin.command: ufw default deny incoming
-      when: "'default: deny' not in ufw_status.stdout"
+    - name: Set default deny policy for incoming traffic
+      community.general.ufw:
+        policy: deny
+        direction: incoming
       become: true
 
-    - name: Set default allow policy for outgoing traffic if not already set
-      ansible.builtin.command: ufw default allow outgoing
-      when: "'default: allow (outgoing)' not in ufw_status.stdout"
+    - name: Set default allow policy for outgoing traffic
+      community.general.ufw:
+        policy: allow
+        direction: outgoing
       become: true
 
     - name: Allow specified TCP ports
@@ -142,12 +139,13 @@
       become: true
 
     - name: Ensure UFW logging is off
-      ansible.builtin.command: ufw logging off
-      failed_when: false
+      community.general.ufw:
+        logging: 'off'
       become: true
 
     - name: Reload UFW to apply changes
-      ansible.builtin.command: ufw reload
+      community.general.ufw:
+        state: reloaded
       become: true
 
     - name: Check UFW status
