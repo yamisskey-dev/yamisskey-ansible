@@ -1,4 +1,4 @@
-.PHONY: help install inventory run check list logs backup deploy
+.PHONY: help install inventory run check list logs backup deploy test
  .PHONY: build publish sanity
 
 ## Configuration - Modern Collections Architecture
@@ -168,6 +168,61 @@ list:
 
 # === Operations ===
 
+# Comprehensive system status check
+status:
+	@echo "🔍 Infrastructure Status Check"
+	@echo "========================================"
+	@echo ""
+	@echo "🌐 Network & DNS:"
+	@ping -c 1 -W 3 yami.ski >/dev/null 2>&1 && echo "   ✅ yami.ski reachable" || echo "   ❌ yami.ski unreachable"
+	@ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1 && echo "   ✅ Internet connectivity" || echo "   ❌ Internet connectivity failed"
+	@nslookup yami.ski >/dev/null 2>&1 && echo "   ✅ DNS resolution working" || echo "   ❌ DNS resolution failed"
+	@echo ""
+	@echo "🚀 Tailscale Status:"
+	@if command -v tailscale >/dev/null 2>&1; then \
+		if tailscale status >/dev/null 2>&1; then \
+			echo "   ✅ Tailscale connected"; \
+			BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); \
+			CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); \
+			JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); \
+			[ -n "$$BALTHASAR_IP" ] && echo "   ✅ balthasar: $$BALTHASAR_IP" || echo "   ❌ balthasar: offline"; \
+			[ -n "$$CASPAR_IP" ] && echo "   ✅ caspar: $$CASPAR_IP" || echo "   ❌ caspar: offline"; \
+			[ -n "$$JOSEPH_IP" ] && echo "   ✅ joseph: $$JOSEPH_IP" || echo "   ❌ joseph: offline"; \
+		else \
+			echo "   ❌ Tailscale disconnected"; \
+		fi \
+	else \
+		echo "   ⚠️  Tailscale not installed"; \
+	fi
+	@echo ""
+	@echo "🗄️  Storage Services:"
+	@if command -v curl >/dev/null 2>&1; then \
+		echo -n "   MinIO (drive): "; \
+		STATUS_CODE=$$(curl -s -w "%{http_code}" -o /dev/null --max-time 10 https://drive.yami.ski/minio/health/live 2>/dev/null); \
+		if [ "$$STATUS_CODE" = "200" ]; then \
+			echo "✅ OK"; \
+		elif [ "$$STATUS_CODE" = "403" ]; then \
+			echo "✅ OK (403 expected)"; \
+		elif [ "$$STATUS_CODE" = "000" ]; then \
+			echo "❌ NO RESPONSE"; \
+		else \
+			echo "⚠️  HTTP $$STATUS_CODE"; \
+		fi; \
+	fi
+	@echo ""
+	@echo "📊 Monitoring Services:"
+	@if command -v curl >/dev/null 2>&1; then \
+		echo -n "   Grafana: "; \
+		STATUS_CODE=$$(curl -s -w "%{http_code}" -o /dev/null --max-time 5 https://grafana.yami.ski/api/health 2>/dev/null); \
+		if [ "$$STATUS_CODE" = "200" ]; then \
+			echo "✅ OK"; \
+		elif [ "$$STATUS_CODE" = "000" ]; then \
+			echo "❌ NO RESPONSE"; \
+		else \
+			echo "⚠️  HTTP $$STATUS_CODE"; \
+		fi; \
+	fi
+
 # Show recent logs
 logs:
 	@echo "📋 Recent logs:"
@@ -178,6 +233,49 @@ backup:
 	@echo "💾 Backing up $(TARGET) inventory..."
 	@test -f "$(INV)" && cp "$(INV)" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak" || true
 	@echo "✅ Backup created"
+
+# === Testing ===
+
+# Unified Molecule wrapper with same abstraction as other targets
+# Variables:
+#   ROLE=<role-name>     # e.g., modsecurity-nginx, minio, misskey
+#   MODE=<mode>          # one of: test (default), syntax, converge, cleanup
+#   TARGET=<collection>  # servers (default) or appliances
+test:
+	@ROLES_DIR="$(COLLECTIONS_DIR)/$(TARGET)/roles"; \
+	MODE_EFF="$(MODE)"; [ -n "$$MODE_EFF" ] || MODE_EFF=test; \
+	SUBCMD="test"; EXTRA=""; \
+	case "$$MODE_EFF" in \
+	  syntax)   SUBCMD="syntax";; \
+	  converge) SUBCMD="converge";; \
+	  cleanup)  SUBCMD="cleanup"; EXTRA="destroy || true";; \
+	  test)     SUBCMD="test";; \
+	  *) echo "❌ Invalid MODE. Use: syntax, converge, cleanup, or test"; exit 1;; \
+	esac; \
+	export PATH="$(PATH_WITH_ANSIBLE)"; \
+	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
+	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
+	if [ -n "$(ROLE)" ]; then \
+		ROLE_EFF="$(ROLE)"; \
+		[ "$$ROLE_EFF" = "modsecurity" ] && ROLE_EFF="modsecurity-nginx"; \
+		ROLE_DIR="$$ROLES_DIR/$$ROLE_EFF"; \
+		if [ ! -d "$$ROLE_DIR" ]; then echo "❌ Role not found: $(ROLE) in $$ROLES_DIR"; exit 1; fi; \
+		if [ ! -f "$$ROLE_DIR/molecule/default/molecule.yml" ]; then echo "❌ Molecule scenario missing for role: $(ROLE)"; exit 1; fi; \
+		echo "🧪 $(COLLECTION) • $(ROLE) • molecule $$SUBCMD"; \
+		cd "$$ROLE_DIR" && molecule $$SUBCMD; \
+		if [ -n "$$EXTRA" ]; then cd "$$ROLE_DIR" && molecule $$EXTRA; fi; \
+	else \
+		ROLES=$$(find "$$ROLES_DIR" -mindepth 1 -maxdepth 1 -type d -exec test -f {}/molecule/default/molecule.yml \; -print 2>/dev/null | sort); \
+		if [ -z "$$ROLES" ]; then echo "⚠️  No roles with Molecule found under $$ROLES_DIR"; exit 0; fi; \
+		COUNT=$$(echo "$$ROLES" | wc -w | tr -d ' '); \
+		echo "🧪 $(COLLECTION) • $$COUNT roles • molecule $$SUBCMD"; \
+		for r in $$ROLES; do \
+			role_name=$$(basename "$$r"); \
+			echo "📋 Testing $$role_name..."; \
+			cd "$$r" && molecule $$SUBCMD; \
+			if [ -n "$$EXTRA" ]; then cd "$$r" && molecule $$EXTRA; fi; \
+		done; \
+	fi
 
 # === Help ===
 help:
@@ -200,9 +298,18 @@ help:
 	@echo "  TARGET=appliances            - Use yamisskey.appliances Collection (TrueNAS)"
 	@echo ""
 	@echo "📊 Operations:"
+	@echo "  status                                  # comprehensive infrastructure status"
 	@echo "  inventory [TARGET=servers|appliances]  # create inventory"
 	@echo "  backup [TARGET=servers|appliances]     # backup inventory"
 	@echo "  logs                                    # recent logs"
+	@echo ""
+	@echo "🧪 Testing:"
+	@echo "  test                                    # run Molecule for all roles (auto-discover)"
+	@echo "  test ROLE=<name>                        # run Molecule for a specific role"
+	@echo "  test MODE=syntax                        # quick syntax checks"
+	@echo "  test MODE=converge                      # run converge only"
+	@echo "  test MODE=cleanup                       # cleanup + destroy environments"
+	@echo "  test ROLE=minio MODE=syntax             # syntax check for specific role"
 	@echo ""
 	@echo "💡 Examples (Collections):"
 	@echo "  make install                                      # Install Ansible + Collections"

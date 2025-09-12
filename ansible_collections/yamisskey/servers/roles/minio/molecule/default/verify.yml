@@ -1,0 +1,175 @@
+---
+- name: Verify MinIO deployment
+  hosts: all
+  gather_facts: false
+  vars:
+    minio_container_name: "minio"
+    test_secrets_file: "/tmp/test-secrets.yml"
+  
+  tasks:
+    - name: Check if Docker is installed and running
+      service:
+        name: docker
+        state: started
+      become: true
+      
+    - name: Verify MinIO container is running
+      community.docker.docker_container_info:
+        name: "{{ minio_container_name }}"
+      register: container_info
+      
+    - name: Assert container is running
+      assert:
+        that:
+          - container_info.exists
+          - container_info.container.State.Status == "running"
+        fail_msg: "MinIO container is not running"
+        success_msg: "MinIO container is running successfully"
+
+    - name: Wait for MinIO to be ready
+      wait_for:
+        port: 9000
+        host: localhost
+        timeout: 30
+
+    - name: Test MinIO health endpoint
+      uri:
+        url: "http://localhost:9000/minio/health/live"
+        method: GET
+        status_code: [200, 403]  # 403 acceptable as console may be disabled
+      register: health_test
+      
+    - name: Verify MinIO health response
+      assert:
+        that:
+          - health_test.status in [200, 403]
+        fail_msg: "MinIO health check failed"
+        success_msg: "MinIO health check successful"
+
+    - name: Check if secrets file was created
+      stat:
+        path: "{{ test_secrets_file }}"
+      register: secrets_file_check
+      
+    - name: Verify secrets file exists
+      assert:
+        that:
+          - secrets_file_check.stat.exists
+        fail_msg: "Secrets file was not created"
+        success_msg: "Secrets file created successfully"
+
+    - name: Load and verify secrets file content
+      slurp:
+        src: "{{ test_secrets_file }}"
+      register: secrets_content
+      
+    - name: Parse secrets YAML
+      set_fact:
+        secrets_data: "{{ secrets_content.content | b64decode | from_yaml }}"
+      
+    - name: Verify secrets file structure
+      assert:
+        that:
+          - secrets_data.minio is defined
+          - secrets_data.minio.root_user is defined
+          - secrets_data.minio.root_password is defined
+          - secrets_data.minio.misskey_s3_access_key is defined
+          - secrets_data.minio.misskey_s3_secret_key is defined
+          - secrets_data.minio.kms_master_key is defined
+        fail_msg: "Secrets file is missing required keys"
+        success_msg: "Secrets file has all required keys"
+
+    - name: Check if MinIO client was installed
+      stat:
+        path: /usr/local/bin/mc
+      register: mc_client_check
+      become: true
+      
+    - name: Verify MinIO client installation
+      assert:
+        that:
+          - mc_client_check.stat.exists
+          - mc_client_check.stat.executable
+        fail_msg: "MinIO client is not installed or not executable"
+        success_msg: "MinIO client installed successfully"
+
+    - name: Check if docker-compose file was created
+      stat:
+        path: "/opt/minio/docker-compose.yml"
+      register: compose_file_check
+      become: true
+      
+    - name: Verify docker-compose file exists
+      assert:
+        that:
+          - compose_file_check.stat.exists
+        fail_msg: "Docker-compose file was not created"
+        success_msg: "Docker-compose file created successfully"
+
+    - name: Check if MinIO data directory was created
+      stat:
+        path: "/opt/minio/minio-data"
+      register: data_dir_check
+      become: true
+      
+    - name: Verify MinIO data directory exists
+      assert:
+        that:
+          - data_dir_check.stat.exists
+          - data_dir_check.stat.isdir
+        fail_msg: "MinIO data directory was not created"
+        success_msg: "MinIO data directory created successfully"
+
+    - name: Test MinIO client configuration (if possible)
+      shell: >
+        /usr/local/bin/mc alias list | grep testminio || echo "Alias not found"
+      register: mc_alias_test
+      become: true
+      ignore_errors: true
+      changed_when: false
+      
+    - name: Verify external network was created
+      shell: docker network ls | grep external_network
+      register: network_check
+      changed_when: false
+      
+    - name: Assert external network exists
+      assert:
+        that:
+          - network_check.rc == 0
+          - '"external_network" in network_check.stdout'
+        fail_msg: "External network was not created"
+        success_msg: "External network created successfully"
+
+    - name: Test MinIO container network connectivity
+      shell: >
+        docker inspect minio --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+      register: container_ip
+      changed_when: false
+      
+    - name: Verify container has IP address
+      assert:
+        that:
+          - container_ip.stdout | length > 0
+          - container_ip.stdout != "<no value>"
+        fail_msg: "MinIO container has no IP address"
+        success_msg: "MinIO container has valid IP address"
+
+    - name: Display test summary
+      debug:
+        msg: |
+          MinIO Deployment Verification Summary:
+          ====================================
+          ✅ Container Status: {{ 'Running' if container_info.container.State.Status == 'running' else 'Failed' }}
+          ✅ Health Check: {{ 'OK' if health_test.status in [200, 403] else 'Failed' }}
+          ✅ Secrets File: {{ 'Created' if secrets_file_check.stat.exists else 'Missing' }}
+          ✅ MinIO Client: {{ 'Installed' if mc_client_check.stat.exists else 'Missing' }}
+          ✅ Data Directory: {{ 'Created' if data_dir_check.stat.exists else 'Missing' }}
+          ✅ Docker Network: {{ 'Created' if network_check.rc == 0 else 'Missing' }}
+          ✅ Container IP: {{ container_ip.stdout }}
+          
+          Configuration Details:
+          - Test Secrets File: {{ test_secrets_file }}
+          - Test Buckets: test-misskey-files, test-outline-assets
+          - MinIO Alias: testminio
+          - Health Endpoint: http://localhost:9000/minio/health/live

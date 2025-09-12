@@ -64,6 +64,15 @@
     mode: '0644'
   register: blackbox_config
 
+- name: Deploy Misskey-specific Blackbox configuration
+  template:
+    src: blackbox-misskey.yml.j2
+    dest: /etc/blackbox_exporter/blackbox-misskey.yml
+    mode: '0644'
+  register: blackbox_misskey_config
+  tags:
+    - misskey_monitoring
+
 - name: Deploy Blackbox Exporter container
   community.docker.docker_container:
     name: blackbox_exporter

@@ -1,0 +1,145 @@
+---
+- name: Converge ModSecurity-nginx role
+  hosts: all
+  become: true
+  gather_facts: true
+  
+  pre_tasks:
+    - name: Install Docker for testing
+      apt:
+        name: 
+          - docker.io
+          - docker-compose-plugin
+        update_cache: true
+        state: present
+      
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+        
+    - name: Add test user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+        
+    - name: Install required Python packages
+      pip:
+        name:
+          - docker
+          - docker-compose
+          - requests
+          - jq
+        state: present
+        
+    - name: Create test nginx backend container
+      community.docker.docker_container:
+        name: test-backend
+        image: nginx:alpine
+        state: started
+        ports:
+          - "8888:80"
+        networks:
+          - name: molecule-test-network
+        volumes:
+          - "/tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro"
+        restart_policy: always
+      ignore_errors: true
+      
+    - name: Create simple nginx config for backend
+      copy:
+        dest: "/tmp/test-nginx.conf"
+        content: |
+          events { worker_connections 1024; }
+          http {
+            server {
+              listen 80;
+              location / {
+                return 200 '{"status": "ok", "service": "test-backend"}';
+                add_header Content-Type application/json;
+              }
+              location /api/meta {
+                return 200 '{"name": "test-misskey", "version": "test"}';
+                add_header Content-Type application/json;
+              }
+              location /streaming {
+                return 200 'WebSocket endpoint';
+              }
+            }
+          }
+        mode: '0644'
+
+  tasks:
+    - name: Apply ModSecurity-nginx role
+      include_role:
+        name: yamisskey.servers.modsecurity-nginx
+      vars:
+        # Test-specific configuration
+        modsecurity_upstream_backend: "test-backend:80"
+        modsecurity_nginx_name: "modsecurity-nginx-test"
+        modsecurity_nginx_ports:
+          - "8080:80"
+          - "8443:443"
+        
+        # Security settings for testing
+        modsecurity_rule_engine: "DetectionOnly"  # Safe for testing
+        modsecurity_paranoia_level: 1
+        modsecurity_anomaly_inbound: 5
+        modsecurity_anomaly_outbound: 4
+        
+        # Enable key features to test
+        modsecurity_rate_limit_enabled: true
+        modsecurity_rate_limit_requests_per_minute: 60
+        modsecurity_rate_limit_requests_per_second: 5
+        modsecurity_hsts_enabled: true
+        
+        # Application exclusions
+        modsecurity_misskey_exclusions_enabled: true
+        modsecurity_api_exclusions_enabled: true
+        
+        # Test blocked user agents
+        modsecurity_blocked_user_agents:
+          - "sqlmap"
+          - "nikto"
+          - "test-scanner"
+        
+        # Mock domains for testing
+        domain: "test.example.com"
+        synapse_server_name: "matrix.test.example.com"
+        element_server_name: "chat.test.example.com"
+        ctfd_server_name: "ctf.test.example.com"
+        
+    - name: Wait for ModSecurity-nginx container to be ready
+      wait_for:
+        port: 8080
+        host: localhost
+        timeout: 60
+        delay: 5
+        
+    - name: Test basic connectivity to ensure setup is working
+      uri:
+        url: "http://localhost:8080/"
+        method: GET
+        return_content: true
+      register: initial_test
+      retries: 3
+      delay: 5
+      until: initial_test.status == 200
+      
+    - name: Display initial test result
+      debug:
+        var: initial_test.json
+      when: initial_test.json is defined
+      
+  post_tasks:
+    - name: Show container logs if verification fails
+      command: docker logs {{ modsecurity_nginx_name }}
+      register: container_logs
+      ignore_errors: true
+      
+    - name: Display container logs for debugging
+      debug:
+        var: container_logs.stdout_lines
+      when: container_logs.rc == 0

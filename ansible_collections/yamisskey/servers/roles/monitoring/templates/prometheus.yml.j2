@@ -165,6 +165,76 @@ scrape_configs:
       - target_label: __address__
         replacement: localhost:9115
 
+  # --- Misskey Application Monitoring (Enhanced) ---
+  - job_name: 'misskey-api'
+    metrics_path: /probe
+    params:
+      module: [misskey_api_meta]
+    static_configs:
+      - targets:
+          - https://{{ primary_domain }}/api/meta
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+      - target_label: service
+        replacement: misskey-api
+
+  - job_name: 'misskey-timeline'
+    metrics_path: /probe
+    params:
+      module: [misskey_api_timeline]
+    static_configs:
+      - targets:
+          - https://{{ primary_domain }}/api/notes/local-timeline
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+      - target_label: service
+        replacement: misskey-timeline
+
+  - job_name: 'misskey-websocket'
+    metrics_path: /probe
+    params:
+      module: [misskey_websocket]
+    static_configs:
+      - targets:
+          - wss://{{ primary_domain }}/streaming
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+      - target_label: service
+        replacement: misskey-websocket
+
+  - job_name: 'misskey-federation'
+    metrics_path: /probe
+    params:
+      module: [misskey_nodeinfo]
+    static_configs:
+      - targets:
+          - https://{{ primary_domain }}/nodeinfo/2.0
+          - https://{{ primary_domain }}/.well-known/nodeinfo
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+      - target_label: service
+        replacement: misskey-federation
+
   # --- Cloudflared Tunnel Monitoring ---
   - job_name: 'cloudflared'
     scrape_interval: {{ monitoring_cloudflared_scrape_interval | default('60s') }}
