@@ -1,6 +1,6 @@
 ---
 - name: Ensure required packages are installed
-  apt:
+  ansible.builtin.apt:
     name: "{{ item }}"
   loop:
     - rsyslog
@@ -12,21 +12,21 @@
   become: true
 
 - name: Ensure syslog user exists
-  user:
+  ansible.builtin.user:
     name: syslog
     system: true
 
 - name: Backup and deploy rsyslog configuration
   block:
     - name: Backup original rsyslog.conf
-      copy:
+      ansible.builtin.copy:
         src: /etc/rsyslog.conf
         dest: /etc/rsyslog.conf.bak
         remote_src: true
       become: true
 
     - name: Deploy custom rsyslog configuration
-      template:
+      ansible.builtin.template:
         src: rsyslog.conf.j2
         dest: /etc/rsyslog.conf
         owner: root
@@ -35,7 +35,7 @@
       notify: Validate rsyslog configuration
 
 - name: Deploy custom logrotate configuration for rsyslog
-  template:
+  ansible.builtin.template:
     src: logrotate_rsyslog.j2
     dest: /etc/logrotate.d/rsyslog
     owner: root
@@ -46,17 +46,17 @@
 - name: Configure UFW rules and service
   block:
     - name: Gather UFW status
-      command: ufw status verbose
+      ansible.builtin.command: ufw status verbose
       register: ufw_status
       changed_when: false
 
     - name: Set default deny policy for incoming traffic if not already set
-      command: ufw default deny incoming
+      ansible.builtin.command: ufw default deny incoming
       when: "'default: deny' not in ufw_status.stdout"
       become: true
 
     - name: Set default allow policy for outgoing traffic if not already set
-      command: ufw default allow outgoing
+      ansible.builtin.command: ufw default allow outgoing
       when: "'default: allow (outgoing)' not in ufw_status.stdout"
       become: true
 
@@ -142,46 +142,46 @@
       become: true
 
     - name: Ensure UFW logging is off
-      command: ufw logging off
+      ansible.builtin.command: ufw logging off
       failed_when: false
       become: true
 
     - name: Reload UFW to apply changes
-      command: ufw reload
+      ansible.builtin.command: ufw reload
       become: true
 
     - name: Check UFW status
-      command: ufw status verbose
+      ansible.builtin.command: ufw status verbose
       register: ufw_status
       become: true
 
     - name: Display UFW status
-      debug:
+      ansible.builtin.debug:
         msg: '{{ ufw_status.stdout }}'
   become: true
 
 - name: Retrieve Tailscale status
-  command: tailscale status
+  ansible.builtin.command: tailscale status
   register: tailscale_status
   changed_when: false
 
 - name: Check if Tailscale needs to be started
-  set_fact:
+  ansible.builtin.set_fact:
     tailscale_needs_start: "{{ tailscale_status.stdout is not regex('.*100\\..*') }}"
 
 - name: Start Tailscale only if not already connected
-  command: tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
+  ansible.builtin.command: tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
   when: tailscale_needs_start | bool
   register: tailscale_start
 
 - name: Retrieve and parse Tailscale IP addresses
   block:
     - name: Retrieve Tailscale status
-      command: tailscale status --json
+      ansible.builtin.command: tailscale status --json
       register: tailscale_status
 
     - name: Set Tailscale IPs
-      set_fact:
+      ansible.builtin.set_fact:
         tailscale_ips: "{{ tailscale_status.stdout | from_json | json_query('Peer.*.TailscaleIPs') | flatten | select('match', '100\\..*') | list }}"
 
     - name: Allow SSH from Tailscale IPs
@@ -201,7 +201,7 @@
   become: true
 
 - name: Configure SSH settings
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
     create: true
     line: '{{ item }}'
@@ -225,14 +225,14 @@
 - name: Backup and deploy fail2ban configuration
   block:
     - name: Backup original jail.conf
-      copy:
+      ansible.builtin.copy:
         src: /etc/fail2ban/jail.conf
         dest: /etc/fail2ban/jail.conf.bak
         remote_src: true
       become: true
 
     - name: Deploy fail2ban configuration
-      template:
+      ansible.builtin.template:
         src: jail.local.j2
         dest: /etc/fail2ban/jail.local
         owner: root
@@ -241,38 +241,38 @@
       notify: Restart fail2ban
 
 - name: Ensure fail2ban service is enabled and started
-  systemd:
+  ansible.builtin.systemd:
     name: fail2ban
     enabled: true
     state: started
   become: true
 
 - name: Check fail2ban status for sshd
-  command: fail2ban-client status sshd
+  ansible.builtin.command: fail2ban-client status sshd
   register: result
   failed_when: "'sshd' not in result.stdout"
   become: true
 
 - name: Debug fail2ban status
-  debug:
+  ansible.builtin.debug:
     msg: '{{ result.stdout }}'
 
 - name: Install and Configure CrowdSec with Firewall Bouncer
   become: true
   block:
     - name: Add CrowdSec repository and install CrowdSec
-      shell: |
+      ansible.builtin.shell: |
         curl -s https://install.crowdsec.net | sudo sh
         apt install -y crowdsec
       register: crowdsec_install
       changed_when: "'CrowdSec installed' not in crowdsec_install.stdout"
 
     - name: Install firewall bouncer
-      apt:
+      ansible.builtin.apt:
         name: crowdsec-firewall-bouncer
 
     - name: Create required directories
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
@@ -281,14 +281,14 @@
         - /etc/crowdsec/parsers/s02-enrich
 
     - name: Configure main CrowdSec config
-      template:
+      ansible.builtin.template:
         src: crowdsec-config.yaml.j2
         dest: /etc/crowdsec/config.yaml
         mode: '0600'
       notify: Restart crowdsec
 
     - name: Configure CrowdSec whitelist
-      template:
+      ansible.builtin.template:
         src: crowdsec-whitelists.yaml.j2
         dest: /etc/crowdsec/parsers/s02-enrich/whitelists.yaml
         mode: '0600'
@@ -296,23 +296,23 @@
 
     # データベース初期化のステップを追加
     - name: Initialize CrowdSec database
-      command: cscli hub update
+      ansible.builtin.command: cscli hub update
       register: hub_update
       changed_when: hub_update.rc == 0
       failed_when: false
 
     - name: Ensure CrowdSec service is started
-      systemd:
+      ansible.builtin.systemd:
         name: crowdsec
         state: started
         enabled: true
 
     - name: Wait for CrowdSec to be ready
-      wait_for:
+      ansible.builtin.wait_for:
         timeout: 10
 
     - name: Remove existing bouncer
-      command: cscli bouncers delete crowdsec-firewall-bouncer
+      ansible.builtin.command: cscli bouncers delete crowdsec-firewall-bouncer
       register: bouncer_delete
       failed_when:
         - bouncer_delete.rc != 0
@@ -320,23 +320,23 @@
       changed_when: bouncer_delete.rc == 0
 
     - name: Add new bouncer
-      command: cscli bouncers add crowdsec-firewall-bouncer
+      ansible.builtin.command: cscli bouncers add crowdsec-firewall-bouncer
       register: bouncer_token
       changed_when: true
 
     - name: Debug full bouncer token output
-      debug:
+      ansible.builtin.debug:
         msg:
           - "stdout: {{ bouncer_token.stdout }}"
           - "stdout_lines: {{ bouncer_token.stdout_lines }}"
         verbosity: 0
 
     - name: Extract API key
-      set_fact:
+      ansible.builtin.set_fact:
         bouncer_api_key: "{{ bouncer_token.stdout_lines[2] | trim }}"
 
     - name: Configure bouncer
-      template:
+      ansible.builtin.template:
         src: crowdsec-firewall-bouncer.yaml.j2
         dest: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
         mode: '0600'
@@ -345,7 +345,7 @@
       notify: Restart crowdsec-firewall-bouncer
 
     - name: Ensure services are enabled and started
-      systemd:
+      ansible.builtin.systemd:
         name: "{{ item }}"
         state: started
         enabled: true
@@ -356,7 +356,7 @@
 - name: Ensure ClamAV configuration
   block:
     - name: Ensure log directory for ClamAV exists
-      file:
+      ansible.builtin.file:
         path: /var/log/clamav
         state: directory
         owner: clamav
@@ -365,7 +365,7 @@
       become: true
 
     - name: Configure ClamAV daemon settings
-      template:
+      ansible.builtin.template:
         src: clamd.conf.j2
         dest: /etc/clamav/clamd.conf
         owner: root
@@ -375,7 +375,7 @@
       become: true
 
     - name: Ensure freshclam log file is writable
-      file:
+      ansible.builtin.file:
         path: /var/log/clamav/freshclam.log
         state: touch
         owner: clamav
@@ -384,20 +384,20 @@
       become: true
 
     - name: Update ClamAV virus database
-      command: freshclam
+      ansible.builtin.command: freshclam
       become: true
       failed_when: false
       changed_when: false
 
     - name: Ensure ClamAV daemon is started and enabled
-      systemd:
+      ansible.builtin.systemd:
         name: clamav-daemon
         state: started
         enabled: true
       become: true
 
     - name: Schedule daily ClamAV scan (JST 4:00 AM)
-      cron:
+      ansible.builtin.cron:
         name: 'Daily ClamAV scan'
         minute: '0'
         hour: '19'    # UTC 19:00 = JST 04:00
@@ -407,7 +407,7 @@
 - name: Configure sysctl settings only if needed
   block:
     - name: Check if sysctl settings need to be applied
-      command: "sysctl -n {{ item.name }}"
+      ansible.builtin.command: "sysctl -n {{ item.name }}"
       register: current_value
       loop: "{{ sysctl_settings }}"
       changed_when: current_value.stdout != item.value
@@ -422,30 +422,30 @@
   become: true
 
 - name: Reload sysctl
-  command: sysctl -p
+  ansible.builtin.command: sysctl -p
   become: true
 
 - name: Setup dnscrypt-proxy (System Install)
   block:
     - name: Install dnscrypt-proxy
-      package:
+      ansible.builtin.package:
         name: dnscrypt-proxy
 
     - name: Ensure dnscrypt-proxy configuration directory exists
-      file:
+      ansible.builtin.file:
         path: /etc/dnscrypt-proxy
         state: directory
         mode: '0755'
 
     - name: Deploy dnscrypt-proxy configuration
-      template:
+      ansible.builtin.template:
         src: dnscrypt-proxy.toml.j2
         dest: /etc/dnscrypt-proxy/dnscrypt-proxy.toml
         mode: '0644'
       notify: Restart dnscrypt-proxy
 
     - name: Enable and start dnscrypt-proxy service
-      systemd:
+      ansible.builtin.systemd:
         name: dnscrypt-proxy
         state: started
         enabled: true
@@ -454,27 +454,27 @@
 - name: Configure systemd-resolved to use dnscrypt-proxy
   block:
     - name: Configure systemd-resolved DNS settings
-      template:
+      ansible.builtin.template:
         src: resolved.conf.j2
         dest: /etc/systemd/resolved.conf
         mode: '0644'
       notify: Restart systemd-resolved
 
     - name: Ensure systemd-resolved is enabled and started
-      systemd:
+      ansible.builtin.systemd:
         name: systemd-resolved
         state: started
         enabled: true
 
     - name: Ensure correct resolv.conf configuration
-      file:
+      ansible.builtin.file:
         src: /run/systemd/resolve/stub-resolv.conf
         dest: /etc/resolv.conf
         state: link
         force: true
 
     - name: Configure Docker daemon DNS settings
-      copy:
+      ansible.builtin.copy:
         dest: /etc/docker/daemon.json
         content: |
           {
@@ -489,22 +489,22 @@
 - name: Verify DNS configuration
   block:
     - name: Test DNS resolution with dig
-      command: dig @127.0.0.1 cloudflare.com
+      ansible.builtin.command: dig @127.0.0.1 cloudflare.com
       register: dig_result
       changed_when: false
 
     - name: Test DNS resolution with nslookup
-      command: nslookup cloudflare.com 127.0.0.1
+      ansible.builtin.command: nslookup cloudflare.com 127.0.0.1
       register: nslookup_result
       changed_when: false
 
     - name: Test SRV record resolution with dig
-      command: dig @127.0.0.1 srv _origintunneld._tcp.argotunnel.com
+      ansible.builtin.command: dig @127.0.0.1 srv _origintunneld._tcp.argotunnel.com
       register: srv_dig_result
       changed_when: false
 
     - name: Display DNS test results
-      debug:
+      ansible.builtin.debug:
         msg: |
           dig result: {{ dig_result.stdout }}
           nslookup result: {{ nslookup_result.stdout }}
