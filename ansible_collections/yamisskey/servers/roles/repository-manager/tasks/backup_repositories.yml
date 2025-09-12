@@ -1,0 +1,138 @@
+---
+# Repository Manager - Backup Repositories Tasks
+# Creates compressed archives of repository directories
+
+- name: Generate backup timestamp
+  set_fact:
+    backup_timestamp: "{{ ansible_date_time.epoch }}"
+    backup_date: "{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second }}"
+
+- name: Create timestamped backup directory
+  file:
+    path: "{{ backup_base_dir }}/{{ backup_date }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "{{ default_dir_mode }}"
+  become: true
+  tags: ['backup', 'directories']
+
+- name: Check disk space before backup
+  shell: df -h "{{ backup_base_dir }}" | tail -1 | awk '{print $4}'
+  register: available_space
+  changed_when: false
+  tags: ['backup', 'validation']
+
+- name: Display backup information
+  debug:
+    msg: |
+      💾 Repository Backup Plan:
+      📅 Timestamp: {{ backup_date }}
+      📁 Backup directory: {{ backup_base_dir }}/{{ backup_date }}
+      💽 Available space: {{ available_space.stdout }}
+      📦 Repositories to backup:
+      {% for repo in existing_repos %}
+      - {{ repo.name }}: {{ repo.dest }}
+      {% endfor %}
+  tags: ['backup', 'info']
+
+- name: Create individual repository backups
+  archive:
+    path: "{{ item.dest }}"
+    dest: "{{ backup_base_dir }}/{{ backup_date }}/{{ item.name }}_{{ backup_date }}.tar.gz"
+    format: gz
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "{{ default_file_mode }}"
+  loop: "{{ existing_repos }}"
+  when: item.name in (target_repositories | map(attribute='name') | list)
+  register: backup_results
+  tags: ['backup', 'archive']
+
+- name: Generate backup manifest
+  copy:
+    content: |
+      # Repository Backup Manifest
+      # Generated: {{ ansible_date_time.iso8601 }}
+      # Host: {{ inventory_hostname }}
+      # Backup Directory: {{ backup_base_dir }}/{{ backup_date }}
+      
+      {% for repo in existing_repos %}
+      {% if repo.name in (target_repositories | map(attribute='name') | list) %}
+      [{{ repo.name }}]
+      source_path = {{ repo.dest }}
+      backup_file = {{ repo.name }}_{{ backup_date }}.tar.gz
+      description = {{ repo.description | default('No description') }}
+      branch = {{ repo.branch | default('HEAD') }}
+      required = {{ repo.required | default(false) }}
+      
+      {% endif %}
+      {% endfor %}
+      
+      # Backup Statistics
+      total_repositories = {{ existing_repos | length }}
+      backup_timestamp = {{ backup_timestamp }}
+      backup_date = {{ backup_date }}
+    dest: "{{ backup_base_dir }}/{{ backup_date }}/backup_manifest.ini"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "{{ default_file_mode }}"
+  tags: ['backup', 'manifest']
+
+- name: Display backup results
+  debug:
+    msg: |
+      📦 Backup Results:
+      {% if backup_results is defined and backup_results.results | length > 0 %}
+      {% for result in backup_results.results %}
+      - {{ result.item.name }}: {{ '✅ Backed up successfully' if not result.failed else '❌ Backup failed' }}
+      {% if not result.failed %}
+        📄 Archive: {{ result.dest }}
+        📏 Size: {{ result.size | default('Unknown') }} bytes
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      ℹ️ No repositories were backed up
+      {% endif %}
+      
+      📋 Backup Summary:
+      📅 Date: {{ backup_date }}
+      📁 Location: {{ backup_base_dir }}/{{ backup_date }}
+      📄 Manifest: backup_manifest.ini
+  when: backup_results is defined
+  tags: ['backup', 'info']
+
+- name: Clean up old backups
+  find:
+    paths: "{{ backup_base_dir }}"
+    age: "{{ backup_retention_days }}d"
+    file_type: directory
+  register: old_backups
+  when: backup_retention_days > 0
+  tags: ['backup', 'cleanup']
+
+- name: Remove old backup directories
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_backups.files }}"
+  when: 
+    - old_backups is defined
+    - old_backups.files | length > 0
+  register: cleanup_results
+  tags: ['backup', 'cleanup']
+
+- name: Display cleanup results
+  debug:
+    msg: |
+      🧹 Backup Cleanup Results:
+      {% if cleanup_results is defined and cleanup_results.results | length > 0 %}
+      Removed {{ cleanup_results.results | length }} old backup(s):
+      {% for result in cleanup_results.results %}
+      - {{ result.item.path }}
+      {% endfor %}
+      {% else %}
+      ✅ No old backups to clean up
+      {% endif %}
+  when: cleanup_results is defined
+  tags: ['backup', 'cleanup']

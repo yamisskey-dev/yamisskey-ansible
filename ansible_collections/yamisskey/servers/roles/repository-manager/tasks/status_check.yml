@@ -1,0 +1,165 @@
+---
+# Repository Manager - Status Check Tasks
+# Provides detailed repository status information
+
+- name: Get git status for each repository
+  shell: |
+    cd "{{ item.dest }}"
+    echo "=== Repository Status: {{ item.name }} ==="
+    echo "📁 Location: {{ item.dest }}"
+    echo "🌿 Current branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')"
+    echo "📝 Latest commit: $(git log -1 --format='%h - %s (%cr)' 2>/dev/null || echo 'N/A')"
+    echo "🏷️  Latest tag: $(git describe --tags --abbrev=0 2>/dev/null || echo 'No tags')"
+    echo "📊 Status:"
+    git status --porcelain 2>/dev/null || echo "Not a git repository"
+    echo "🔗 Remote URL: $(git remote get-url origin 2>/dev/null || echo 'No remote')"
+    echo "📈 Commits ahead/behind: $(git rev-list --count --left-right @{upstream}...HEAD 2>/dev/null || echo 'N/A')"
+    echo ""
+  register: git_status_detailed
+  loop: "{{ existing_repos }}"
+  when: 
+    - item.name in (target_repositories | map(attribute='name') | list)
+    - existing_repos is defined
+  failed_when: false
+  changed_when: false
+  tags: ['status', 'git']
+
+- name: Check repository sizes
+  shell: |
+    if [ -d "{{ item.dest }}" ]; then
+      du -sh "{{ item.dest }}" | cut -f1
+    else
+      echo "N/A"
+    fi
+  register: repo_sizes
+  loop: "{{ target_repositories }}"
+  changed_when: false
+  failed_when: false
+  tags: ['status', 'size']
+
+- name: Check last modification times
+  stat:
+    path: "{{ item.dest }}"
+  register: repo_modification_times
+  loop: "{{ target_repositories }}"
+  tags: ['status', 'timestamps']
+
+- name: Display comprehensive repository status
+  debug:
+    msg: |
+      📊 Repository Status Report for {{ inventory_hostname }}
+      Generated: {{ ansible_date_time.iso8601 }}
+      
+      {% if git_status_detailed is defined and git_status_detailed.results | length > 0 %}
+      {% for result in git_status_detailed.results %}
+      {{ result.stdout }}
+      {% endfor %}
+      {% else %}
+      ℹ️ No repository status information available
+      {% endif %}
+      
+      📏 Repository Sizes:
+      {% for result in repo_sizes.results %}
+      {% set repo_name = result.item.name %}
+      {% set size = result.stdout.strip() %}
+      - {{ repo_name }}: {{ size }}
+      {% endfor %}
+      
+      📅 Last Modified:
+      {% for result in repo_modification_times.results %}
+      {% set repo_name = result.item.name %}
+      {% set mtime = result.stat.mtime | default(0) | int %}
+      {% if result.stat.exists %}
+      - {{ repo_name }}: {{ mtime | strftime('%Y-%m-%d %H:%M:%S') }}
+      {% else %}
+      - {{ repo_name }}: Not found
+      {% endif %}
+      {% endfor %}
+  tags: ['status', 'info']
+
+- name: Check for security issues
+  shell: |
+    cd "{{ item.dest }}"
+    echo "=== Security Check: {{ item.name }} ==="
+    # Check for exposed credentials
+    if git log --all --grep="password\|secret\|key" --oneline | head -5; then
+      echo "⚠️ Potential credential exposure in commit messages"
+    fi
+    
+    # Check for large files
+    find . -type f -size +10M -not -path "./.git/*" 2>/dev/null | head -5 | while read file; do
+      echo "📦 Large file: $file"
+    done
+    
+    # Check git hooks
+    if [ -d ".git/hooks" ]; then
+      echo "🪝 Git hooks present: $(ls .git/hooks/ | grep -v '.sample' | wc -l) active"
+    fi
+    echo ""
+  register: security_check
+  loop: "{{ existing_repos }}"
+  when: 
+    - item.name in (target_repositories | map(attribute='name') | list)
+    - repo_security_check | default(false)
+  failed_when: false
+  changed_when: false
+  tags: ['status', 'security']
+
+- name: Display security findings
+  debug:
+    msg: |
+      🔒 Security Check Results:
+      {% if security_check is defined and security_check.results | length > 0 %}
+      {% for result in security_check.results %}
+      {{ result.stdout }}
+      {% endfor %}
+      {% else %}
+      ✅ Security checks skipped or no issues found
+      {% endif %}
+  when: repo_security_check | default(false)
+  tags: ['status', 'security']
+
+- name: Generate status summary
+  set_fact:
+    status_summary:
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      host: "{{ inventory_hostname }}"
+      total_repositories: "{{ target_repositories | length }}"
+      existing_repositories: "{{ existing_repos | length if existing_repos is defined else 0 }}"
+      missing_repositories: "{{ missing_repos | length if missing_repos is defined else 0 }}"
+      total_size: "{{ repo_sizes.results | map(attribute='stdout') | join(' ') }}"
+  tags: ['status', 'summary']
+
+- name: Save status report to file
+  copy:
+    content: |
+      # Repository Status Report
+      # Generated: {{ status_summary.timestamp }}
+      # Host: {{ status_summary.host }}
+      
+      ## Summary
+      - Total repositories configured: {{ status_summary.total_repositories }}
+      - Existing repositories: {{ status_summary.existing_repositories }}
+      - Missing repositories: {{ status_summary.missing_repositories }}
+      
+      ## Detailed Status
+      {% if git_status_detailed is defined %}
+      {% for result in git_status_detailed.results %}
+      {{ result.stdout }}
+      {% endfor %}
+      {% endif %}
+      
+      ---
+      Report generated by repository-manager role
+    dest: "/tmp/repository_status_{{ ansible_date_time.epoch }}.txt"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "{{ default_file_mode }}"
+  when: save_status_report | default(false)
+  tags: ['status', 'report']
+
+- name: Display report location
+  debug:
+    msg: "📄 Status report saved to: /tmp/repository_status_{{ ansible_date_time.epoch }}.txt"
+  when: save_status_report | default(false)
+  tags: ['status', 'report']

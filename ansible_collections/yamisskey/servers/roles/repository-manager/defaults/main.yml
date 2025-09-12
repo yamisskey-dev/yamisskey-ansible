@@ -1,0 +1,86 @@
+---
+# Repository Manager Role - Default Variables
+# Repository configuration and operational settings
+
+# Operation mode: clone, update, backup, restore, status
+repo_operation: clone
+
+# Target repositories: all, specific repo name, or comma-separated list
+repo_target: all
+
+# GitHub organization settings
+github_org: yamisskey-dev
+github_org_url: "https://github.com/{{ github_org }}"
+
+# Default repository list
+default_repositories:
+  - name: yamisskey
+    url: "{{ github_org_url }}/yamisskey.git"
+    dest: /var/www/misskey
+    branch: master
+    owner: "{{ ansible_user }}"
+    become_required: true
+    required: true
+    description: "Main Yamisskey application"
+    
+  - name: yamisskey-assets
+    url: "{{ github_org_url }}/yamisskey-assets.git"
+    dest: "{{ ansible_env.HOME }}/misskey-assets"
+    owner: "{{ ansible_user }}"
+    become_required: false
+    required: false
+    description: "Yamisskey static assets"
+    
+  - name: yui
+    url: "{{ github_org_url }}/yui.git"
+    dest: "{{ ansible_env.HOME }}/ai"
+    owner: "{{ ansible_user }}"
+    become_required: false
+    required: false
+    description: "Yui AI assistant"
+    
+  - name: yamisskey-backup
+    url: "{{ github_org_url }}/yamisskey-backup.git"
+    dest: /opt/misskey-backup
+    owner: "{{ ansible_user }}"
+    become_required: true
+    required: true
+    description: "Backup utilities"
+    
+  - name: yamisskey-anonote
+    url: "{{ github_org_url }}/yamisskey-anonote.git"
+    dest: "{{ ansible_env.HOME }}/misskey-anonote"
+    owner: "{{ ansible_user }}"
+    become_required: false
+    required: false
+    description: "Anonymous note service"
+    
+  - name: ctf.yami.ski
+    url: "{{ github_org_url }}/ctf.yami.ski.git"
+    dest: "{{ ansible_env.HOME }}/ctfd"
+    owner: "{{ ansible_user }}"
+    become_required: false
+    required: false
+    description: "CTF platform"
+
+# Repository list - can be overridden via extra vars
+repositories: "{{ repo_list | default(default_repositories) }}"
+
+# Backup settings
+backup_base_dir: "/opt/backups/repositories"
+backup_timestamp_format: "%Y%m%d_%H%M%S"
+backup_retention_days: 30
+
+# Git settings
+git_accept_hostkey: true
+git_force_update: false
+git_recursive_submodules: true
+
+# Directory permissions
+default_dir_mode: "0755"
+default_file_mode: "0644"
+
+# Verification settings
+verify_git_status: true
+verify_branch_consistency: true
+verify_remote_connectivity: false
