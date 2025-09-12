@@ -43,11 +43,11 @@ make migrate SOURCE=balthasar TARGET=raspberrypi
 make inventory SOURCE=balthasar TARGET=raspberrypi
 
 # 2. 接続確認
-ansible -i ansible/inventory all -m ping
+ansible -i deploy/servers/inventory all -m ping
 
 # 3. 移行実行
-ansible-playbook -i ansible/inventory \
-  ansible/playbooks/migrate.yml \
+ansible-playbook -i deploy/servers/inventory \
+  deploy/servers/playbooks/migrate.yml \
   -e "migrate_source=balthasar migrate_target=raspberrypi" \
   --limit raspberrypi --ask-become-pass
 ```
@@ -57,8 +57,8 @@ ansible-playbook -i ansible/inventory \
 ```bash
 # カスタムポートでの移行
 make inventory SOURCE=balthasar TARGET=raspberrypi
-ansible-playbook -i ansible/inventory \
-  ansible/playbooks/migrate.yml \
+ansible-playbook -i deploy/servers/inventory \
+  deploy/servers/playbooks/migrate.yml \
   -e "migrate_source=balthasar migrate_target=raspberrypi" \
   -e "source_minio_port=9001 target_minio_port=9002" \
   --limit raspberrypi --ask-become-pass

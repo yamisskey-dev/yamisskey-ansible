@@ -75,7 +75,7 @@ PlayIt.ggは完全自動でセットアップされます：
 2. **ワンコマンドデプロイ**
    ```bash
    # PlayIt有効化してデプロイ（完全自動）
-   ansible-playbook -i inventory ansible/playbooks/minecraft.yml \
+   ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/minecraft.yml \
      -e "playit_enabled=true"
    ```
 
@@ -217,12 +217,12 @@ minecraft_secrets_file: '{{ minecraft_dir }}/secrets.yml'
 
 ### 3. 基本デプロイ
 ```bash
-ansible-playbook -i inventory ansible/playbooks/minecraft.yml
+ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/minecraft.yml
 ```
 
 ### 4. PlayIt.gg完全自動デプロイ
 ```bash
-ansible-playbook -i inventory ansible/playbooks/minecraft.yml \
+ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/minecraft.yml \
   -e "playit_enabled=true"
 ```
 

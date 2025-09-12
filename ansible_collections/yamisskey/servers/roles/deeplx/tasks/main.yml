@@ -1,4 +1,4 @@
-# ansible/playbooks/roles/deeplx/tasks/main.yml
+# yamisskey.servers role: deeplx tasks
 ---
 - name: Create DeepLX directory
   file:

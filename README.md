@@ -553,21 +553,38 @@ curl http://localhost:3000/api/health
 
 ```
 yamisskey-provision/
-├── ansible/
-│   ├── servers/                    # Server management
-│   │   ├── playbooks/             # Server playbooks
-│   │   ├── roles/                 # Server roles
-│   │   └── inventory              # Server inventory (created by make inventory)
-│   └── appliances/                # Appliance management
-│       ├── playbooks/             # Appliance playbooks (TrueNAS)
-│       ├── roles/                 # Appliance roles
-│       └── inventory              # Appliance inventory (created by make inventory TARGET=appliances)
-├── logs/                          # Execution logs
-├── backups/                       # Inventory backups
-│   ├── servers-inventory-*.bak    # Server inventory backups
-│   └── appliances-inventory-*.bak # Appliance inventory backups
-├── Makefile                       # Unified Ansible wrapper
-└── README.md                      # This documentation
+├── ansible_collections/
+│   └── yamisskey/
+│       ├── servers/                  # Reusable server collection
+│       │   ├── roles/               # Server roles (redistributable)
+│       │   ├── meta/                # runtime.yml, galaxy.yml
+│       │   ├── tests/               # ansible-test (sanity/integration)
+│       │   └── README.md
+│       └── appliances/               # Reusable appliances collection
+│           ├── roles/               # TrueNAS roles (redistributable)
+│           ├── meta/                # runtime.yml, galaxy.yml
+│           ├── tests/               # ansible-test (sanity/integration)
+│           └── README.md
+├── deploy/
+│   ├── servers/                      # Execution artifacts for servers
+│   │   ├── ansible.cfg              # Uses collection roles_path
+│   │   ├── playbooks/               # Server playbooks
+│   │   ├── group_vars/              # Global/group vars (vault example included)
+│   │   ├── host_vars/               # Per-host vars
+│   │   └── inventory                # Created by `make inventory`
+│   └── appliances/                  # Execution artifacts for appliances
+│       ├── ansible.cfg              # Uses collection roles_path
+│       ├── playbooks/               # Appliance (TrueNAS) playbooks
+│       ├── group_vars/              # Global/group vars
+│       ├── host_vars/               # Per-host vars
+│       └── inventory                # Created by `make inventory TARGET=appliances`
+├── logs/                            # Execution logs
+├── backups/                         # Inventory backups
+│   ├── servers-inventory-*.bak      # Server inventory backups
+│   └── appliances-inventory-*.bak   # Appliance inventory backups
+├── Makefile                         # Unified Ansible wrapper
+├── requirements.yml                 # Collections (local + external)
+└── README.md                        # This documentation
 ```
 
 ## 🚀 Advanced Usage

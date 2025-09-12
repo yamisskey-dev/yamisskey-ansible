@@ -1,13 +1,10 @@
 # Ansible inventories (created by make inventory)
-ansible/servers/inventory
-ansible/appliances/inventory
-
-# Legacy inventory paths
-ansible/inventory
+deploy/servers/inventory
+deploy/appliances/inventory
 
 # Ansible secrets
-ansible/vault_pass
-ansible/group_vars/sudo_passwords.yml
+.vault_pass
+deploy/**/group_vars/vault.yml
 
 # Runtime directories created by Makefile
 backups/

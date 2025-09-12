@@ -395,17 +395,17 @@
       make migrate
 
       🎯 Flexible host migration:
-      ansible-playbook -i ansible/inventory ansible/playbooks/migrate.yml \
+      ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/migrate.yml \
         -e "migrate_source=balthasar migrate_target=raspberrypi" \
         --limit raspberrypi --ask-become-pass
 
       🔄 Reverse migration (raspberrypi→balthasar):
-      ansible-playbook -i ansible/inventory ansible/playbooks/migrate.yml \
+      ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/migrate.yml \
         -e "migrate_source=raspberrypi migrate_target=balthasar" \
         --limit balthasar --ask-become-pass
 
       📡 Custom endpoints:
-      ansible-playbook -i ansible/inventory ansible/playbooks/migrate.yml \
+      ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/migrate.yml \
         -e "migrate_source=server1 migrate_target=server2" \
         -e "source_minio_port=9001 target_minio_port=9002" \
         --limit server2 --ask-become-pass

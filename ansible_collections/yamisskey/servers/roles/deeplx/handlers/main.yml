@@ -1,4 +1,4 @@
-# ansible/playbooks/roles/deeplx/handlers/main.yml
+# yamisskey.servers role: deeplx handlers
 ---
 - name: restart deeplx
   community.docker.docker_compose_v2:

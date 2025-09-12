@@ -22,8 +22,8 @@
 ```yaml
 - name: Run ansible-lint
   run: |
-    ansible-lint ansible/servers/
-    ansible-lint ansible/appliances/
+    ansible-lint ansible_collections/yamisskey/servers
+    ansible-lint ansible_collections/yamisskey/appliances
 ```
 - Ansibleプレイブックとロールの品質チェック
 - ベストプラクティス遵守の確認
@@ -42,8 +42,8 @@
 ```yaml
 - name: Check ansible syntax
   run: |
-    ansible-playbook --syntax-check ansible/servers/playbooks/*.yml
-    ansible-playbook --syntax-check ansible/appliances/playbooks/*.yml
+    ansible-playbook --syntax-check deploy/servers/playbooks/*.yml
+    ansible-playbook --syntax-check deploy/appliances/playbooks/*.yml
 ```
 - Ansibleプレイブックの構文検証
 - 実行前のエラー検出
@@ -64,8 +64,10 @@
 ### 検証対象
 
 #### 📁 ディレクトリ構造
-- `ansible/servers/` - サーバー管理設定
-- `ansible/appliances/` - アプライアンス管理設定
+- `ansible_collections/yamisskey/servers/` - 再配布可能なサーバーコレクション
+- `ansible_collections/yamisskey/appliances/` - 再配布可能なアプライアンスコレクション
+- `deploy/servers/` - 実行用プレイブック/インベントリ/設定
+- `deploy/appliances/` - 実行用プレイブック/インベントリ/設定
 - `.yamllint.yaml` - YAML Lint設定
 - `.ansible-lint` - Ansible Lint設定
 
@@ -158,8 +160,8 @@ env:
 ```bash
 # プッシュ前のローカル検証
 yamllint .
-ansible-lint ansible/servers/
-ansible-lint ansible/appliances/
+ansible-lint ansible_collections/yamisskey/servers
+ansible-lint ansible_collections/yamisskey/appliances
 make help
 make list
 ```
@@ -167,7 +169,7 @@ make list
 ### 設定修正
 ```bash
 # Linting エラー修正
-ansible-lint --fix ansible/servers/
+ansible-lint --fix ansible_collections/yamisskey/servers
 yamllint --format parsable . | head -20
 ```
 
@@ -209,7 +211,7 @@ yamllint --format parsable . | head -20
 ### デバッグ方法
 ```bash
 # ローカルでCIと同等の検証
-docker run --rm -v $(pwd):/data cytopia/ansible-lint:latest ansible/servers/
+docker run --rm -v $(pwd):/data cytopia/ansible-lint:latest ansible_collections/yamisskey/servers
 docker run --rm -v $(pwd):/data cytopia/yamllint:latest .
 ```
 
