@@ -101,78 +101,78 @@
 
         - name: Backup current database (safety measure)
           block:
-        - name: Create current DB backup
-          community.docker.docker_container:
-            name: "{{ postgres_backup_container }}"
-            image: postgres:15
-            command: >
-              pg_dump -h {{ postgres_container_name }} 
-              -U {{ vault_postgres_user }} 
-              -d {{ vault_postgres_db }}
-              -f /backup/current-db-backup-{{ ansible_date_time.epoch }}.sql
-            volumes:
-              - "{{ postgres_backup_path }}:/backup"
-            env:
-              PGPASSWORD: "{{ vault_postgres_password }}"
-            networks:
-              - name: misskey_default
-            state: started
-            detach: false
-            cleanup: true
-          register: current_backup_result
-          
-        - name: Verify current backup created
-          stat:
-            path: "{{ postgres_backup_path }}/current-db-backup-{{ ansible_date_time.epoch }}.sql"
-          register: current_backup_file
-          
-        - name: Confirm current backup success
-          assert:
-            that:
-              - current_backup_file.stat.exists
-              - current_backup_file.stat.size > 1000
-            fail_msg: "Current database backup failed"
-            success_msg: "Current database successfully backed up"
+            - name: Create current DB backup
+              community.docker.docker_container:
+                name: "{{ postgres_backup_container }}"
+                image: postgres:15
+                command: >
+                  pg_dump -h {{ postgres_container_name }} 
+                  -U {{ vault_postgres_user }} 
+                  -d {{ vault_postgres_db }}
+                  -f /backup/current-db-backup-{{ ansible_date_time.epoch }}.sql
+                volumes:
+                  - "{{ postgres_backup_path }}:/backup"
+                env:
+                  PGPASSWORD: "{{ vault_postgres_password }}"
+                networks:
+                  - name: misskey_default
+                state: started
+                detach: false
+                cleanup: true
+              register: current_backup_result
+              
+            - name: Verify current backup created
+              stat:
+                path: "{{ postgres_backup_path }}/current-db-backup-{{ ansible_date_time.epoch }}.sql"
+              register: current_backup_file
+              
+            - name: Confirm current backup success
+              assert:
+                that:
+                  - current_backup_file.stat.exists
+                  - current_backup_file.stat.size > 1000
+                fail_msg: "Current database backup failed"
+                success_msg: "Current database successfully backed up"
           when: backup_current_db
 
         - name: Download DR backup from storage
           block:
-        - name: Configure AWS CLI for backup access
-          environment:
-            AWS_ACCESS_KEY_ID: "{{ vault_aws_access_key }}"
-            AWS_SECRET_ACCESS_KEY: "{{ vault_aws_secret_key }}"
-            AWS_DEFAULT_REGION: "{{ aws_region | default('ap-northeast-1') }}"
-          shell: |
-            if [ "{{ dr_restore_point }}" = "latest" ]; then
-              BACKUP_FILE=$(aws s3 ls {{ dr_backup_source }} --recursive | sort | tail -n 1 | awk '{print $4}')
-            else
-              BACKUP_FILE=$(aws s3 ls {{ dr_backup_source }} --recursive | grep "{{ dr_restore_point }}" | head -n 1 | awk '{print $4}')
-            fi
-            
-            if [ -z "$BACKUP_FILE" ]; then
-              echo "No backup found for restore point: {{ dr_restore_point }}"
-              exit 1
-            fi
-            
-            echo "Downloading: s3://{{ dr_backup_source.split('://')[1] }}/$BACKUP_FILE"
-            aws s3 cp "s3://{{ dr_backup_source.split('://')[1] }}/$BACKUP_FILE" "{{ postgres_backup_path }}/dr-restore-backup.sql"
-            echo "backup_file=$BACKUP_FILE" > "{{ postgres_backup_path }}/restore_info.txt"
-          args:
-            creates: "{{ postgres_backup_path }}/dr-restore-backup.sql"
-          register: backup_download
-          
-        - name: Verify DR backup download
-          stat:
-            path: "{{ postgres_backup_path }}/dr-restore-backup.sql"
-          register: dr_backup_file
-          
-        - name: Confirm DR backup download
-          assert:
-            that:
-              - dr_backup_file.stat.exists
-              - dr_backup_file.stat.size > 1000
-            fail_msg: "DR backup download failed"
-            success_msg: "DR backup successfully downloaded"
+            - name: Configure AWS CLI for backup access
+              environment:
+                AWS_ACCESS_KEY_ID: "{{ vault_aws_access_key }}"
+                AWS_SECRET_ACCESS_KEY: "{{ vault_aws_secret_key }}"
+                AWS_DEFAULT_REGION: "{{ aws_region | default('ap-northeast-1') }}"
+              shell: |
+                if [ "{{ dr_restore_point }}" = "latest" ]; then
+                  BACKUP_FILE=$(aws s3 ls {{ dr_backup_source }} --recursive | sort | tail -n 1 | awk '{print $4}')
+                else
+                  BACKUP_FILE=$(aws s3 ls {{ dr_backup_source }} --recursive | grep "{{ dr_restore_point }}" | head -n 1 | awk '{print $4}')
+                fi
+                
+                if [ -z "$BACKUP_FILE" ]; then
+                  echo "No backup found for restore point: {{ dr_restore_point }}"
+                  exit 1
+                fi
+                
+                echo "Downloading: s3://{{ dr_backup_source.split('://')[1] }}/$BACKUP_FILE"
+                aws s3 cp "s3://{{ dr_backup_source.split('://')[1] }}/$BACKUP_FILE" "{{ postgres_backup_path }}/dr-restore-backup.sql"
+                echo "backup_file=$BACKUP_FILE" > "{{ postgres_backup_path }}/restore_info.txt"
+              args:
+                creates: "{{ postgres_backup_path }}/dr-restore-backup.sql"
+              register: backup_download
+              
+            - name: Verify DR backup download
+              stat:
+                path: "{{ postgres_backup_path }}/dr-restore-backup.sql"
+              register: dr_backup_file
+              
+            - name: Confirm DR backup download
+              assert:
+                that:
+                  - dr_backup_file.stat.exists
+                  - dr_backup_file.stat.size > 1000
+                fail_msg: "DR backup download failed"
+                success_msg: "DR backup successfully downloaded"
 
         - name: Perform database restore
           block:
