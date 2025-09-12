@@ -107,21 +107,33 @@ inventory:
 		echo "⚠️  Inventory already exists. Creating backup..."; \
 		cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; \
 	fi; \
-	echo "📄 Processing template with environment variables..."; \
+	echo "📄 Processing template with Tailscale IPs..."; \
 	cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
 	CURRENT_HOST=$$(hostname); \
-	DOMAIN="$${YAMISSKEY_DOMAIN:-yami.ski}"; \
-	USER="$${YAMISSKEY_USER:-taka}"; \
-	BALTHASAR_IP="$${BALTHASAR_IP:-10.0.1.10}"; \
-	CASPAR_IP="$${CASPAR_IP:-10.0.1.20}"; \
-	LINODE_IP="$${LINODE_IP:-45.79.XXX.XXX}"; \
-	JOSEPH_IP="$${JOSEPH_IP:-10.0.1.50}"; \
-	RASPBERRY_IP="$${RASPBERRY_IP:-10.0.1.60}"; \
-	NETWORK="$${INTERNAL_NETWORK:-10.0.1.0/24}"; \
+	CURRENT_USER=$$(whoami); \
+	DOMAIN="yami.ski"; \
+	NETWORK="100.64.0.0/10"; \
+	BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); \
+	CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); \
+	LINODE_IP=$$(tailscale ip -4 linode-prox 2>/dev/null); \
+	JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); \
+	RASPBERRY_IP=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
+	if [ -z "$$BALTHASAR_IP" ] || [ -z "$$CASPAR_IP" ] || [ -z "$$LINODE_IP" ]; then \
+		echo "❌ Failed to resolve required Tailscale IPs. Check 'tailscale status'"; \
+		exit 1; \
+	fi; \
+	if [ "$(TARGET)" = "servers" ] && [ -z "$$RASPBERRY_IP" ]; then \
+		echo "❌ raspberrypi not found in Tailscale"; \
+		exit 1; \
+	fi; \
+	if [ "$(TARGET)" = "appliances" ] && [ -z "$$JOSEPH_IP" ]; then \
+		echo "❌ joseph not found in Tailscale"; \
+		exit 1; \
+	fi; \
 	sed -i.bak \
 		-e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" \
 		-e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" \
-		-e "s|USER_PLACEHOLDER|$$USER|g" \
+		-e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" \
 		-e "s|BALTHASAR_IP_PLACEHOLDER|$$BALTHASAR_IP|g" \
 		-e "s|CASPAR_IP_PLACEHOLDER|$$CASPAR_IP|g" \
 		-e "s|LINODE_IP_PLACEHOLDER|$$LINODE_IP|g" \
@@ -132,27 +144,20 @@ inventory:
 	rm "$$INV_PATH.bak" 2>/dev/null || true; \
 	echo "✅ $(TARGET) inventory created from template at $$INV_PATH"; \
 	echo ""; \
-	echo "🔧 Customization completed with environment variables:"; \
-	echo "   - Domain: $$DOMAIN (YAMISSKEY_DOMAIN)"; \
-	echo "   - User: $$USER (YAMISSKEY_USER)"; \
-	echo "   - Network: $$NETWORK (INTERNAL_NETWORK)"; \
+	echo "🔧 Customization completed:"; \
+	echo "   - Domain: $$DOMAIN"; \
+	echo "   - User: $$CURRENT_USER (auto-detected)"; \
+	echo "   - Network: $$NETWORK"; \
 	if [ "$(TARGET)" = "servers" ]; then \
-		echo "   - Balthasar IP: $$BALTHASAR_IP (BALTHASAR_IP)"; \
-		echo "   - Caspar IP: $$CASPAR_IP (CASPAR_IP)"; \
-		echo "   - Linode IP: $$LINODE_IP (LINODE_IP)"; \
-		echo "   - Raspberry IP: $$RASPBERRY_IP (RASPBERRY_IP)"; \
+		echo "   - Balthasar IP: $$BALTHASAR_IP (tailscale)"; \
+		echo "   - Caspar IP: $$CASPAR_IP (tailscale)"; \
+		echo "   - Linode IP: $$LINODE_IP (tailscale)"; \
+		echo "   - Raspberry IP: $$RASPBERRY_IP (tailscale)"; \
 	else \
-		echo "   - Joseph IP: $$JOSEPH_IP (JOSEPH_IP)"; \
+		echo "   - Joseph IP: $$JOSEPH_IP (tailscale)"; \
 	fi; \
 	echo ""; \
-	echo "💡 Environment Variables for Customization:"; \
-	if [ "$(TARGET)" = "servers" ]; then \
-		echo "   YAMISSKEY_DOMAIN=example.com BALTHASAR_IP=192.168.1.10 make inventory"; \
-	else \
-		echo "   YAMISSKEY_DOMAIN=example.com JOSEPH_IP=192.168.1.50 make inventory TARGET=appliances"; \
-	fi; \
-	echo ""; \
-	echo "📋 Still Required (manual):"; \
+	echo "💡 Next Steps:"; \
 	echo "   - Create and encrypt group_vars/vault.yml with vault_* variables"; \
 	echo "   - Run: ansible-vault encrypt $(DEPLOY_DIR)/group_vars/vault.yml"
 

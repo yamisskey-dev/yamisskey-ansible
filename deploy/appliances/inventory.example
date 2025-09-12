@@ -17,6 +17,10 @@ joseph
 truenas
 joseph
 
+# === Local Testing ===
+[local]
+HOSTNAME_PLACEHOLDER ansible_connection=local
+
 # ========================================
 # Global Variables - 必須設定項目
 # ========================================
@@ -29,7 +33,7 @@ ansible_become_method=sudo
 ansible_become_user=root
 
 # --- TrueNAS API Configuration (必須) ---
-truenas_api_url="https://{{ ansible_host }}"
+truenas_api_url="https://JOSEPH_IP_PLACEHOLDER"
 truenas_api_key="{{ vault_truenas_api_key }}"
 truenas_api_timeout=10
 truenas_health_check_timeout=30
@@ -45,7 +49,7 @@ truenas_backup_path="/mnt/{{ truenas_pool_name }}/backups"
 
 # --- Domain & Network Configuration (必須) ---
 primary_domain=DOMAIN_PLACEHOLDER
-truenas_minio_domain="drive.{{ primary_domain }}"
+truenas_minio_domain="drive.DOMAIN_PLACEHOLDER"
 internal_network=NETWORK_PLACEHOLDER
 truenas_internal_ip=JOSEPH_IP_PLACEHOLDER
 

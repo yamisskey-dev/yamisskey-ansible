@@ -63,7 +63,7 @@ internal_interface=eth1
 
 # --- Domain Configuration (必須) ---
 primary_domain=DOMAIN_PLACEHOLDER
-misskey_domain="{{ primary_domain }}"
+misskey_domain=DOMAIN_PLACEHOLDER
 
 # --- Cloudflare Tunnel Configuration (必須) ---
 # これらの値は group_vars/vault.yml で暗号化してください
@@ -211,14 +211,20 @@ monitoring_enabled=true
 # Service-Specific Connection Overrides
 # ========================================
 
-# SSH接続設定のカスタマイズ例
-[proxy_servers:vars]
-ansible_ssh_port=2222
-ansible_ssh_private_key_file="~/.ssh/linode_rsa"
+# --- Tailscale SSH Configuration ---
+# Tailscale SSHを使用するため、秘密鍵ファイルは不要
+# すべてのホストでTailscaleの認証を使用
 
-[game_servers:vars]
+# --- Linode Proxy (External Host - 標準SSH) ---
+[proxy_servers:vars]
+# 外部VPSのため標準SSHを使用
 ansible_ssh_port=22
-ansible_ssh_private_key_file="~/.ssh/raspberry_pi_rsa"
+# Tailscale SSH未対応の場合のみ秘密鍵を指定
+# ansible_ssh_private_key_file="~/.ssh/linode_rsa"
+
+# --- Tailscale Hosts (SSH Key不要) ---
+# balthasar, caspar, raspberrypi は Tailscale SSH で認証
+# 秘密鍵ファイルの設定は不要
 
 # ========================================
 # 必須変数チェック用コメント
