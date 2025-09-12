@@ -426,68 +426,71 @@
           
           ⏭️ Next: Verify application connectivity and update DR procedures
 
-  rescue:
-    - name: MinIO DR Rehearsal Failure - Rollback
-      debug:
-        msg: |
-          🚨 MINIO DR REHEARSAL FAILED - INITIATING ROLLBACK
-          
-          Rolling back to original data...
-      
-    - name: Stop MinIO for rollback
-      community.docker.docker_compose_v2:
-        project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
-        state: stopped
-        
-    - name: Restore from current backup (rollback)
+    - name: MinIO DR wrapper for rescue/always
       block:
-        - name: Clear failed restore data
-          file:
-            path: "{{ minio_data_path }}"
-            state: absent
-          become: true
+        - debug:
+            msg: "Wrapping DR steps for error handling"
+      rescue:
+        - name: MinIO DR Rehearsal Failure - Rollback
+          debug:
+            msg: |
+              🚨 MINIO DR REHEARSAL FAILED - INITIATING ROLLBACK
+              
+              Rolling back to original data...
           
-        - name: Recreate data directory
-          file:
-            path: "{{ minio_data_path }}"
-            state: directory
-            owner: root
-            group: root
-            mode: '0755'
-          become: true
+        - name: Stop MinIO for rollback
+          community.docker.docker_compose_v2:
+            project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+            state: stopped
+            
+        - name: Restore from current backup (rollback)
+          block:
+            - name: Clear failed restore data
+              file:
+                path: "{{ minio_data_path }}"
+                state: absent
+              become: true
+              
+            - name: Recreate data directory
+              file:
+                path: "{{ minio_data_path }}"
+                state: directory
+                owner: root
+                group: root
+                mode: '0755'
+              become: true
+              
+            - name: Copy back original data
+              shell: |
+                if [ -d "{{ minio_backup_path }}/current-backup" ]; then
+                  cp -r {{ minio_backup_path }}/current-backup/* {{ minio_data_path }}/
+                  echo "Original data restored from backup"
+                else
+                  echo "No current backup found - manual intervention required"
+                  exit 1
+                fi
+              become: true
+          when: backup_current_data
           
-        - name: Copy back original data
+        - name: Restart MinIO after rollback
+          community.docker.docker_compose_v2:
+            project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+            state: started
+          
+        - fail:
+            msg: "MinIO DR rehearsal failed and rollback completed. Check logs for details."
+      always:
+        - name: Cleanup MinIO client aliases
           shell: |
-            if [ -d "{{ minio_backup_path }}/current-backup" ]; then
-              cp -r {{ minio_backup_path }}/current-backup/* {{ minio_data_path }}/
-              echo "Original data restored from backup"
-            else
-              echo "No current backup found - manual intervention required"
-              exit 1
-            fi
-          become: true
-      when: backup_current_data
-      
-    - name: Restart MinIO after rollback
-      community.docker.docker_compose_v2:
-        project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
-        state: started
-      
-    - fail:
-        msg: "MinIO DR rehearsal failed and rollback completed. Check logs for details."
-
-  always:
-    - name: Cleanup MinIO client aliases
-      shell: |
-        /usr/local/bin/mc alias remove {{ minio_alias }} 2>/dev/null || true
-        /usr/local/bin/mc alias remove dr-source 2>/dev/null || true
-        /usr/local/bin/mc alias remove restored-minio 2>/dev/null || true
-      ignore_errors: true
-      
-    - name: MinIO DR rehearsal cleanup summary
-      debug:
-        msg: |
-          🧹 MinIO DR Cleanup completed
-          📂 Backup files retained at: {{ minio_backup_path }}
-          💡 Remember to review the rehearsal report and update procedures
-          🔍 Verify application connectivity to restored storage
+            /usr/local/bin/mc alias remove {{ minio_alias }} 2>/dev/null || true
+            /usr/local/bin/mc alias remove dr-source 2>/dev/null || true
+            /usr/local/bin/mc alias remove restored-minio 2>/dev/null || true
+          ignore_errors: true
+          
+        - name: MinIO DR rehearsal cleanup summary
+          debug:
+            msg: |
+              🧹 MinIO DR Cleanup completed
+              📂 Backup files retained at: {{ minio_backup_path }}
+              💡 Remember to review the rehearsal report and update procedures
+              🔍 Verify application connectivity to restored storage
