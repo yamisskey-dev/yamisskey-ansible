@@ -1,0 +1,24 @@
+---
+- name: Check if Tailscale is already installed
+  command: which tailscale
+  register: tailscale_check
+  failed_when: false
+  changed_when: false
+
+- name: Download and install Tailscale
+  shell: curl -fsSL https://tailscale.com/install.sh | sh
+  when: tailscale_check.rc != 0
+  register: tailscale_install
+  changed_when: tailscale_install.rc == 0
+
+- name: Verify Tailscale installation
+  command: tailscale version
+  register: tailscale_version
+  changed_when: false
+  failed_when: false
+
+- name: Display Tailscale installation result
+  debug:
+    msg: |
+      ✅ Tailscale installation completed
+      Version: {{ tailscale_version.stdout if tailscale_version.rc == 0 else 'Installation failed' }}

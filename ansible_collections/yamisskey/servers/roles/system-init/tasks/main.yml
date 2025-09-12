@@ -1,0 +1,98 @@
+---
+- name: Display system information
+  debug:
+    msg: |
+      🖥️ System Information:
+      OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      Architecture: {{ ansible_architecture }}
+      Hostname: {{ ansible_hostname }}
+      User: {{ ansible_user }}
+  tags:
+    - always
+
+- name: Update apt package index
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  tags:
+    - packages
+
+- name: Check if common role should be applied
+  stat:
+    path: "{{ ansible_env.PWD }}/deploy/servers/playbooks/common.yml"
+  register: common_playbook_check
+  delegate_to: localhost
+  tags:
+    - always
+
+- name: Apply common role for necessary packages
+  include_role:
+    name: yamisskey.servers.common
+  when: common_playbook_check.stat.exists
+  tags:
+    - packages
+    - common
+
+- name: Install base packages if common playbook not available
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - gnupg
+      - lsb-release
+      - software-properties-common
+      - apt-transport-https
+      - ca-certificates
+    state: present
+    update_cache: true
+  when: not common_playbook_check.stat.exists and ansible_os_family == "Debian"
+  tags:
+    - packages
+    - base
+
+- name: Install Docker
+  include_tasks: docker.yml
+  when: install_docker | default(true)
+  tags:
+    - docker
+
+- name: Install Tailscale
+  include_tasks: tailscale.yml
+  when: install_tailscale | default(true)
+  tags:
+    - tailscale
+
+- name: Install Cloudflare products
+  include_tasks: cloudflare.yml
+  when: install_cloudflare | default(true)
+  tags:
+    - cloudflare
+
+- name: Install Playit
+  include_tasks: playit.yml
+  when: install_playit | default(true)
+  tags:
+    - playit
+
+- name: Verify installations
+  include_tasks: verify.yml
+  when: verify_installations | default(true)
+  tags:
+    - verify
+    - always
+
+- name: Display next steps
+  debug:
+    msg: |
+      🎉 System initialization completed!
+
+      📋 Next steps:
+      1. Configure Tailscale: sudo tailscale up
+      2. Configure Cloudflare WARP (optional): warp-cli register
+      3. Clone repositories: ansible-playbook -i inventory playbooks/clone-repos.yml
+      4. Run system test: ansible-playbook -i inventory playbooks/system-test.yml
+      5. Start provisioning: ansible-playbook -i inventory playbooks/common.yml
+  tags:
+    - always

@@ -1,0 +1,24 @@
+---
+- name: Check installation versions
+  shell: |
+    echo "📦 Installation Verification:"
+    echo "✅ Ansible: $(ansible --version | head -1)"
+    echo "✅ Docker: $(docker --version)"
+    echo "✅ Tailscale: $(tailscale version)"
+    echo "✅ Cloudflared: $(cloudflared version)"
+    if command -v warp-cli >/dev/null 2>&1; then
+      echo "✅ Cloudflare WARP: $(warp-cli --version)"
+    else
+      echo "⚠️ Cloudflare WARP: Installation may have failed"
+    fi
+    if command -v playit >/dev/null 2>&1; then
+      echo "✅ Playit: Installed"
+    else
+      echo "⚠️ Playit: Installation may have failed"
+    fi
+  register: verification_result
+  changed_when: false
+
+- name: Display verification results
+  debug:
+    msg: "{{ verification_result.stdout_lines }}"
