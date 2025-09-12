@@ -1,0 +1,165 @@
+---
+- name: Comprehensive deployment stack with tag-based execution
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Stack components control
+    stack_components: "{{ components | default('all') }}"
+    # Individual component toggles
+    enable_common: "{{ 'common' in stack_components.split(',') or stack_components == 'all' }}"
+    enable_security: "{{ 'security' in stack_components.split(',') or stack_components == 'all' }}"
+    enable_monitoring: "{{ 'monitoring' in stack_components.split(',') or stack_components == 'all' }}"
+    enable_import: "{{ 'import' in stack_components.split(',') or stack_components == 'all' }}"
+    enable_export: "{{ 'export' in stack_components.split(',') or stack_components == 'all' }}"
+
+  pre_tasks:
+    - name: Display deployment stack plan
+      debug:
+        msg: |
+          🚀 Deployment Stack Execution Plan:
+          📦 Components to deploy: {{ stack_components }}
+          
+          Stack Components Status:
+          {% if enable_common %}
+          ✅ Common configurations
+          {% else %}
+          ⏭️ Common configurations (skipped)
+          {% endif %}
+          {% if enable_security %}
+          ✅ Security services (Cloudflared, etc.)
+          {% else %}
+          ⏭️ Security services (skipped)
+          {% endif %}
+          {% if enable_monitoring %}
+          ✅ Monitoring tools
+          {% else %}
+          ⏭️ Monitoring tools (skipped)
+          {% endif %}
+          {% if enable_import %}
+          ✅ Data import processes
+          {% else %}
+          ⏭️ Data import processes (skipped)
+          {% endif %}
+          {% if enable_export %}
+          ✅ Data export processes
+          {% else %}
+          ⏭️ Data export processes (skipped)
+          {% endif %}
+          
+          💡 Usage examples:
+          - All components: ansible-playbook deployment-stack.yml
+          - Specific components: ansible-playbook deployment-stack.yml -e "components=common,security"
+          - Tag-based: ansible-playbook deployment-stack.yml --tags "common,security"
+      tags: ['info', 'plan']
+
+  roles:
+    - role: common
+      when: enable_common | bool
+      tags: ['common', 'base']
+      
+    - role: security
+      when: enable_security | bool
+      tags: ['security', 'cloudflared']
+      
+    - role: monitoring
+      when: enable_monitoring | bool
+      tags: ['monitoring', 'observability']
+      
+    - role: import
+      when: enable_import | bool
+      tags: ['import', 'data']
+      
+    - role: export
+      when: enable_export | bool
+      tags: ['export', 'data']
+
+  post_tasks:
+    - name: Verify deployment stack completion
+      debug:
+        msg: |
+          🎉 Deployment Stack Completed Successfully!
+          
+          📊 Execution Summary:
+          📅 Completed at: {{ ansible_date_time.iso8601 }}
+          🖥️ Host: {{ inventory_hostname }}
+          📦 Components deployed: {{ stack_components }}
+          
+          📋 Deployed Components:
+          {% if enable_common %}
+          ✅ Common configurations - Base system setup
+          {% endif %}
+          {% if enable_security %}
+          ✅ Security services - Cloudflared and secure services
+          {% endif %}
+          {% if enable_monitoring %}
+          ✅ Monitoring tools - Observability stack
+          {% endif %}
+          {% if enable_import %}
+          ✅ Import processes - Data import functionality
+          {% endif %}
+          {% if enable_export %}
+          ✅ Export processes - Data export functionality
+          {% endif %}
+          
+          💡 Next steps:
+          1. Verify each component is functioning correctly
+          2. Check service status: ansible-playbook operations.yml -e "op=status"
+          3. Run health checks: ansible-playbook operations.yml -e "op=health"
+          4. Review component-specific configurations as needed
+      tags: ['info', 'summary']
+
+    - name: Generate deployment report
+      copy:
+        content: |
+          # Deployment Stack Report
+          Generated: {{ ansible_date_time.iso8601 }}
+          Host: {{ inventory_hostname }}
+          Components: {{ stack_components }}
+          
+          ## Deployment Summary
+          {% if enable_common %}
+          - [x] Common configurations
+          {% else %}
+          - [ ] Common configurations (skipped)
+          {% endif %}
+          {% if enable_security %}
+          - [x] Security services
+          {% else %}
+          - [ ] Security services (skipped)
+          {% endif %}
+          {% if enable_monitoring %}
+          - [x] Monitoring tools
+          {% else %}
+          - [ ] Monitoring tools (skipped)
+          {% endif %}
+          {% if enable_import %}
+          - [x] Data import processes
+          {% else %}
+          - [ ] Data import processes (skipped)
+          {% endif %}
+          {% if enable_export %}
+          - [x] Data export processes
+          {% else %}
+          - [ ] Data export processes (skipped)
+          {% endif %}
+          
+          ## Execution Details
+          - Start time: {{ ansible_date_time.iso8601 }}
+          - Execution mode: {{ 'Full stack' if stack_components == 'all' else 'Selective components' }}
+          - Host: {{ inventory_hostname }}
+          
+          ---
+          Report generated by deployment-stack playbook
+        dest: "/tmp/deployment_report_{{ ansible_date_time.epoch }}.md"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+      when: generate_report | default(false)
+      tags: ['report', 'documentation']
+
+    - name: Display report location
+      debug:
+        msg: "📄 Deployment report saved to: /tmp/deployment_report_{{ ansible_date_time.epoch }}.md"
+      when: generate_report | default(false)
+      tags: ['report', 'documentation']

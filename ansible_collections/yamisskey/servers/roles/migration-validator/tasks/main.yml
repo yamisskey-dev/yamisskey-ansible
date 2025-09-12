@@ -1,0 +1,53 @@
+---
+# Migration Validator Role - Main Tasks
+# Comprehensive validation for migration operations
+
+- name: Display validation context
+  debug:
+    msg: |
+      🔍 Migration Validation Process Started:
+      Validation Phase: {{ validation_phase | default('pre_migration') }}
+      Source Host: {{ source_minio_host | default('undefined') }}
+      Target Host: {{ target_minio_host | default('undefined') }}
+      Operation: {{ migration_operation | default('validate') }}
+  tags: ['info', 'context']
+
+- name: Parameter validation
+  include_tasks: parameter_validation.yml
+  when: validation_phase in ['pre_migration', 'all']
+  tags: ['validation', 'parameters']
+
+- name: Host connectivity validation
+  include_tasks: connectivity_validation.yml
+  when: validation_phase in ['pre_migration', 'all']
+  tags: ['validation', 'connectivity']
+
+- name: MinIO service validation
+  include_tasks: service_validation.yml
+  when: validation_phase in ['pre_migration', 'all']
+  tags: ['validation', 'services']
+
+- name: Storage capacity validation
+  include_tasks: capacity_validation.yml
+  when: validation_phase in ['pre_migration', 'all']
+  tags: ['validation', 'capacity']
+
+- name: Data integrity validation
+  include_tasks: integrity_validation.yml
+  when: validation_phase in ['pre_migration', 'post_migration', 'all']
+  tags: ['validation', 'integrity']
+
+- name: Migration readiness assessment
+  include_tasks: readiness_assessment.yml
+  when: validation_phase in ['pre_migration', 'all']
+  tags: ['validation', 'readiness']
+
+- name: Post-migration verification
+  include_tasks: post_migration_verification.yml
+  when: validation_phase in ['post_migration', 'all']
+  tags: ['validation', 'verification']
+
+- name: Generate validation report
+  include_tasks: validation_report.yml
+  when: generate_validation_report | default(true)
+  tags: ['validation', 'report']
