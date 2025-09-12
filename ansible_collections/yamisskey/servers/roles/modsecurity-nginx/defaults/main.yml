@@ -53,3 +53,67 @@ modsecurity_docker_volumes:
   # Static file volumes for Element and Synapse
   - "/var/www/element:/var/www/element:ro"
   - "/var/www/synapse:/var/www/synapse:ro"
+
+# === Enhanced Security Defaults ===
+
+# Rate limiting configuration
+modsecurity_rate_limit_enabled: true
+modsecurity_rate_limit_requests_per_minute: 60
+modsecurity_rate_limit_requests_per_second: 5
+modsecurity_rate_limit_burst: 20
+modsecurity_rate_limit_delay: 200ms
+
+# IP-based restrictions
+modsecurity_ip_blocking_enabled: true
+modsecurity_blocked_countries: []  # ISO 3166-1 alpha-2 codes (e.g., ['CN', 'RU'])
+modsecurity_allowed_ips: []        # Whitelist IPs (e.g., ['127.0.0.1', '::1'])
+modsecurity_blocked_ips: []        # Blacklist IPs
+modsecurity_blocked_user_agents:
+  - "sqlmap"
+  - "nikto"
+  - "w3af"
+  - "skipfish"
+  - "masscan"
+  - "nmap"
+
+# Security headers (OWASP recommendations)
+modsecurity_security_headers:
+  - "X-Content-Type-Options: nosniff"
+  - "X-Frame-Options: DENY"
+  - "X-XSS-Protection: '1; mode=block'"
+  - "Referrer-Policy: strict-origin-when-cross-origin"
+  - "Permissions-Policy: 'camera=(), microphone=(), geolocation=()'"
+  - "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'self'; object-src 'none'; child-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'"
+
+# HSTS configuration
+modsecurity_hsts_enabled: true
+modsecurity_hsts_max_age: 31536000  # 1 year
+modsecurity_hsts_include_subdomains: true
+modsecurity_hsts_preload: false
+
+# Request size limits (防止 DoS)
+modsecurity_max_request_size: "10M"
+modsecurity_max_file_size: "5M"
+modsecurity_max_combined_file_sizes: "10M"
+
+# Advanced CRS tuning
+modsecurity_enforce_body_limit: true
+modsecurity_pcre_match_limit: 1000
+modsecurity_pcre_match_limit_recursion: 1000
+
+# Application-specific exclusions
+modsecurity_misskey_exclusions_enabled: true
+modsecurity_api_exclusions_enabled: true
+
+# Monitoring and alerting
+modsecurity_alert_high_severity: true
+modsecurity_alert_threshold_per_minute: 10
+modsecurity_log_suspicious_requests: true
+
+# Backup and maintenance mode
+modsecurity_maintenance_mode: false
+modsecurity_maintenance_allowed_ips: ["127.0.0.1", "::1"]
+
+# Performance tuning
+modsecurity_collection_timeout: 600
+modsecurity_debug_log_level: 0  # 0=off, 1-9=debug levels

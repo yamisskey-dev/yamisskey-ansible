@@ -41,6 +41,58 @@
     owner: root
     group: root
 
+# Create IP lists and configuration files for enhanced security
+- name: Create IP lists directory
+  file:
+    path: "/etc/modsecurity-nginx/lists"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create blocked IPs list
+  copy:
+    content: |
+      {% for ip in modsecurity_blocked_ips %}
+      {{ ip }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/blocked_ips.txt"
+    mode: '0644'
+  when: modsecurity_blocked_ips | length > 0
+  notify: restart modsecurity nginx
+
+- name: Create allowed IPs list
+  copy:
+    content: |
+      {% for ip in modsecurity_allowed_ips %}
+      {{ ip }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/allowed_ips.txt"
+    mode: '0644'
+  when: modsecurity_allowed_ips | length > 0
+  notify: restart modsecurity nginx
+
+- name: Create maintenance IPs list
+  copy:
+    content: |
+      {% for ip in modsecurity_maintenance_allowed_ips %}
+      {{ ip }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/maintenance_ips.txt"
+    mode: '0644'
+  notify: restart modsecurity nginx
+
+- name: Create blocked user agents list
+  copy:
+    content: |
+      {% for ua in modsecurity_blocked_user_agents %}
+      {{ ua }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/blocked_user_agents.txt"
+    mode: '0644'
+  when: modsecurity_blocked_user_agents | length > 0
+  notify: restart modsecurity nginx
+
 - name: Create individual service nginx configurations
   template:
     src: "conf.d/{{ item }}.conf.j2"
@@ -65,6 +117,34 @@
     - neo_quesdon    # Neo-Quesdon Q&A
     - lemmy          # Lemmy link aggregator
   notify: restart modsecurity nginx
+
+- name: Create security monitoring script
+  template:
+    src: monitor-modsecurity.sh.j2
+    dest: "/etc/modsecurity-nginx/monitor-modsecurity.sh"
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - monitoring
+
+- name: Setup log rotation for ModSecurity
+  copy:
+    content: |
+      /var/log/nginx/*.log {
+        daily
+        missingok
+        rotate 30
+        compress
+        delaycompress
+        notifempty
+        create 0644 www-data www-data
+        postrotate
+          docker exec {{ modsecurity_nginx_name }} nginx -s reload > /dev/null 2>&1 || true
+        endscript
+      }
+    dest: /etc/logrotate.d/modsecurity-nginx
+    mode: '0644'
 
 - name: Create Docker Compose file for ModSecurity NGINX
   template:

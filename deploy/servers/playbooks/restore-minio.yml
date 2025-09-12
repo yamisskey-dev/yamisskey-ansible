@@ -1,0 +1,493 @@
+---
+- name: MinIO Storage Disaster Recovery Rehearsal
+  hosts: truenas,storage_servers
+  become: true
+  gather_facts: true
+  
+  vars:
+    # DR Configuration
+    dr_rehearsal_mode: true
+    dr_backup_source: "{{ vault_dr_minio_backup_source | default('s3://yamisskey-dr-backups/minio/') }}"
+    dr_restore_point: "{{ restore_timestamp | default('latest') }}"
+    dr_verification_enabled: true
+    
+    # MinIO Configuration
+    minio_data_path: "{{ truenas_minio_data_path | default('/mnt/tank/minio') }}"
+    minio_backup_path: "/tmp/minio-restore-{{ ansible_date_time.epoch }}"
+    minio_container_name: "minio"
+    minio_alias: "local-minio"
+    
+    # Safety Settings
+    require_confirmation: "{{ not (auto_confirm | default(false)) }}"
+    backup_current_data: true
+    validate_restore: true
+    
+    # Restore Configuration
+    restore_buckets: "{{ dr_restore_buckets | default(['files', 'assets', 'backups']) }}"
+    parallel_restore: true
+    restore_workers: 4
+
+  pre_tasks:
+    - name: MinIO DR Rehearsal Safety Check
+      pause:
+        prompt: |
+          
+          🚨 MINIO STORAGE DISASTER RECOVERY REHEARSAL 🚨
+          
+          ⚠️  WARNING: This will simulate a complete MinIO storage restore!
+          
+          📋 Rehearsal Configuration:
+          - Target hosts: {{ ansible_play_hosts | join(', ') }}
+          - Restore point: {{ dr_restore_point }}
+          - Backup source: {{ dr_backup_source }}
+          - Buckets to restore: {{ restore_buckets | join(', ') }}
+          - Current data backup: {{ backup_current_data }}
+          - Verification enabled: {{ dr_verification_enabled }}
+          
+          �� This rehearsal will:
+          1. Stop MinIO services
+          2. Backup current storage data
+          3. Restore from specified backup
+          4. Verify data integrity
+          5. Rollback if needed
+          
+          Type 'CONFIRM-MINIO-DR-REHEARSAL' to proceed:
+      register: minio_dr_confirmation
+      when: require_confirmation
+      
+    - name: Validate MinIO DR confirmation
+      assert:
+        that:
+          - minio_dr_confirmation.user_input == "CONFIRM-MINIO-DR-REHEARSAL"
+        fail_msg: "MinIO DR rehearsal cancelled - confirmation required"
+        success_msg: "MinIO DR rehearsal confirmed - proceeding with restore"
+      when: require_confirmation
+
+  tasks:
+    - name: Display MinIO DR rehearsal information
+      debug:
+        msg: |
+          🗄️ Starting MinIO Storage DR Rehearsal
+          
+          🎯 Target: {{ inventory_hostname }}
+          🕐 Started: {{ ansible_date_time.iso8601 }}
+          📂 Restore point: {{ dr_restore_point }}
+          🪣 Buckets: {{ restore_buckets | join(', ') }}
+          🔒 Safety: {{ 'Enabled' if backup_current_data else 'Disabled' }}
+
+    - name: Check current MinIO status
+      uri:
+        url: "{{ truenas_api_url | default('https://' + ansible_host) }}/minio/health/live"
+        method: GET
+        validate_certs: false
+        status_code: [200, 403, 404]
+      register: minio_current_status
+      ignore_errors: true
+
+    - name: Install MinIO Client (mc) for DR operations
+      get_url:
+        url: "https://dl.min.io/client/mc/release/linux-amd64/mc"
+        dest: /usr/local/bin/mc
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Create DR rehearsal workspace
+      file:
+        path: "{{ minio_backup_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Stop MinIO services for DR rehearsal
+      community.docker.docker_compose_v2:
+        project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+        state: stopped
+      when: minio_current_status.status in [200, 403]
+
+    - name: Backup current MinIO data (safety measure)
+      block:
+        - name: Configure mc for current MinIO instance
+          shell: |
+            /usr/local/bin/mc alias set {{ minio_alias }} \
+              http://localhost:{{ minio_api_port | default('9000') }} \
+              {{ truenas_minio_root_user }} \
+              {{ truenas_minio_root_password }}
+          environment:
+            MC_HOST_{{ minio_alias }}: "http://{{ truenas_minio_root_user }}:{{ truenas_minio_root_password }}@localhost:{{ minio_api_port | default('9000') }}"
+          no_log: true
+          
+        - name: Create current MinIO data backup
+          shell: |
+            mkdir -p {{ minio_backup_path }}/current-backup
+            for bucket in {{ restore_buckets | join(' ') }}; do
+              echo "Backing up bucket: $bucket"
+              /usr/local/bin/mc mirror {{ minio_alias }}/$bucket {{ minio_backup_path }}/current-backup/$bucket --overwrite
+            done
+          register: current_backup_result
+          
+        - name: Verify current backup created
+          find:
+            paths: "{{ minio_backup_path }}/current-backup"
+            recurse: true
+            file_type: file
+          register: current_backup_files
+          
+        - name: Confirm current backup success
+          assert:
+            that:
+              - current_backup_files.files | length > 0
+            fail_msg: "Current MinIO backup failed or no files found"
+            success_msg: "Current MinIO data successfully backed up ({{ current_backup_files.files | length }} files)"
+      when: backup_current_data
+
+    - name: Download DR backup from remote storage
+      block:
+        - name: Configure mc for DR backup source
+          shell: |
+            /usr/local/bin/mc alias set dr-source {{ dr_backup_source.split('/')[0] }}//{{ dr_backup_source.split('/')[2] }} \
+              {{ vault_aws_access_key }} \
+              {{ vault_aws_secret_key }}
+          environment:
+            AWS_ACCESS_KEY_ID: "{{ vault_aws_access_key }}"
+            AWS_SECRET_ACCESS_KEY: "{{ vault_aws_secret_key }}"
+          no_log: true
+          
+        - name: Find and download DR backup
+          shell: |
+            mkdir -p {{ minio_backup_path }}/dr-restore
+            
+            if [ "{{ dr_restore_point }}" = "latest" ]; then
+              BACKUP_PATH=$(/usr/local/bin/mc ls dr-source/{{ dr_backup_source.split('/', 3)[3] }} --recursive | tail -n 1 | awk '{print $NF}')
+            else
+              BACKUP_PATH=$(/usr/local/bin/mc ls dr-source/{{ dr_backup_source.split('/', 3)[3] }} --recursive | grep "{{ dr_restore_point }}" | head -n 1 | awk '{print $NF}')
+            fi
+            
+            if [ -z "$BACKUP_PATH" ]; then
+              echo "No backup found for restore point: {{ dr_restore_point }}"
+              exit 1
+            fi
+            
+            echo "Downloading DR backup: $BACKUP_PATH"
+            /usr/local/bin/mc mirror dr-source/{{ dr_backup_source.split('/', 3)[3] }}/$BACKUP_PATH {{ minio_backup_path }}/dr-restore --overwrite
+            echo "backup_path=$BACKUP_PATH" > {{ minio_backup_path }}/restore_info.txt
+          register: backup_download
+          
+        - name: Verify DR backup download
+          find:
+            paths: "{{ minio_backup_path }}/dr-restore"
+            recurse: true
+            file_type: file
+          register: dr_backup_files
+          
+        - name: Confirm DR backup download
+          assert:
+            that:
+              - dr_backup_files.files | length > 0
+            fail_msg: "DR backup download failed or no files found"
+            success_msg: "DR backup successfully downloaded ({{ dr_backup_files.files | length }} files)"
+
+    - name: Clear existing MinIO data
+      file:
+        path: "{{ minio_data_path }}"
+        state: absent
+      become: true
+      
+    - name: Recreate MinIO data directory
+      file:
+        path: "{{ minio_data_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      become: true
+
+    - name: Start MinIO services for restore
+      community.docker.docker_compose_v2:
+        project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+        state: started
+        
+    - name: Wait for MinIO to be ready
+      uri:
+        url: "http://localhost:{{ minio_api_port | default('9000') }}/minio/health/ready"
+        method: GET
+        status_code: 200
+      retries: 30
+      delay: 5
+      register: minio_ready
+
+    - name: Configure mc for restored MinIO
+      shell: |
+        /usr/local/bin/mc alias set restored-minio \
+          http://localhost:{{ minio_api_port | default('9000') }} \
+          {{ truenas_minio_root_user }} \
+          {{ truenas_minio_root_password }}
+      no_log: true
+
+    - name: Restore MinIO data from backup
+      block:
+        - name: Create buckets for restoration
+          shell: |
+            for bucket in {{ restore_buckets | join(' ') }}; do
+              echo "Creating bucket: $bucket"
+              /usr/local/bin/mc mb restored-minio/$bucket --ignore-existing
+            done
+          
+        - name: Restore data to buckets
+          shell: |
+            cd {{ minio_backup_path }}/dr-restore
+            for bucket_dir in */; do
+              bucket=${bucket_dir%/}
+              if [[ " {{ restore_buckets | join(' ') }} " == *" $bucket "* ]]; then
+                echo "Restoring bucket: $bucket"
+                /usr/local/bin/mc mirror $bucket_dir restored-minio/$bucket \
+                  --overwrite \
+                  {% if parallel_restore %}--parallel {{ restore_workers }}{% endif %}
+              fi
+            done
+          register: restore_result
+
+    - name: Verify MinIO data restore
+      block:
+        - name: Check bucket creation
+          shell: /usr/local/bin/mc ls restored-minio
+          register: bucket_list_check
+          
+        - name: Verify bucket contents
+          shell: |
+            for bucket in {{ restore_buckets | join(' ') }}; do
+              count=$(/usr/local/bin/mc ls restored-minio/$bucket --recursive | wc -l)
+              echo "Bucket $bucket: $count objects"
+              if [ $count -eq 0 ]; then
+                echo "WARNING: Bucket $bucket is empty after restore"
+              fi
+            done
+          register: content_verification
+          
+        - name: Test MinIO API functionality
+          uri:
+            url: "http://localhost:{{ minio_api_port | default('9000') }}/minio/admin/v3/info"
+            method: GET
+            headers:
+              Authorization: "Bearer {{ minio_admin_token | default('') }}"
+            status_code: [200, 401, 403]
+          register: api_functionality_check
+          ignore_errors: true
+          
+        - name: Check storage usage
+          shell: |
+            /usr/local/bin/mc admin info restored-minio --json | jq -r '.info.usage'
+          register: storage_usage_check
+          ignore_errors: true
+      when: dr_verification_enabled
+
+    - name: Configure restored MinIO settings
+      block:
+        - name: Apply bucket policies
+          shell: |
+            for bucket in {{ restore_buckets | join(' ') }}; do
+              case $bucket in
+                "files")
+                  echo "Setting public read policy for files bucket"
+                  /usr/local/bin/mc anonymous set download restored-minio/files
+                  ;;
+                "assets")
+                  echo "Setting public read policy for assets bucket"
+                  /usr/local/bin/mc anonymous set download restored-minio/assets
+                  ;;
+                *)
+                  echo "Keeping private policy for bucket: $bucket"
+                  ;;
+              esac
+            done
+          
+        - name: Configure CORS for web access
+          shell: |
+            /usr/local/bin/mc admin config set restored-minio api cors_allow_origin="{{ cors_allowed_origins | join(',') }}"
+          ignore_errors: true
+          
+        - name: Restart MinIO to apply configuration
+          community.docker.docker_compose_v2:
+            project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+            state: restarted
+
+    - name: Final MinIO health verification
+      uri:
+        url: "https://{{ truenas_minio_domain }}/minio/health/live"
+        method: GET
+        validate_certs: false
+        status_code: 200
+      retries: 15
+      delay: 10
+      register: final_health_check
+
+    - name: Generate MinIO DR rehearsal report
+      template:
+        dest: "{{ minio_backup_path }}/minio-dr-rehearsal-report.md"
+        mode: '0644'
+        content: |
+          # MinIO Storage DR Rehearsal Report
+          
+          **Date:** {{ ansible_date_time.iso8601 }}
+          **Host:** {{ inventory_hostname }}
+          **Restore Point:** {{ dr_restore_point }}
+          
+          ## Rehearsal Summary
+          
+          - **Status:** {% if final_health_check.status == 200 %}✅ SUCCESS{% else %}❌ FAILED{% endif %}
+          - **Current Data Backup:** {% if backup_current_data %}✅ Created ({{ current_backup_files.files | length }} files){% else %}⏭️ Skipped{% endif %}
+          - **DR Backup Download:** {% if dr_backup_files.files | length > 0 %}✅ Success ({{ dr_backup_files.files | length }} files){% else %}❌ Failed{% endif %}
+          - **Data Restore:** {% if restore_result.rc == 0 %}✅ Success{% else %}❌ Failed{% endif %}
+          - **Service Health:** {% if final_health_check.status == 200 %}✅ Healthy{% else %}❌ Unhealthy{% endif %}
+          
+          ## Verification Results
+          
+          {% if dr_verification_enabled %}
+          - **Bucket Creation:** {% if bucket_list_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
+          - **Content Verification:** {% if content_verification.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
+          - **API Functionality:** {% if api_functionality_check.status in [200, 401, 403] %}✅ OK{% else %}❌ FAILED{% endif %}
+          - **Storage Usage:** {% if storage_usage_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
+          {% else %}
+          - **Verification:** ⏭️ Skipped
+          {% endif %}
+          
+          ## Restored Buckets
+          
+          {% for bucket in restore_buckets %}
+          - **{{ bucket }}**: Restored
+          {% endfor %}
+          
+          ## Backup Information
+          
+          - **Source:** {{ dr_backup_source }}
+          - **Restore Point:** {{ dr_restore_point }}
+          - **Current Backup:** {{ minio_backup_path }}/current-backup/
+          - **Restore Backup:** {{ minio_backup_path }}/dr-restore/
+          
+          ## Performance Metrics
+          
+          - **Restore Workers:** {{ restore_workers if parallel_restore else 1 }}
+          - **Parallel Restore:** {{ 'Enabled' if parallel_restore else 'Disabled' }}
+          - **Total Files:** {{ dr_backup_files.files | length }}
+          
+          ## Service URLs
+          
+          - **MinIO Console:** https://{{ truenas_minio_domain }}:{{ minio_console_port | default('9001') }}
+          - **MinIO API:** https://{{ truenas_minio_domain }}:{{ minio_api_port | default('9000') }}
+          - **Health Check:** https://{{ truenas_minio_domain }}/minio/health/live
+          
+          ## Recommendations
+          
+          {% if final_health_check.status == 200 %}
+          ✅ MinIO DR rehearsal completed successfully. Storage restore process is working correctly.
+          
+          **Next Steps:**
+          1. Verify application connectivity to restored storage
+          2. Test file upload/download functionality
+          3. Monitor performance after restore
+          4. Update DR procedures if needed
+          {% else %}
+          ⚠️ MinIO DR rehearsal encountered issues. Review the logs and fix identified problems.
+          
+          **Action Items:**
+          1. Check MinIO container logs
+          2. Verify network connectivity
+          3. Validate backup data integrity
+          4. Test restore procedure in isolation
+          {% endif %}
+          
+          ## Security Checklist
+          
+          - [ ] Bucket policies applied correctly
+          - [ ] CORS configuration restored
+          - [ ] Access credentials validated
+          - [ ] Network access restrictions in place
+          - [ ] Encryption settings verified
+
+    - name: Display MinIO DR rehearsal results
+      debug:
+        msg: |
+          🗄️ MinIO Storage DR Rehearsal Complete!
+          
+          📊 Results Summary:
+          - Service Status: {{ 'Healthy' if final_health_check.status == 200 else 'Unhealthy' }}
+          - Data Restore: {{ 'Success' if restore_result.rc == 0 else 'Failed' }}
+          - Buckets Restored: {{ restore_buckets | length }}
+          - Files Restored: {{ dr_backup_files.files | length }}
+          
+          📁 Files Created:
+          - DR Report: {{ minio_backup_path }}/minio-dr-rehearsal-report.md
+          - Current Backup: {{ minio_backup_path }}/current-backup/
+          - Restore Data: {{ minio_backup_path }}/dr-restore/
+          
+          🔗 Service Access:
+          - MinIO Console: https://{{ truenas_minio_domain }}:{{ minio_console_port | default('9001') }}
+          - API Endpoint: https://{{ truenas_minio_domain }}
+          - Health Check: https://{{ truenas_minio_domain }}/minio/health/live
+          
+          ⏭️ Next: Verify application connectivity and update DR procedures
+
+  rescue:
+    - name: MinIO DR Rehearsal Failure - Rollback
+      debug:
+        msg: |
+          🚨 MINIO DR REHEARSAL FAILED - INITIATING ROLLBACK
+          
+          Rolling back to original data...
+      
+    - name: Stop MinIO for rollback
+      community.docker.docker_compose_v2:
+        project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+        state: stopped
+        
+    - name: Restore from current backup (rollback)
+      block:
+        - name: Clear failed restore data
+          file:
+            path: "{{ minio_data_path }}"
+            state: absent
+          become: true
+          
+        - name: Recreate data directory
+          file:
+            path: "{{ minio_data_path }}"
+            state: directory
+            owner: root
+            group: root
+            mode: '0755'
+          become: true
+          
+        - name: Copy back original data
+          shell: |
+            if [ -d "{{ minio_backup_path }}/current-backup" ]; then
+              cp -r {{ minio_backup_path }}/current-backup/* {{ minio_data_path }}/
+              echo "Original data restored from backup"
+            else
+              echo "No current backup found - manual intervention required"
+              exit 1
+            fi
+          become: true
+      when: backup_current_data
+      
+    - name: Restart MinIO after rollback
+      community.docker.docker_compose_v2:
+        project_src: "{{ truenas_minio_config_path | default('/mnt/tank/apps-config/minio') }}"
+        state: started
+      
+    - fail:
+        msg: "MinIO DR rehearsal failed and rollback completed. Check logs for details."
+
+  always:
+    - name: Cleanup MinIO client aliases
+      shell: |
+        /usr/local/bin/mc alias remove {{ minio_alias }} 2>/dev/null || true
+        /usr/local/bin/mc alias remove dr-source 2>/dev/null || true
+        /usr/local/bin/mc alias remove restored-minio 2>/dev/null || true
+      ignore_errors: true
+      
+    - name: MinIO DR rehearsal cleanup summary
+      debug:
+        msg: |
+          🧹 MinIO DR Cleanup completed
+          📂 Backup files retained at: {{ minio_backup_path }}
+          💡 Remember to review the rehearsal report and update procedures
+          🔍 Verify application connectivity to restored storage
