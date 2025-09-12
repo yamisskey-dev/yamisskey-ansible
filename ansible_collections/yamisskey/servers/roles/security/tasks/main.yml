@@ -158,6 +158,22 @@
         msg: '{{ ufw_status.stdout }}'
   become: true
 
+- name: Ensure UFW is enabled (finalize firewall)
+  community.general.ufw:
+    state: enabled
+  when: ufw_enable | default(true)
+  become: true
+
+- name: Check UFW status (post-enable)
+  ansible.builtin.command: ufw status verbose
+  register: ufw_status_post
+  changed_when: false
+  become: true
+
+- name: Display UFW status (post-enable)
+  ansible.builtin.debug:
+    msg: '{{ ufw_status_post.stdout }}'
+
 - name: Retrieve Tailscale status
   ansible.builtin.command: tailscale status
   register: tailscale_status
