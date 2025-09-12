@@ -26,13 +26,5 @@
 
 - name: Set capacity validation status
   set_fact:
-    validation_results: "{{ validation_results | default({}) | combine({
-      'capacity': {
-        'status': 'passed',
-        'timestamp': ansible_date_time.iso8601,
-        'details': 'Disk capacity validation completed',
-        'critical': false,
-        'score': 85
-      }
-    }) }}"
+    validation_results: "{{ validation_results | default({}) | combine({'capacity': {'status': 'passed', 'timestamp': ansible_date_time.iso8601, 'details': 'Disk capacity validation completed', 'critical': false, 'score': 85}}) }}"
   tags: ['capacity', 'results']

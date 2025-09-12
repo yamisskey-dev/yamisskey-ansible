@@ -4,7 +4,7 @@
 
 - name: Test Docker container status
   shell: |
-    docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(misskey|minio|postgres|redis|nginx)" | wc -l
+    docker ps --format "table {{ '{{.Names}}\t{{.Status}}' }}" | grep -E "(misskey|minio|postgres|redis|nginx)" | wc -l
   register: container_status_test
   changed_when: false
   when: service_tests.container_status | bool
@@ -12,7 +12,7 @@
 
 - name: Test container health checks
   shell: |
-    docker ps --filter "health=healthy" --format "{{.Names}}" | wc -l
+    docker ps --filter "health=healthy" --format "{{ '{{.Names}}' }}" | wc -l
   register: container_health_test
   changed_when: false
   when: service_tests.container_status | bool
@@ -25,9 +25,9 @@
   failed_when: false
   changed_when: false
   loop:
-    - "$(docker ps --filter 'name=misskey' --format '{{.Names}}' | head -1)"
-    - "$(docker ps --filter 'name=minio' --format '{{.Names}}' | head -1)"
-    - "$(docker ps --filter 'name=postgres' --format '{{.Names}}' | head -1)"
+    - "$(docker ps --filter 'name=misskey' --format '{{ '{{.Names}}' }}' | head -1)"
+    - "$(docker ps --filter 'name=minio' --format '{{ '{{.Names}}' }}' | head -1)"
+    - "$(docker ps --filter 'name=postgres' --format '{{ '{{.Names}}' }}' | head -1)"
   when: service_tests.log_availability | bool
   tags: ['service', 'logs']
 
@@ -47,8 +47,8 @@
 - name: Test configuration file validity
   shell: |
     # Test nginx configuration
-    if docker ps --filter "name=nginx" --format "{{.Names}}" | grep -q nginx; then
-      docker exec $(docker ps --filter "name=nginx" --format "{{.Names}}" | head -1) nginx -t 2>/dev/null && echo "nginx_ok"
+    if docker ps --filter "name=nginx" --format "{{ '{{.Names}}' }}" | grep -q nginx; then
+      docker exec $(docker ps --filter "name=nginx" --format "{{ '{{.Names}}' }}" | head -1) nginx -t 2>/dev/null && echo "nginx_ok"
     fi
     
     # Test docker-compose files
@@ -71,7 +71,7 @@
 
 - name: Test persistent volume mounts
   shell: |
-    docker volume ls --format "{{.Name}}" | grep -E "(misskey|minio|postgres)" | wc -l
+    docker volume ls --format "{{ '{{.Name}}' }}" | grep -E "(misskey|minio|postgres)" | wc -l
   register: volume_mount_test
   changed_when: false
   when: service_tests.container_status | bool
@@ -80,7 +80,7 @@
 - name: Test service resource usage
   shell: |
     # Get top 3 containers by memory usage
-    docker stats --no-stream --format "{{.Container}}\t{{.MemUsage}}" | head -3 | wc -l
+    docker stats --no-stream --format "{{ '{{.Container}}\t{{.MemUsage}}' }}" | head -3 | wc -l
   register: resource_usage_test
   changed_when: false
   when: service_tests.container_status | bool

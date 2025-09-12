@@ -4,7 +4,7 @@
 
 - name: Check MinIO service status on source host
   shell: |
-    docker ps --format "table {{.Names}}\t{{.Status}}" | grep -i minio || echo "MinIO not running"
+    docker ps --format "table {{ '{{.Names}}\t{{.Status}}' }}" | grep -i minio || echo "MinIO not running"
   register: source_minio_status
   delegate_to: "{{ source_minio_host }}"
   failed_when: false
@@ -13,7 +13,7 @@
 
 - name: Check MinIO service status on target host
   shell: |
-    docker ps --format "table {{.Names}}\t{{.Status}}" | grep -i minio || echo "MinIO not running"
+    docker ps --format "table {{ '{{.Names}}\t{{.Status}}' }}" | grep -i minio || echo "MinIO not running"
   register: target_minio_status
   delegate_to: "{{ target_minio_host }}"
   failed_when: false
@@ -34,13 +34,5 @@
 
 - name: Set service validation status
   set_fact:
-    validation_results: "{{ validation_results | default({}) | combine({
-      'services': {
-        'status': 'passed' if (source_minio_status.stdout.find('minio') != -1 and target_minio_status.stdout.find('minio') != -1) else 'warning',
-        'timestamp': ansible_date_time.iso8601,
-        'details': 'MinIO service validation completed',
-        'critical': true,
-        'score': 100 if (source_minio_status.stdout.find('minio') != -1 and target_minio_status.stdout.find('minio') != -1) else 50
-      }
-    }) }}"
+    validation_results: "{{ validation_results | default({}) | combine({'services': {'status': 'passed' if (source_minio_status.stdout.find('minio') != -1 and target_minio_status.stdout.find('minio') != -1) else 'warning', 'timestamp': ansible_date_time.iso8601, 'details': 'MinIO service validation completed', 'critical': true, 'score': 100 if (source_minio_status.stdout.find('minio') != -1 and target_minio_status.stdout.find('minio') != -1) else 50}}) }}"
   tags: ['services', 'results']

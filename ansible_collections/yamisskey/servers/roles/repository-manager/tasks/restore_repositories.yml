@@ -59,9 +59,9 @@
   pause:
     prompt: "⚠️  This restore operation will overwrite existing repositories. Type 'yes' to continue"
   register: restore_confirmation
-  when: 
+  when:
     - backup_manifest is defined
-    - restore_force | default(false) != true
+    - not (restore_force | default(false) | bool)
   tags: ['restore', 'confirmation']
 
 - name: Validate confirmation
@@ -73,7 +73,7 @@
   tags: ['restore', 'validation']
 
 - name: Backup existing repositories before restore
-  archive:
+  community.general.archive:
     path: "{{ item.dest }}"
     dest: "{{ backup_base_dir }}/pre_restore_{{ ansible_date_time.epoch }}_{{ item.name }}.tar.gz"
     format: gz

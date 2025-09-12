@@ -94,7 +94,7 @@
 
       ℹ️ Only services configured for this host ({{ inventory_hostname }}) are checked.
       
-      {% set total_checks = ([docker_health] + ([minio_health] if minio_health is defined else []) + ([misskey_health] if misskey_health is defined else []) + ([prometheus_health] if prometheus_health is defined else []) + ([grafana_health] if grafana_health is defined else []) + (custom_health_results.results if custom_health_results is defined else [])) %}
+      {% set total_checks = [docker_health] + ([minio_health] if minio_health is defined else []) + ([misskey_health] if misskey_health is defined else []) + ([prometheus_health] if prometheus_health is defined else []) + ([grafana_health] if grafana_health is defined else []) + (custom_health_results.results if custom_health_results is defined else []) %}
       {% set healthy_checks = total_checks | selectattr('status', 'defined') | selectattr('status', 'equalto', 200) | list %}
       {% set docker_healthy = 1 if docker_health.status.ActiveState == 'active' else 0 %}
       📊 Overall Health: {{ (healthy_checks | length + docker_healthy) }}/{{ total_checks | length }} services healthy

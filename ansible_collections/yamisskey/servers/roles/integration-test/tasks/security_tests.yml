@@ -28,11 +28,11 @@
 
 - name: Test Docker container security
   shell: |-
-    docker ps --format "{{.Names}}" | while read container; do
+    docker ps --format "{{ '{{.Names}}' }}" | while read container; do
       # Check if container is running as root
       user=$(docker exec $container whoami 2>/dev/null || echo "unknown")
       # Check if container has privileged mode
-      privileged=$(docker inspect $container --format '{{.HostConfig.Privileged}}' 2>/dev/null || echo "false")
+      privileged=$(docker inspect $container --format '{{ "{{.HostConfig.Privileged}}" }}' 2>/dev/null || echo "false")
       echo "$container:$user:$privileged"
     done
   register: container_security_test
@@ -57,7 +57,7 @@
 - name: Test for default credentials
   shell: |-
     # Check for common default passwords in environment variables
-    docker ps --format "{{.Names}}" | while read container; do
+    docker ps --format "{{ '{{.Names}}' }}" | while read container; do
       env_vars=$(docker exec $container env 2>/dev/null | grep -i "password\|passwd\|pwd" | grep -v "POSTGRES_PASSWORD" || true)
       if [ ! -z "$env_vars" ]; then
         echo "$container:potential_default_creds"

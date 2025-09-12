@@ -37,7 +37,7 @@
   tags: ['backup', 'info']
 
 - name: Create individual repository backups
-  archive:
+  community.general.archive:
     path: "{{ item.dest }}"
     dest: "{{ backup_base_dir }}/{{ backup_date }}/{{ item.name }}_{{ backup_date }}.tar.gz"
     format: gz

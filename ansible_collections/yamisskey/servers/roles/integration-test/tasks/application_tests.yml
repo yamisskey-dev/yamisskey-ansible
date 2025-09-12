@@ -43,7 +43,7 @@
 
 - name: Test database connectivity
   shell: |
-    docker exec $(docker ps --filter "name=postgres" --format "{{.Names}}" | head -1) \
+    docker exec $(docker ps --filter "name=postgres" --format "{{ '{{.Names}}' }}" | head -1) \
     psql -U postgres -c "SELECT version();" 2>/dev/null || echo "DB_CONNECT_FAILED"
   register: database_test
   failed_when: false
@@ -53,7 +53,7 @@
 
 - name: Test Redis connectivity
   shell: |
-    docker exec $(docker ps --filter "name=redis" --format "{{.Names}}" | head -1) \
+    docker exec $(docker ps --filter "name=redis" --format "{{ '{{.Names}}' }}" | head -1) \
     redis-cli ping 2>/dev/null || echo "REDIS_CONNECT_FAILED"
   register: redis_test
   failed_when: false

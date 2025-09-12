@@ -21,7 +21,7 @@
 
 - name: Test memory usage of containers
   shell: |-
-    docker stats --no-stream --format "{{.Container}}\t{{.MemUsage}}" | while read container memory; do
+    docker stats --no-stream --format "{{ '{{.Container}}\t{{.MemUsage}}' }}" | while read container memory; do
       mem_mb=$(echo $memory | sed 's/MiB.*//' | sed 's/.*\///')
       if [ ! -z "$mem_mb" ] && [ "$mem_mb" -gt 0 ]; then
         echo "$container:$mem_mb"
@@ -34,7 +34,7 @@
 
 - name: Test CPU usage
   shell: |-
-    docker stats --no-stream --format "{{.Container}}\t{{.CPUPerc}}" | while read container cpu; do
+    docker stats --no-stream --format "{{ '{{.Container}}\t{{.CPUPerc}}' }}" | while read container cpu; do
       cpu_num=$(echo $cpu | sed 's/%//')
       if [ ! -z "$cpu_num" ]; then
         echo "$container:$cpu_num"
@@ -60,7 +60,7 @@
 
 - name: Test database query performance
   shell: |-
-    container=$(docker ps --filter "name=postgres" --format "{{.Names}}" | head -1)
+    container=$(docker ps --filter "name=postgres" --format "{{ '{{.Names}}' }}" | head -1)
     if [ ! -z "$container" ]; then
       start_time=$(date +%s%N)
       docker exec $container psql -U postgres -c "SELECT COUNT(*) FROM information_schema.tables;" >/dev/null 2>&1

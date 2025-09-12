@@ -170,17 +170,7 @@
 
 - name: Set connectivity validation status
   set_fact:
-    validation_results: "{{ validation_results | default({}) | combine({
-      'connectivity': {
-        'status': 'passed' if connectivity_score | int >= 80 else ('warning' if connectivity_score | int >= 60 else 'failed'),
-        'timestamp': ansible_date_time.iso8601,
-        'score': connectivity_score | int,
-        'details': 'Connectivity validation completed with ' + (connectivity_score | string) + '% success rate',
-        'critical': true,
-        'ssh_source': ssh_test_source.rc | default(0) if ssh_test_source is defined else 'local',
-        'ssh_target': ssh_test_target.rc | default(0) if ssh_test_target is defined else 'local'
-      }
-    }) }}"
+    validation_results: "{{ validation_results | default({}) | combine({'connectivity': {'status': 'passed' if connectivity_score | int >= 80 else ('warning' if connectivity_score | int >= 60 else 'failed'), 'timestamp': ansible_date_time.iso8601, 'score': connectivity_score | int, 'details': 'Connectivity validation completed with ' + (connectivity_score | string) + '% success rate', 'critical': true, 'ssh_source': ssh_test_source.rc | default(0) if ssh_test_source is defined else 'local', 'ssh_target': ssh_test_target.rc | default(0) if ssh_test_target is defined else 'local'}}) }}"
   tags: ['connectivity', 'results']
 
 - name: Fail on critical connectivity issues
