@@ -66,39 +66,41 @@
       when: require_confirmation
 
   tasks:
-    - name: Display DR rehearsal information
-      debug:
-        msg: |
-          🔄 Starting Database DR Rehearsal
-          
-          🎯 Target: {{ inventory_hostname }}
-          🕐 Started: {{ ansible_date_time.iso8601 }}
-          📂 Restore point: {{ dr_restore_point }}
-          🔒 Safety: {{ 'Enabled' if backup_current_db else 'Disabled' }}
-
-    - name: Check current database status
-      community.docker.docker_container_info:
-        name: "{{ postgres_container_name }}"
-      register: postgres_current_status
-      ignore_errors: true
-
-    - name: Stop Misskey services for DR rehearsal
-      community.docker.docker_compose_v2:
-        project_src: /opt/misskey
-        state: stopped
-        services:
-          - web
-          - redis
-      when: postgres_current_status.exists
-      
-    - name: Create DR rehearsal workspace
-      file:
-        path: "{{ postgres_backup_path }}"
-        state: directory
-        mode: '0755'
-
-    - name: Backup current database (safety measure)
+    - name: Database DR rehearsal (main)
       block:
+        - name: Display DR rehearsal information
+          debug:
+            msg: |
+              🔄 Starting Database DR Rehearsal
+              
+              🎯 Target: {{ inventory_hostname }}
+              🕐 Started: {{ ansible_date_time.iso8601 }}
+              📂 Restore point: {{ dr_restore_point }}
+              🔒 Safety: {{ 'Enabled' if backup_current_db else 'Disabled' }}
+
+        - name: Check current database status
+          community.docker.docker_container_info:
+            name: "{{ postgres_container_name }}"
+          register: postgres_current_status
+          ignore_errors: true
+
+        - name: Stop Misskey services for DR rehearsal
+          community.docker.docker_compose_v2:
+            project_src: /opt/misskey
+            state: stopped
+            services:
+              - web
+              - redis
+          when: postgres_current_status.exists
+      
+        - name: Create DR rehearsal workspace
+          file:
+            path: "{{ postgres_backup_path }}"
+            state: directory
+            mode: '0755'
+
+        - name: Backup current database (safety measure)
+          block:
         - name: Create current DB backup
           community.docker.docker_container:
             name: "{{ postgres_backup_container }}"
@@ -131,10 +133,10 @@
               - current_backup_file.stat.size > 1000
             fail_msg: "Current database backup failed"
             success_msg: "Current database successfully backed up"
-      when: backup_current_db
+          when: backup_current_db
 
-    - name: Download DR backup from storage
-      block:
+        - name: Download DR backup from storage
+          block:
         - name: Configure AWS CLI for backup access
           environment:
             AWS_ACCESS_KEY_ID: "{{ vault_aws_access_key }}"
@@ -172,64 +174,242 @@
             fail_msg: "DR backup download failed"
             success_msg: "DR backup successfully downloaded"
 
-    - name: Perform database restore
-      block:
-        - name: Stop PostgreSQL container
-          community.docker.docker_container:
-            name: "{{ postgres_container_name }}"
-            state: stopped
+        - name: Perform database restore
+          block:
+            - name: Stop PostgreSQL container
+              community.docker.docker_container:
+                name: "{{ postgres_container_name }}"
+                state: stopped
             
-        - name: Clear existing database data
-          file:
-            path: "{{ postgres_data_path }}"
-            state: absent
-          become: true
-          
-        - name: Recreate database data directory
-          file:
-            path: "{{ postgres_data_path }}"
-            state: directory
-            owner: 999  # postgres user in container
-            group: 999
-            mode: '0700'
-          become: true
-          
-        - name: Start PostgreSQL container for restore
-          community.docker.docker_container:
-            name: "{{ postgres_container_name }}"
-            image: postgres:15
-            state: started
-            env:
-              POSTGRES_DB: "{{ vault_postgres_db }}"
-              POSTGRES_USER: "{{ vault_postgres_user }}"
-              POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
-            volumes:
-              - "postgres_data:/var/lib/postgresql/data"
-            networks:
-              - name: misskey_default
+            - name: Clear existing database data
+              file:
+                path: "{{ postgres_data_path }}"
+                state: absent
+              become: true
+              
+            - name: Recreate database data directory
+              file:
+                path: "{{ postgres_data_path }}"
+                state: directory
+                owner: 999  # postgres user in container
+                group: 999
+                mode: '0700'
+              become: true
+              
+            - name: Start PostgreSQL container for restore
+              community.docker.docker_container:
+                name: "{{ postgres_container_name }}"
+                image: postgres:15
+                state: started
+                env:
+                  POSTGRES_DB: "{{ vault_postgres_db }}"
+                  POSTGRES_USER: "{{ vault_postgres_user }}"
+                  POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
+                volumes:
+                  - "postgres_data:/var/lib/postgresql/data"
+                networks:
+                  - name: misskey_default
             
-        - name: Wait for PostgreSQL to be ready
-          community.docker.docker_container:
-            name: postgres_restore_check
-            image: postgres:15
-            command: pg_isready -h {{ postgres_container_name }} -U {{ vault_postgres_user }}
-            networks:
-              - name: misskey_default
+            - name: Wait for PostgreSQL to be ready
+              community.docker.docker_container:
+                name: postgres_restore_check
+                image: postgres:15
+                command: pg_isready -h {{ postgres_container_name }} -U {{ vault_postgres_user }}
+                networks:
+                  - name: misskey_default
+                state: started
+                detach: false
+                cleanup: true
+              retries: 30
+              delay: 2
+          
+            - name: Restore database from backup
+              community.docker.docker_container:
+                name: postgres_restore
+                image: postgres:15
+                command: >
+                  psql -h {{ postgres_container_name }} 
+                  -U {{ vault_postgres_user }} 
+                  -d {{ vault_postgres_db }}
+                  -f /backup/dr-restore-backup.sql
+                volumes:
+                  - "{{ postgres_backup_path }}:/backup"
+                env:
+                  PGPASSWORD: "{{ vault_postgres_password }}"
+                networks:
+                  - name: misskey_default
+                state: started
+                detach: false
+                cleanup: true
+              register: restore_result
+
+        - name: Verify database restore
+          block:
+            - name: Check database connectivity
+              community.docker.docker_container:
+                name: postgres_verify_connection
+                image: postgres:15
+                command: >
+                  psql -h {{ postgres_container_name }} 
+                  -U {{ vault_postgres_user }} 
+                  -d {{ vault_postgres_db }}
+                  -c "SELECT version();"
+                env:
+                  PGPASSWORD: "{{ vault_postgres_password }}"
+                networks:
+                  - name: misskey_default
+                state: started
+                detach: false
+                cleanup: true
+              register: db_connection_check
+          
+            - name: Verify critical tables exist
+              community.docker.docker_container:
+                name: postgres_verify_tables
+                image: postgres:15
+                command: >
+                  psql -h {{ postgres_container_name }} 
+                  -U {{ vault_postgres_user }} 
+                  -d {{ vault_postgres_db }}
+                  -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';"
+                env:
+                  PGPASSWORD: "{{ vault_postgres_password }}"
+                networks:
+                  - name: misskey_default
+                state: started
+                detach: false
+                cleanup: true
+              register: tables_check
+          
+            - name: Verify user data integrity
+              community.docker.docker_container:
+                name: postgres_verify_data
+                image: postgres:15
+                command: >
+                  psql -h {{ postgres_container_name }} 
+                  -U {{ vault_postgres_user }} 
+                  -d {{ vault_postgres_db }}
+                  -c "SELECT COUNT(*) as user_count FROM \"user\";"
+                env:
+                  PGPASSWORD: "{{ vault_postgres_password }}"
+                networks:
+                  - name: misskey_default
+                state: started
+                detach: false
+                cleanup: true
+              register: data_integrity_check
+          when: dr_verification_enabled
+
+        - name: Start Misskey services after restore
+          community.docker.docker_compose_v2:
+            project_src: /opt/misskey
             state: started
-            detach: false
-            cleanup: true
+        
+        - name: Wait for Misskey to be ready
+          uri:
+            url: "https://{{ primary_domain }}/api/meta"
+            method: POST
+            headers:
+              Content-Type: "application/json"
+            body_format: json
+            body: {}
+            status_code: 200
           retries: 30
-          delay: 2
+          delay: 10
+          register: misskey_health_check
+
+        - name: Generate DR rehearsal report
+          template:
+            dest: "{{ postgres_backup_path }}/dr-rehearsal-report.md"
+            mode: '0644'
+            content: |
+              # Database DR Rehearsal Report
+              
+              **Date:** {{ ansible_date_time.iso8601 }}
+              **Host:** {{ inventory_hostname }}
+              **Restore Point:** {{ dr_restore_point }}
+              
+              ## Rehearsal Summary
+              
+              - **Status:** {% if misskey_health_check.status == 200 %}✅ SUCCESS{% else %}❌ FAILED{% endif %}
+              - **Current DB Backup:** {% if backup_current_db %}✅ Created{% else %}⏭️ Skipped{% endif %}
+              - **DR Backup Download:** {% if dr_backup_file.stat.exists %}✅ Success{% else %}❌ Failed{% endif %}
+              - **Database Restore:** {% if restore_result.rc == 0 %}✅ Success{% else %}❌ Failed{% endif %}
+              - **Service Restart:** {% if misskey_health_check.status == 200 %}✅ Success{% else %}❌ Failed{% endif %}
+              
+              ## Verification Results
+              
+              {% if dr_verification_enabled %}
+              - **DB Connection:** {% if db_connection_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
+              - **Tables Check:** {% if tables_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
+              - **Data Integrity:** {% if data_integrity_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
+              {% else %}
+              - **Verification:** ⏭️ Skipped
+              {% endif %}
+              
+              ## Backup Information
+              
+              - **Source:** {{ dr_backup_source }}
+              - **Restore Point:** {{ dr_restore_point }}
+              - **Current DB Backup:** {{ postgres_backup_path }}/current-db-backup-{{ ansible_date_time.epoch }}.sql
+              
+              ## Performance Metrics
+              
+              - **Total Time:** {{ (ansible_date_time.epoch | int) - (ansible_date_time.epoch | int) }} seconds
+              - **Backup Size:** {{ (dr_backup_file.stat.size / 1024 / 1024) | round(2) }}MB
+              
+              ## Recommendations
+              
+              {% if misskey_health_check.status == 200 %}
+              ✅ DR rehearsal completed successfully. Database restore process is working correctly.
+              {% else %}
+              ⚠️ DR rehearsal encountered issues. Review the logs and fix identified problems.
+              {% endif %}
+              
+              ## Next Steps
+              
+              1. Review this report with the operations team
+              2. Document any issues found during rehearsal
+              3. Update DR procedures based on lessons learned
+              4. Schedule next DR rehearsal (recommended: monthly)
+
+        - name: Display DR rehearsal results
+          debug:
+            msg: |
+              🎭 Database DR Rehearsal Complete!
+              
+              📊 Results Summary:
+              - Service Status: {{ 'Healthy' if misskey_health_check.status == 200 else 'Unhealthy' }}
+              - Database Restore: {{ 'Success' if restore_result.rc == 0 else 'Failed' }}
+              - Data Verification: {{ 'Passed' if dr_verification_enabled and data_integrity_check.rc == 0 else 'Skipped/Failed' }}
+              
+              📁 Files Created:
+              - DR Report: {{ postgres_backup_path }}/dr-rehearsal-report.md
+              - Current Backup: {{ postgres_backup_path }}/current-db-backup-{{ ansible_date_time.epoch }}.sql
+              - Restore Backup: {{ postgres_backup_path }}/dr-restore-backup.sql
+              
+              🔗 Service Health:
+              - Misskey API: https://{{ primary_domain }}/api/meta
+              - Admin Panel: https://{{ primary_domain }}/admin
+              
+              ⏭️ Next: Review the report and update DR procedures if needed
+      rescue:
+        - name: DR Rehearsal Failure - Rollback
+          debug:
+            msg: |
+              🚨 DR REHEARSAL FAILED - INITIATING ROLLBACK
+              
+              Rolling back to original database...
           
-        - name: Restore database from backup
+        - name: Restore from current backup (rollback)
           community.docker.docker_container:
-            name: postgres_restore
+            name: postgres_rollback
             image: postgres:15
             command: >
               psql -h {{ postgres_container_name }} 
               -U {{ vault_postgres_user }} 
               -d {{ vault_postgres_db }}
-              -f /backup/dr-restore-backup.sql
+              -f /backup/current-db-backup-{{ ansible_date_time.epoch }}.sql
             volumes:
               - "{{ postgres_backup_path }}:/backup"
             env:
@@ -239,213 +419,34 @@
             state: started
             detach: false
             cleanup: true
-          register: restore_result
-
-    - name: Verify database restore
-      block:
-        - name: Check database connectivity
-          community.docker.docker_container:
-            name: postgres_verify_connection
-            image: postgres:15
-            command: >
-              psql -h {{ postgres_container_name }} 
-              -U {{ vault_postgres_user }} 
-              -d {{ vault_postgres_db }}
-              -c "SELECT version();"
-            env:
-              PGPASSWORD: "{{ vault_postgres_password }}"
-            networks:
-              - name: misskey_default
+          when: backup_current_db
+          
+        - name: Restart services after rollback
+          community.docker.docker_compose_v2:
+            project_src: /opt/misskey
             state: started
-            detach: false
-            cleanup: true
-          register: db_connection_check
           
-        - name: Verify critical tables exist
+        - fail:
+            msg: "DR rehearsal failed and rollback completed. Check logs for details."
+
+      always:
+        - name: Cleanup temporary containers
           community.docker.docker_container:
-            name: postgres_verify_tables
-            image: postgres:15
-            command: >
-              psql -h {{ postgres_container_name }} 
-              -U {{ vault_postgres_user }} 
-              -d {{ vault_postgres_db }}
-              -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';"
-            env:
-              PGPASSWORD: "{{ vault_postgres_password }}"
-            networks:
-              - name: misskey_default
-            state: started
-            detach: false
-            cleanup: true
-          register: tables_check
+            name: "{{ item }}"
+            state: absent
+          loop:
+            - "{{ postgres_backup_container }}"
+            - postgres_restore_check
+            - postgres_restore
+            - postgres_verify_connection
+            - postgres_verify_tables
+            - postgres_verify_data
+            - postgres_rollback
+          ignore_errors: true
           
-        - name: Verify user data integrity
-          community.docker.docker_container:
-            name: postgres_verify_data
-            image: postgres:15
-            command: >
-              psql -h {{ postgres_container_name }} 
-              -U {{ vault_postgres_user }} 
-              -d {{ vault_postgres_db }}
-              -c "SELECT COUNT(*) as user_count FROM \"user\";"
-            env:
-              PGPASSWORD: "{{ vault_postgres_password }}"
-            networks:
-              - name: misskey_default
-            state: started
-            detach: false
-            cleanup: true
-          register: data_integrity_check
-      when: dr_verification_enabled
-
-    - name: Start Misskey services after restore
-      community.docker.docker_compose_v2:
-        project_src: /opt/misskey
-        state: started
-        
-    - name: Wait for Misskey to be ready
-      uri:
-        url: "https://{{ primary_domain }}/api/meta"
-        method: POST
-        headers:
-          Content-Type: "application/json"
-        body_format: json
-        body: {}
-        status_code: 200
-      retries: 30
-      delay: 10
-      register: misskey_health_check
-
-    - name: Generate DR rehearsal report
-      template:
-        dest: "{{ postgres_backup_path }}/dr-rehearsal-report.md"
-        mode: '0644'
-        content: |
-          # Database DR Rehearsal Report
-          
-          **Date:** {{ ansible_date_time.iso8601 }}
-          **Host:** {{ inventory_hostname }}
-          **Restore Point:** {{ dr_restore_point }}
-          
-          ## Rehearsal Summary
-          
-          - **Status:** {% if misskey_health_check.status == 200 %}✅ SUCCESS{% else %}❌ FAILED{% endif %}
-          - **Current DB Backup:** {% if backup_current_db %}✅ Created{% else %}⏭️ Skipped{% endif %}
-          - **DR Backup Download:** {% if dr_backup_file.stat.exists %}✅ Success{% else %}❌ Failed{% endif %}
-          - **Database Restore:** {% if restore_result.rc == 0 %}✅ Success{% else %}❌ Failed{% endif %}
-          - **Service Restart:** {% if misskey_health_check.status == 200 %}✅ Success{% else %}❌ Failed{% endif %}
-          
-          ## Verification Results
-          
-          {% if dr_verification_enabled %}
-          - **DB Connection:** {% if db_connection_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
-          - **Tables Check:** {% if tables_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
-          - **Data Integrity:** {% if data_integrity_check.rc == 0 %}✅ OK{% else %}❌ FAILED{% endif %}
-          {% else %}
-          - **Verification:** ⏭️ Skipped
-          {% endif %}
-          
-          ## Backup Information
-          
-          - **Source:** {{ dr_backup_source }}
-          - **Restore Point:** {{ dr_restore_point }}
-          - **Current DB Backup:** {{ postgres_backup_path }}/current-db-backup-{{ ansible_date_time.epoch }}.sql
-          
-          ## Performance Metrics
-          
-          - **Total Time:** {{ (ansible_date_time.epoch | int) - (ansible_date_time.epoch | int) }} seconds
-          - **Backup Size:** {{ (dr_backup_file.stat.size / 1024 / 1024) | round(2) }}MB
-          
-          ## Recommendations
-          
-          {% if misskey_health_check.status == 200 %}
-          ✅ DR rehearsal completed successfully. Database restore process is working correctly.
-          {% else %}
-          ⚠️ DR rehearsal encountered issues. Review the logs and fix identified problems.
-          {% endif %}
-          
-          ## Next Steps
-          
-          1. Review this report with the operations team
-          2. Document any issues found during rehearsal
-          3. Update DR procedures based on lessons learned
-          4. Schedule next DR rehearsal (recommended: monthly)
-
-    - name: Display DR rehearsal results
-      debug:
-        msg: |
-          🎭 Database DR Rehearsal Complete!
-          
-          📊 Results Summary:
-          - Service Status: {{ 'Healthy' if misskey_health_check.status == 200 else 'Unhealthy' }}
-          - Database Restore: {{ 'Success' if restore_result.rc == 0 else 'Failed' }}
-          - Data Verification: {{ 'Passed' if dr_verification_enabled and data_integrity_check.rc == 0 else 'Skipped/Failed' }}
-          
-          📁 Files Created:
-          - DR Report: {{ postgres_backup_path }}/dr-rehearsal-report.md
-          - Current Backup: {{ postgres_backup_path }}/current-db-backup-{{ ansible_date_time.epoch }}.sql
-          - Restore Backup: {{ postgres_backup_path }}/dr-restore-backup.sql
-          
-          🔗 Service Health:
-          - Misskey API: https://{{ primary_domain }}/api/meta
-          - Admin Panel: https://{{ primary_domain }}/admin
-          
-          ⏭️ Next: Review the report and update DR procedures if needed
-
-  rescue:
-    - name: DR Rehearsal Failure - Rollback
-      debug:
-        msg: |
-          🚨 DR REHEARSAL FAILED - INITIATING ROLLBACK
-          
-          Rolling back to original database...
-      
-    - name: Restore from current backup (rollback)
-      community.docker.docker_container:
-        name: postgres_rollback
-        image: postgres:15
-        command: >
-          psql -h {{ postgres_container_name }} 
-          -U {{ vault_postgres_user }} 
-          -d {{ vault_postgres_db }}
-          -f /backup/current-db-backup-{{ ansible_date_time.epoch }}.sql
-        volumes:
-          - "{{ postgres_backup_path }}:/backup"
-        env:
-          PGPASSWORD: "{{ vault_postgres_password }}"
-        networks:
-          - name: misskey_default
-        state: started
-        detach: false
-        cleanup: true
-      when: backup_current_db
-      
-    - name: Restart services after rollback
-      community.docker.docker_compose_v2:
-        project_src: /opt/misskey
-        state: started
-      
-    - fail:
-        msg: "DR rehearsal failed and rollback completed. Check logs for details."
-
-  always:
-    - name: Cleanup temporary containers
-      community.docker.docker_container:
-        name: "{{ item }}"
-        state: absent
-      loop:
-        - "{{ postgres_backup_container }}"
-        - postgres_restore_check
-        - postgres_restore
-        - postgres_verify_connection
-        - postgres_verify_tables
-        - postgres_verify_data
-        - postgres_rollback
-      ignore_errors: true
-      
-    - name: DR rehearsal cleanup summary
-      debug:
-        msg: |
-          🧹 Cleanup completed
-          📂 Backup files retained at: {{ postgres_backup_path }}
-          💡 Remember to review the rehearsal report and update procedures
+        - name: DR rehearsal cleanup summary
+          debug:
+            msg: |
+              🧹 Cleanup completed
+              📂 Backup files retained at: {{ postgres_backup_path }}
+              💡 Remember to review the rehearsal report and update procedures
