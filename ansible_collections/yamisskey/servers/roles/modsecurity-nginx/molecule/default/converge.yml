@@ -34,20 +34,6 @@
           - jq
         state: present
         
-    - name: Create test nginx backend container
-      community.docker.docker_container:
-        name: test-backend
-        image: nginx:alpine
-        state: started
-        ports:
-          - "8888:80"
-        networks:
-          - name: molecule-test-network
-        volumes:
-          - "/tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro"
-        restart_policy: always
-      ignore_errors: true
-      
     - name: Create simple nginx config for backend
       copy:
         dest: "/tmp/test-nginx.conf"
@@ -70,6 +56,19 @@
             }
           }
         mode: '0644'
+
+    - name: Create test nginx backend container
+      community.docker.docker_container:
+        name: test-backend
+        image: nginx:alpine
+        state: started
+        ports:
+          - "8888:80"
+        networks:
+          - name: molecule-test-network
+        volumes:
+          - "/tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro"
+        restart_policy: always
 
   tasks:
     - name: Apply ModSecurity-nginx role
@@ -137,7 +136,8 @@
     - name: Show container logs if verification fails
       command: docker logs {{ modsecurity_nginx_name }}
       register: container_logs
-      ignore_errors: true
+      failed_when: false
+      changed_when: false
       
     - name: Display container logs for debugging
       debug:

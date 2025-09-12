@@ -143,7 +143,7 @@
 
     - name: Test MinIO container network connectivity
       shell: >
-        docker inspect minio --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+        docker inspect minio --format '{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}'
       register: container_ip
       changed_when: false
       
