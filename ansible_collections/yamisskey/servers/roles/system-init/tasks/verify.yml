@@ -1,24 +1,51 @@
 ---
-- name: Check installation versions
-  shell: |
-    echo "📦 Installation Verification:"
-    echo "✅ Ansible: $(ansible --version | head -1)"
-    echo "✅ Docker: $(docker --version)"
-    echo "✅ Tailscale: $(tailscale version)"
-    echo "✅ Cloudflared: $(cloudflared version)"
-    if command -v warp-cli >/dev/null 2>&1; then
-      echo "✅ Cloudflare WARP: $(warp-cli --version)"
-    else
-      echo "⚠️ Cloudflare WARP: Installation may have failed"
-    fi
-    if command -v playit >/dev/null 2>&1; then
-      echo "✅ Playit: Installed"
-    else
-      echo "⚠️ Playit: Installation may have failed"
-    fi
-  register: verification_result
+- name: Check Ansible version
+  ansible.builtin.command: ansible --version
+  register: ansible_ver
+  failed_when: false
   changed_when: false
 
+- name: Check Docker version
+  ansible.builtin.command: docker --version
+  register: docker_ver
+  failed_when: false
+  changed_when: false
+
+- name: Check Tailscale version
+  ansible.builtin.command: tailscale version
+  register: tailscale_ver
+  failed_when: false
+  changed_when: false
+
+- name: Check Cloudflared version
+  ansible.builtin.command: cloudflared version
+  register: cloudflared_ver
+  failed_when: false
+  changed_when: false
+
+- name: Check WARP version
+  ansible.builtin.command: warp-cli --version
+  register: warp_ver
+  failed_when: false
+  changed_when: false
+
+- name: Check Playit version
+  ansible.builtin.command: playit --version
+  register: playit_ver
+  failed_when: false
+  changed_when: false
+
+- name: Build verification summary
+  ansible.builtin.set_fact:
+    verification_summary: |
+      📦 Installation Verification:
+      ✅ Ansible: {{ (ansible_ver.stdout_lines | first) | default('not found') }}
+      ✅ Docker: {{ docker_ver.stdout | default('not found') }}
+      ✅ Tailscale: {{ tailscale_ver.stdout | default('not found') }}
+      ✅ Cloudflared: {{ cloudflared_ver.stdout | default('not found') }}
+      {{ '✅ Cloudflare WARP: ' + warp_ver.stdout if (warp_ver.rc | default(1)) == 0 else '⚠️ Cloudflare WARP: not found' }}
+      {{ '✅ Playit: ' + playit_ver.stdout if (playit_ver.rc | default(1)) == 0 else '⚠️ Playit: not found' }}
+
 - name: Display verification results
-  debug:
-    msg: "{{ verification_result.stdout_lines }}"
+  ansible.builtin.debug:
+    msg: "{{ verification_summary.split('\n') }}"

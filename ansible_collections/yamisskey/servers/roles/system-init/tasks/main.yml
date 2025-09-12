@@ -1,6 +1,6 @@
 ---
 - name: Display system information
-  debug:
+  ansible.builtin.debug:
     msg: |
       🖥️ System Information:
       OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
@@ -11,7 +11,7 @@
     - always
 
 - name: Update apt package index
-  apt:
+  ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
   when: ansible_os_family == "Debian"
@@ -19,7 +19,7 @@
     - packages
 
 - name: Check if common role should be applied
-  stat:
+  ansible.builtin.stat:
     path: "{{ ansible_env.PWD }}/deploy/servers/playbooks/common.yml"
   register: common_playbook_check
   delegate_to: localhost
@@ -27,7 +27,7 @@
     - always
 
 - name: Apply common role for necessary packages
-  include_role:
+  ansible.builtin.include_role:
     name: yamisskey.servers.common
   when: common_playbook_check.stat.exists
   tags:
@@ -35,7 +35,7 @@
     - common
 
 - name: Install base packages if common playbook not available
-  apt:
+  ansible.builtin.apt:
     name:
       - curl
       - wget
@@ -53,38 +53,38 @@
     - base
 
 - name: Install Docker
-  include_tasks: docker.yml
+  ansible.builtin.include_tasks: docker.yml
   when: install_docker | default(true)
   tags:
     - docker
 
 - name: Install Tailscale
-  include_tasks: tailscale.yml
+  ansible.builtin.include_tasks: tailscale.yml
   when: install_tailscale | default(true)
   tags:
     - tailscale
 
 - name: Install Cloudflare products
-  include_tasks: cloudflare.yml
+  ansible.builtin.include_tasks: cloudflare.yml
   when: install_cloudflare | default(true)
   tags:
     - cloudflare
 
 - name: Install Playit
-  include_tasks: playit.yml
+  ansible.builtin.include_tasks: playit.yml
   when: install_playit | default(true)
   tags:
     - playit
 
 - name: Verify installations
-  include_tasks: verify.yml
+  ansible.builtin.include_tasks: verify.yml
   when: verify_installations | default(true)
   tags:
     - verify
     - always
 
 - name: Display next steps
-  debug:
+  ansible.builtin.debug:
     msg: |
       🎉 System initialization completed!
 

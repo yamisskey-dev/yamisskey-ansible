@@ -1,47 +1,47 @@
 ---
 - name: Add Playit GPG key
-  get_url:
+  ansible.builtin.get_url:
     url: https://playit-cloud.github.io/ppa/key.gpg
     dest: /tmp/playit.gpg
     mode: '0644'
 
 - name: Install Playit GPG key
-  shell: gpg --dearmor < /tmp/playit.gpg > /etc/apt/trusted.gpg.d/playit.gpg
+  ansible.builtin.command: gpg --dearmor -o /etc/apt/trusted.gpg.d/playit.gpg /tmp/playit.gpg
   args:
     creates: /etc/apt/trusted.gpg.d/playit.gpg
 
 - name: Set Playit GPG key permissions
-  file:
+  ansible.builtin.file:
     path: /etc/apt/trusted.gpg.d/playit.gpg
     mode: '0644'
 
 - name: Add Playit repository
-  apt_repository:
+  ansible.builtin.apt_repository:
     repo: "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./"
     filename: playit-cloud
     state: present
 
 - name: Clean up temporary GPG file
-  file:
+  ansible.builtin.file:
     path: /tmp/playit.gpg
     state: absent
 
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: true
 
 - name: Install Playit
-  apt:
+  ansible.builtin.apt:
     name: playit
     state: present
 
 - name: Verify Playit installation
-  command: playit --version
+  ansible.builtin.command: playit --version
   register: playit_version
   failed_when: false
   changed_when: false
 
 - name: Display Playit installation result
-  debug:
+  ansible.builtin.debug:
     msg: |-
       Playit: {{ '✅ Installed' if playit_version.rc == 0 else '⚠️ Installation may have failed' }}
