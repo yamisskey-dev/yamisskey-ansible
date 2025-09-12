@@ -1,31 +1,15 @@
 ---
-- name: Ensure keyring directory exists (tailscale)
-  ansible.builtin.file:
-    path: /usr/share/keyrings
-    state: directory
-    mode: '0755'
-  when: ansible_os_family == 'Debian' and (install_tailscale | default(true))
+- name: Check if Tailscale is already installed
+  ansible.builtin.command: which tailscale
+  register: tailscale_check
+  failed_when: false
+  changed_when: false
 
-- name: Install Tailscale archive key (noarmor)
-  ansible.builtin.get_url:
-    url: "https://pkgs.tailscale.com/stable/{{ os_name }}/{{ codename }}.noarmor.gpg"
-    dest: /usr/share/keyrings/tailscale-archive-keyring.gpg
-    mode: '0644'
-  when: ansible_os_family == 'Debian' and (install_tailscale | default(true))
-
-- name: Add Tailscale apt repository
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/{{ os_name }} {{ codename }} main"
-    filename: tailscale
-    state: present
-  when: ansible_os_family == 'Debian' and (install_tailscale | default(true))
-
-- name: Install Tailscale package
-  ansible.builtin.apt:
-    name: tailscale
-    state: present
-    update_cache: true
-  when: ansible_os_family == 'Debian' and (install_tailscale | default(true))
+- name: Download and install Tailscale (cross-distro script)
+  ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+  when: install_tailscale | default(true) and tailscale_check.rc != 0
+  register: tailscale_install
+  changed_when: tailscale_check.rc != 0
 
 - name: Verify Tailscale installation
   ansible.builtin.command: tailscale version
@@ -36,5 +20,5 @@
 - name: Display Tailscale installation result
   ansible.builtin.debug:
     msg: |
-      ✅ Tailscale installation check
-      Version: {{ tailscale_version.stdout if tailscale_version.rc == 0 else 'Not installed / verification failed' }}
+      ✅ Tailscale installation completed
+      Version: {{ tailscale_version.stdout if tailscale_version.rc == 0 else 'Installation failed' }}
