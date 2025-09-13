@@ -1,4 +1,0 @@
----
-# Vikunja specific variables
-vikunja_server_name: "task.{{ domain }}"
-vikunja_secrets_file: '/var/www/vikunja/secrets.yml'

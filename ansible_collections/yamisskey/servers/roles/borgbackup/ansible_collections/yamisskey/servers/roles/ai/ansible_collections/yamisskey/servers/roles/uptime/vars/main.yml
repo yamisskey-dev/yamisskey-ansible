@@ -1,5 +1,0 @@
----
-# Uptime specific variables
-uptime_server_name: "uptime.{{ domain }}"
-uptime_dir: '/opt/uptime-kuma'
-uptime_secrets_file: '{{ uptime_dir }}/secrets.yml'

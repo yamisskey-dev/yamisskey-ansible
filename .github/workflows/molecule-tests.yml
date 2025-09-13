@@ -1,0 +1,178 @@
+name: Molecule Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'ansible_collections/**'
+      - '.github/workflows/molecule-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ansible_collections/**'
+      - '.github/workflows/molecule-tests.yml'
+
+env:
+  PY_COLORS: '1'
+  ANSIBLE_FORCE_COLOR: '1'
+
+jobs:
+  # Job to detect which roles have been changed
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-roles: ${{ steps.changes.outputs.roles }}
+      matrix: ${{ steps.changes.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed roles
+        id: changes
+        run: |
+          # Get list of changed files
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          else
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }})
+          fi
+          
+          # Extract role names from changed files
+          CHANGED_ROLES=$(echo "$CHANGED_FILES" | grep -E '^ansible_collections/.*/roles/' | cut -d'/' -f4 | sort -u || true)
+          
+          # Create JSON matrix for parallel execution
+          if [ -n "$CHANGED_ROLES" ]; then
+            MATRIX_JSON=$(echo "$CHANGED_ROLES" | jq -R -s 'split("\n") | map(select(length > 0)) | map({role: ., collection: (if test("^ansible_collections/yamisskey/servers/") then "servers" else "appliances" end)})')
+            echo "roles=$CHANGED_ROLES" >> $GITHUB_OUTPUT
+            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          else
+            echo "roles=" >> $GITHUB_OUTPUT
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+          fi
+
+  # Syntax check for all changed roles
+  syntax-check:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.changed-roles != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install molecule molecule-plugins[docker] ansible-lint
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo usermod -aG docker $USER
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install community.docker
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: Run Molecule syntax check
+        run: |
+          cd ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
+          molecule syntax
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}
+
+  # Full Molecule test for changed roles
+  molecule-test:
+    needs: [detect-changes, syntax-check]
+    if: needs.detect-changes.outputs.changed-roles != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install molecule molecule-plugins[docker] ansible-lint
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo usermod -aG docker $USER
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install community.docker
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: Run Molecule test
+        run: |
+          cd ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
+          molecule test
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}
+
+  # Optional: Full test suite for main branch
+  full-test-suite:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        collection: [servers, appliances]
+        mode: [syntax]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install molecule molecule-plugins[docker] ansible-lint
+
+      - name: Install Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo usermod -aG docker $USER
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install community.docker
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: Run full test suite
+        run: |
+          make test TARGET=${{ matrix.collection }} MODE=${{ matrix.mode }}
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}

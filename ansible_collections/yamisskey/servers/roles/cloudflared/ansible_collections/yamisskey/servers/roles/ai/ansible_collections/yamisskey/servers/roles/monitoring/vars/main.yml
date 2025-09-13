@@ -1,3 +1,0 @@
----
-# Grafana specific variables
-grafana_server_name: grafana.{{ domain }}

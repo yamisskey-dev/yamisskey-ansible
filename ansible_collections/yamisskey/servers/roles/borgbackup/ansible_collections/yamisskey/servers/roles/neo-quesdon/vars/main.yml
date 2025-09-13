@@ -1,5 +1,0 @@
----
-# Neo-Quesdon specific variables
-neo_quesdon_dir: '/var/www/neo-quesdon'
-neo_quesdon_secrets_file: '{{ neo_quesdon_dir }}/secrets.yml'
-neo_quesdon_server_name: neo-quesdon.{{ domain }}

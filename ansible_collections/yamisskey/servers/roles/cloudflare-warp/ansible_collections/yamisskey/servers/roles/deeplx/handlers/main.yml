@@ -1,6 +1,0 @@
-# yamisskey.servers role: deeplx handlers
----
-- name: restart deeplx
-  community.docker.docker_compose_v2:
-    project_src: "{{ deeplx_dir }}"
-    state: restarted

@@ -1,0 +1,45 @@
+# Ansible Molecule Testing with Pre-commit Hooks
+repos:
+  # Ansible Lint
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v6.22.1
+    hooks:
+      - id: ansible-lint
+        files: \.(yml|yaml)$
+        exclude: |
+          (?x)^(
+            molecule/.*/.*\.yml|
+            \.github/.*|
+            requirements\.yml
+          )$
+
+  # YAML Lint
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: [-c=.yamllint.yaml]
+
+  # Molecule Syntax Check Hook
+  - repo: local
+    hooks:
+      - id: molecule-syntax-check
+        name: Molecule Syntax Check
+        entry: scripts/pre-commit-molecule.sh
+        language: script
+        files: ^ansible_collections/.*/roles/.*/.*$
+        require_serial: true
+
+  # General code quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: |
+          (?x)^(
+            molecule/.*/.*\.yml
+          )$
+      - id: check-added-large-files
+      - id: check-merge-conflict

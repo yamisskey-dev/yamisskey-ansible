@@ -1,5 +1,0 @@
----
-# Zitadel specific variables
-zitadel_server_name: auth.{{ domain }}
-zitadel_dir: '/var/www/zitadel'
-zitadel_secrets_file: '{{ zitadel_dir }}/secrets.yml'
