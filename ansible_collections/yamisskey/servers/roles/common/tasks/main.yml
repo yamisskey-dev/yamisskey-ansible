@@ -11,21 +11,3 @@
     name: '{{ packages }}'
   tags:
     - packages
-
-- name: Copy unattended-upgrades configuration file
-  copy:
-    src: 20auto-upgrades
-    dest: /etc/apt/apt.conf.d/20auto-upgrades
-    owner: root
-    group: root
-    mode: '0644'
-  tags:
-    - unattended-upgrades
-
-- name: Ensure unattended-upgrades service is enabled and started
-  systemd:
-    name: unattended-upgrades
-    enabled: true
-    state: started
-  tags:
-    - unattended-upgrades
