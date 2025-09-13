@@ -164,10 +164,11 @@
     project_src: "/etc/modsecurity-nginx"
 
 - name: Ensure ModSecurity NGINX is running
-  community.docker.docker_container_info:
-    name: "{{ modsecurity_nginx_name }}"
-  register: container_info
+  command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" {{ modsecurity_nginx_name }}
+  register: modsec_status
+  changed_when: false
+  failed_when: modsec_status.rc != 0
 
 - name: Display container status
   debug:
-    msg: "ModSecurity NGINX container is {{ container_info.container.State.Status }}"
+    msg: "ModSecurity NGINX container is {{ modsec_status.stdout }}"

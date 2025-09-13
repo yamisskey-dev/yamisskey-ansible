@@ -28,22 +28,27 @@
   notify: Restart backup container
 
 - name: Check if backup service is already running
-  community.docker.docker_container_info:
-    name: backup
-  register: backup_container
+  command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" backup
+  register: backup_container_status
+  changed_when: false
+  failed_when: false
+
+- name: Determine backup container running state
+  set_fact:
+    backup_container_running: "{{ backup_container_status.rc == 0 and backup_container_status.stdout == 'running' }}"
 
 - name: Pull and build Docker images
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
     pull: always
     build: always
-  when: not backup_container.exists or backup_container.container.State.Status != 'running'
+  when: not backup_container_running | bool
   register: compose_pull_build
 
 - name: Start Docker Compose services
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
-  when: not backup_container.exists or backup_container.container.State.Status != 'running'
+  when: not backup_container_running | bool
   register: compose_start
 
 - name: Run manual backup script

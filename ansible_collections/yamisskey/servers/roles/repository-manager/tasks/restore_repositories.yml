@@ -73,7 +73,7 @@
   tags: ['restore', 'validation']
 
 - name: Backup existing repositories before restore
-  ansible.builtin.archive:
+  community.general.archive:
     path: "{{ item.dest }}"
     dest: "{{ backup_base_dir }}/pre_restore_{{ ansible_date_time.epoch }}_{{ item.name }}.tar.gz"
     format: gz

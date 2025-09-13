@@ -14,7 +14,7 @@
       failed_when: false
 
     - name: Verify MinIO container is running
-      command: docker inspect -f '{{'{{'}}.State.Status{{'}}'}}' {{ minio_container_name }}
+      command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" {{ minio_container_name }}
       register: container_status
       changed_when: false
       failed_when: container_status.rc != 0
@@ -23,8 +23,8 @@
       assert:
         that:
           - container_status.stdout == "running"
-          fail_msg: "MinIO container is not running"
-          success_msg: "MinIO container is running successfully"
+        fail_msg: "MinIO container is not running"
+        success_msg: "MinIO container is running successfully"
 
     - name: Wait for MinIO to be ready
       wait_for:

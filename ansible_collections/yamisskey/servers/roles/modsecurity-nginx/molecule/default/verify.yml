@@ -14,7 +14,7 @@
       failed_when: false
 
     - name: Verify ModSecurity container is running
-      command: docker inspect -f '{{'{{'}}.State.Status{{'}}'}}' {{ test_container_name }}
+      command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" {{ test_container_name }}
       register: container_status
       changed_when: false
       failed_when: container_status.rc != 0
@@ -23,8 +23,8 @@
       assert:
         that:
           - container_status.stdout == "running"
-          fail_msg: "ModSecurity container is not running"
-          success_msg: "ModSecurity container is running successfully"
+        fail_msg: "ModSecurity container is not running"
+        success_msg: "ModSecurity container is running successfully"
 
     - name: Wait for ModSecurity-nginx to be ready
       wait_for:

@@ -79,10 +79,10 @@
               🔒 Safety: {{ 'Enabled' if backup_current_db else 'Disabled' }}
 
         - name: Check current database status
-          community.docker.docker_container_info:
-            name: "{{ postgres_container_name }}"
-          register: postgres_current_status
-          ignore_errors: true
+          command: docker inspect -f '{{'{{'}}.State.Status{{'}}'}}' {{ postgres_container_name }}
+          register: postgres_status
+          changed_when: false
+          failed_when: false
 
         - name: Stop Misskey services for DR rehearsal
           community.docker.docker_compose_v2:
@@ -91,7 +91,7 @@
             services:
               - web
               - redis
-          when: postgres_current_status.exists
+          when: postgres_status.rc == 0
       
         - name: Create DR rehearsal workspace
           file:
@@ -102,7 +102,7 @@
         - name: Backup current database (safety measure)
           block:
             - name: Create current DB backup
-              community.docker.docker:
+              community.docker.docker_container:
                 name: "{{ postgres_backup_container }}"
                 image: postgres:15
                 command: >

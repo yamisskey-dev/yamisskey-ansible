@@ -87,13 +87,14 @@
   when: not mc_check.stat.exists
 
 - name: Get MinIO container IP
-  community.docker.docker_container_info:
-    name: minio
-  register: minio_container_info
+  command: docker inspect -f "{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}" minio
+  register: minio_ip
+  changed_when: false
+  failed_when: minio_ip.rc != 0
 
 - name: Wait for MinIO service to be fully ready (health check)
   uri:
-    url: "http://{{ minio_container_info.container.NetworkSettings.Networks.external_network.IPAddress }}:{{ host_services.joseph.minio_api }}/minio/health/live"
+    url: "http://{{ minio_ip.stdout }}:{{ host_services.joseph.minio_api }}/minio/health/live"
     method: GET
   register: health_check
   until: health_check.status == 200
@@ -104,7 +105,7 @@
 - name: Set Minio Client alias with retry mechanism
   command: >
     /usr/local/bin/mc alias set "{{ minio_alias }}"
-    http://{{ minio_container_info.container.NetworkSettings.Networks.external_network.IPAddress }}:{{ host_services.joseph.minio_api }}
+    http://{{ minio_ip.stdout }}:{{ host_services.joseph.minio_api }}
     "{{ minio_root_user }}"
     "{{ minio_root_password }}"
   register: mc_alias_result
