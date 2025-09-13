@@ -44,9 +44,10 @@
 
 - name: Add user to docker group
   ansible.builtin.user:
-    name: "{{ ansible_user }}"
+    name: "{{ ansible_user | default(ansible_user_id | default('root')) }}"
     groups: docker
     append: true
+  when: not ansible_check_mode
 
 - name: Enable and start Docker service
   ansible.builtin.systemd:

@@ -39,7 +39,7 @@
         group: root
         mode: '0644'
       notify: Validate rsyslog configuration
-  when: ansible_become | default(false)
+  when: (ansible_become | default(false)) | bool
 
 - name: Deploy custom logrotate configuration for rsyslog
   ansible.builtin.template:
@@ -147,13 +147,13 @@
   changed_when: false
   when: ufw_enable | default(true)
   become: true
-
+  when: (ansible_become | default(false)) | bool
 - name: Check UFW status (post-enable)
   ansible.builtin.command: ufw status verbose
   register: ufw_status_post
   changed_when: false
   become: true
-
+  when: (ansible_become | default(false)) | bool
 - name: Display UFW status (post-enable)
   ansible.builtin.debug:
     msg: '{{ ufw_status_post.stdout }}'
