@@ -55,7 +55,8 @@ jobs:
 
       - name: ansible-lint (yamisskey.servers Collection)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           echo "🔍 Linting yamisskey.servers Collection..."
@@ -63,14 +64,16 @@ jobs:
 
       - name: ansible-lint (yamisskey.appliances Collection)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           echo "🔍 Linting yamisskey.appliances Collection..."
           ansible-lint --offline -v ansible_collections/yamisskey/appliances
 
       - name: Ansible syntax-check (servers deploy playbooks)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           set -euo pipefail
@@ -83,7 +86,8 @@ jobs:
 
       - name: Ansible syntax-check (appliances deploy playbooks)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/appliances/ansible.cfg
         run: |
           set -euo pipefail
@@ -131,7 +135,8 @@ jobs:
 
       - name: Idempotency Test - Core Infrastructure (servers)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           set -euo pipefail
@@ -150,7 +155,8 @@ jobs:
 
       - name: Idempotency Test - Application Stack (servers)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           set -euo pipefail
@@ -169,7 +175,8 @@ jobs:
 
       - name: Idempotency Test - TrueNAS Setup (appliances)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/appliances/ansible.cfg
         run: |
           set -euo pipefail
@@ -188,7 +195,8 @@ jobs:
 
       - name: ansible-test sanity (yamisskey.servers)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           set -euo pipefail
           echo "🧪 ansible-test sanity for yamisskey.servers"
@@ -198,7 +206,8 @@ jobs:
 
       - name: ansible-test sanity (yamisskey.appliances)
         env:
-          ANSIBLE_COLLECTIONS_PATH: .
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           set -euo pipefail
           echo "🧪 ansible-test sanity for yamisskey.appliances"
