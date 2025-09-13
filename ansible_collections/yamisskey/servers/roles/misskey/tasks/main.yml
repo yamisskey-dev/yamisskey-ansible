@@ -65,7 +65,9 @@
 - name: Fail if required files are still missing
   fail:
     msg: 'Required file {{ item.item }} not found'
-  when: not item.stat.exists
+  when:
+    - not item.stat.exists
+    - not ansible_check_mode
   loop: '{{ final_check.results }}'
 
 - name: Deploy postgresql.conf

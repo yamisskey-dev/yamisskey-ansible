@@ -158,6 +158,9 @@
 - name: Display UFW status (post-enable)
   ansible.builtin.debug:
     msg: '{{ ufw_status_post.stdout }}'
+  when:
+    - ufw_status_post is defined
+    - (ansible_become | default(false)) | bool
 
 - name: Retrieve Tailscale status
   ansible.builtin.command: tailscale status

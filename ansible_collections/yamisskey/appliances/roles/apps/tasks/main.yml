@@ -18,6 +18,9 @@
 - name: Set default paths for apps configs (CI safe)
   set_fact:
     truenas_apps_config_path: "{{ truenas_apps_config_path | default('/mnt/pool/apps') }}"
+
+- name: Set cloudflared config path (depends on apps config path)
+  set_fact:
     truenas_cloudflared_config_path: "{{ truenas_cloudflared_config_path | default(truenas_apps_config_path + '/cloudflared') }}"
 
 # 0) 互換レイヤ（servers側の命名を受けても動くように）

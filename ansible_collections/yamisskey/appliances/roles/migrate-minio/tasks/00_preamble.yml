@@ -54,8 +54,8 @@
 
 - name: Map servers-style vars to appliances-style (domain/token)
   set_fact:
-    truenas_minio_domain: "{{ truenas_minio_domain | default(minio_api_server_name) }}"
-    truenas_tunnel_token: "{{ truenas_tunnel_token | default(cloudflare_tunnel_token) }}"
+    truenas_minio_domain: "{{ truenas_minio_domain | default(minio_api_server_name | default('minio.example.invalid')) }}"
+    truenas_tunnel_token: "{{ truenas_tunnel_token | default(cloudflare_tunnel_token | default('')) }}"
 
 - name: Create migration workspace
   file:
