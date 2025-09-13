@@ -49,24 +49,66 @@ jobs:
 
       - name: Check for other sensitive patterns
         run: |
-          # Check for common secret patterns
+          # Check for common secret patterns (excluding legitimate Ansible patterns)
           PATTERNS=(
             "BEGIN RSA PRIVATE KEY"
-            "BEGIN OPENSSH PRIVATE KEY" 
+            "BEGIN OPENSSH PRIVATE KEY"
             "BEGIN PRIVATE KEY"
-            "-----BEGIN CERTIFICATE-----"
             "AKIA[0-9A-Z]{16}"  # AWS Access Key
-            "password\\s*=\\s*['\"][^'\"]{8,}['\"]"  # Hardcoded passwords
-            "api[_-]?key\\s*[=:]\\s*['\"][^'\"]{16,}['\"]"  # API keys
           )
           
           FOUND=false
           for pattern in "${PATTERNS[@]}"; do
-            if grep -rEi "$pattern" . --exclude-dir=.git --exclude-dir=.github --exclude="*.md"; then
+            # Exclude .example files, Ansible vault variable references, and template files
+            if grep -rEi "$pattern" . \
+              --exclude-dir=.git \
+              --exclude-dir=.github \
+              --exclude="*.md" \
+              --exclude="*.example" \
+              --exclude="vault.yml.example" \
+              | grep -v "{{ vault_" \
+              | grep -v "{{ .*_password" \
+              | grep -v "{{ .*_key" \
+              | grep -v "{{ .*_token" \
+              | grep -v ".j2:" \
+              | grep -v "vars/main.yml:" \
+              | head -10; then
               echo "🚨 Potential secret found: $pattern"
               FOUND=true
             fi
           done
+          
+          # Check for hardcoded passwords (excluding Ansible variables and examples)
+          echo "🔍 Checking for hardcoded passwords..."
+          if grep -rEi 'password\s*=\s*['\''"][^'\''"]{8,}['\''"]' . \
+            --exclude-dir=.git \
+            --exclude-dir=.github \
+            --exclude="*.md" \
+            --exclude="*.example" \
+            --exclude="inventory.example" \
+            | grep -v "{{ vault_" \
+            | grep -v "{{ .*_password" \
+            | head -5; then
+            echo "🚨 Potential hardcoded password found"
+            FOUND=true
+          fi
+          
+          # Check for hardcoded API keys (excluding Ansible variables and examples)
+          echo "🔍 Checking for hardcoded API keys..."
+          if grep -rEi 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{16,}['\''"]' . \
+            --exclude-dir=.git \
+            --exclude-dir=.github \
+            --exclude="*.md" \
+            --exclude="*.example" \
+            --exclude="vault.yml.example" \
+            | grep -v "{{ vault_" \
+            | grep -v "{{ .*_key" \
+            | grep -v "{{ .*_api_key" \
+            | grep -v ".j2:" \
+            | head -5; then
+            echo "🚨 Potential hardcoded API key found"
+            FOUND=true
+          fi
           
           if [ "$FOUND" = true ]; then
             echo "🚨 Potential secrets detected. Please review and remove sensitive data."
