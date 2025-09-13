@@ -58,7 +58,7 @@
         mode: '0644'
 
     - name: Create test nginx backend container
-      community.docker.docker:
+      community.docker.docker_container:
         name: test-backend
         image: nginx:alpine
         state: started
