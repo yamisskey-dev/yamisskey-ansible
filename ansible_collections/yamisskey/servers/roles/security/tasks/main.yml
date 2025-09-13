@@ -39,6 +39,7 @@
         group: root
         mode: '0644'
       notify: Validate rsyslog configuration
+  when: ansible_become | default(false)
 
 - name: Deploy custom logrotate configuration for rsyslog
   ansible.builtin.template:
@@ -48,6 +49,7 @@
     group: root
     mode: '0644'
   become: true
+  when: ansible_become | default(false)
 
 - name: Configure UFW rules and service
   block:
@@ -138,6 +140,7 @@
       ansible.builtin.debug:
         msg: '{{ ufw_status.stdout }}'
   become: true
+  when: ansible_become | default(false)
 
 - name: Ensure UFW is enabled (finalize firewall)
   ansible.builtin.command: ufw --force enable

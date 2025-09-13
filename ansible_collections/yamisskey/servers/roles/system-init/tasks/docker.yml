@@ -40,6 +40,7 @@
       - docker-compose-plugin
     state: present
     update_cache: true
+  when: not ansible_check_mode
 
 - name: Add user to docker group
   ansible.builtin.user:
@@ -52,3 +53,4 @@
     name: docker
     enabled: true
     state: started
+  when: not ansible_check_mode
