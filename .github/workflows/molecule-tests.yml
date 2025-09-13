@@ -86,10 +86,9 @@ jobs:
           docker --version
           docker info | sed -n '1,30p'
 
-      - name: Install Ansible collections
+      - name: Install required Ansible collections (remote only)
         run: |
-          ansible-galaxy collection install community.docker
-          ansible-galaxy collection install -r requirements.yml
+          ansible-galaxy collection install community.docker ansible.posix community.sops
 
       - name: Run Molecule syntax check
         run: |
@@ -126,10 +125,9 @@ jobs:
           docker --version
           docker info | sed -n '1,30p'
 
-      - name: Install Ansible collections
+      - name: Install required Ansible collections (remote only)
         run: |
-          ansible-galaxy collection install community.docker
-          ansible-galaxy collection install -r requirements.yml
+          ansible-galaxy collection install community.docker ansible.posix community.sops
 
       - name: Run Molecule test
         run: |
@@ -166,10 +164,9 @@ jobs:
           docker --version
           docker info | sed -n '1,30p'
 
-      - name: Install Ansible collections
+      - name: Install required Ansible collections (remote only)
         run: |
-          ansible-galaxy collection install community.docker
-          ansible-galaxy collection install -r requirements.yml
+          ansible-galaxy collection install community.docker ansible.posix community.sops
 
       - name: Run full test suite
         run: |
