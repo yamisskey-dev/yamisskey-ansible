@@ -35,15 +35,15 @@
   set_fact:
     source_secrets:
       minio:
-        root_user: "{{ source_minio_root_user }}"
-        root_password: "{{ source_minio_root_password }}"
+        root_user: "{{ source_minio_root_user | default('minioadmin') }}"
+        root_password: "{{ source_minio_root_password | default('minioadmin') }}"
 
 - name: Set target credentials from variables
   set_fact:
     target_secrets:
       minio:
-        root_user: "{{ truenas_minio_root_user }}"
-        root_password: "{{ truenas_minio_root_password }}"
+        root_user: "{{ truenas_minio_root_user | default('minioadmin') }}"
+        root_password: "{{ truenas_minio_root_password | default('minioadmin') }}"
         kms_key_id: "{{ truenas_minio_kms_key | default('minio-default-key') }}"
 
 - name: Set compatibility vars (align with servers-side naming)

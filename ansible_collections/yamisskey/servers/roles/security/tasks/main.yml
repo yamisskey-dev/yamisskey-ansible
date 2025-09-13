@@ -49,7 +49,7 @@
     group: root
     mode: '0644'
   become: true
-  when: ansible_become | default(false)
+  when: (ansible_become | default(false)) | bool
 
 - name: Configure UFW rules and service
   block:

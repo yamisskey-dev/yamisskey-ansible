@@ -41,6 +41,7 @@
   when: 
     - ansible_os_family == "Debian"
     - install_warp | default(true)
+    - not ansible_check_mode
 
 # Cloudflared installation
 - name: Install Cloudflared
@@ -63,6 +64,7 @@
   when: 
     - ansible_os_family == "Debian"
     - install_cloudflared | default(true)
+    - not ansible_check_mode
 
 - name: Verify Cloudflare installations
   block:

@@ -10,8 +10,8 @@
       ==============================================
       TrueNAS Scale Apps – Deploy (Custom App)
       Target: {{ inventory_hostname }}
-      App: {{ truenas_minio_app_name }}
-      Compose path: {{ truenas_apps_config_path }}/minio/docker-compose.yml
+      App: {{ truenas_minio_app_name | default('minio') }}
+      Compose path: {{ (truenas_apps_config_path | default('/mnt/pool/apps')) }}/minio/docker-compose.yml
       ==============================================
 
 # 0) 互換レイヤ（servers側の命名を受けても動くように）
