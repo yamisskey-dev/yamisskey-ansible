@@ -57,18 +57,22 @@
           }
         mode: '0644'
 
-    - name: Create test nginx backend container
-      community.docker.docker_container:
-        name: test-backend
-        image: nginx:alpine
-        state: started
-        ports:
-          - "8888:80"
-        networks:
-          - name: molecule-test-network
-        volumes:
-          - "/tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro"
-        restart_policy: always
+    - name: Ensure test-backend container is running (docker CLI)
+      shell: |
+        if ! docker ps --format '{{"{{"}}.Names{{"}}"}}' | grep -q '^test-backend$'; then
+          docker run -d --name test-backend \
+            -p 8888:80 \
+            --network molecule-test-network \
+            -v /tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro \
+            --restart always \
+            nginx:alpine
+        else
+          # ensure it's started
+          docker start test-backend >/dev/null 2>&1 || true
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: false
 
   tasks:
     - name: Apply ModSecurity-nginx role
