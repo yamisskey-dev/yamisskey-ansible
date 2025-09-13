@@ -59,7 +59,8 @@
 
     - name: Ensure test-backend container is running (docker CLI)
       shell: |
-        if ! docker ps --format '{{"{{"}}.Names{{"}}"}}' | grep -q '^test-backend$'; then
+        {% raw %}
+        if ! docker ps --format '{{.Names}}' | grep -q '^test-backend$'; then
           docker run -d --name test-backend \
             -p 8888:80 \
             --network molecule-test-network \
@@ -70,6 +71,7 @@
           # ensure it's started
           docker start test-backend >/dev/null 2>&1 || true
         fi
+        {% endraw %}
       args:
         executable: /bin/bash
       changed_when: false
