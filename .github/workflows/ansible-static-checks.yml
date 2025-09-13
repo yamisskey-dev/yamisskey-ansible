@@ -1,4 +1,4 @@
-name: CI (lint / plan / security)
+name: Static Checks (lint / syntax / sanity / security)
 
 on:
   pull_request:
@@ -46,20 +46,8 @@ jobs:
           ansible-galaxy collection install -r requirements-ci.yml
           echo "✅ External Collections installed"
 
-      - name: Build local yamisskey collections (for lint/install)
-        run: |
-          set -euo pipefail
-          mkdir -p dist/servers dist/appliances
-          echo "📦 Building yamisskey.servers..."
-          pushd ansible_collections/yamisskey/servers
-          ansible-galaxy collection build --force
-          mv yamisskey-servers-*.tar.gz ../../../dist/servers/
-          popd
-          echo "📦 Building yamisskey.appliances..."
-          pushd ansible_collections/yamisskey/appliances
-          ansible-galaxy collection build --force
-          mv yamisskey-appliances-*.tar.gz ../../../dist/appliances/
-          popd
+      # Build of local collections is not required for static checks
+      # (ansible-lint and ansible-test run against the source tree)
 
       - name: yamllint (Collections-aware)
         run: |
