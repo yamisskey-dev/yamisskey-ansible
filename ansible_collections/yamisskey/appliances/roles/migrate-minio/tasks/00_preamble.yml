@@ -5,9 +5,9 @@
       ==============================================
       TrueNAS Scale Cloudflare Tunnel Migration
       ==============================================
-      Source: {{ source_minio_host }} ({{ source_minio_ip }}:{{ source_minio_port }})
-      Target: {{ target_minio_endpoint }} (Cloudflare Tunnel)
-      Buckets: {{ buckets_to_migrate | join(', ') }}
+      Source: {{ source_minio_host | default('source-host') }} ({{ source_minio_ip | default('0.0.0.0') }}:{{ source_minio_port | default('9000') }})
+      Target: {{ target_minio_endpoint | default('https://minio.example.invalid') }} (Cloudflare Tunnel)
+      Buckets: {{ (buckets_to_migrate | default([])) | join(', ') }}
       Method: MinIO Client via HTTPS (Tunnel)
       Security: End-to-End TLS + Tunnel isolation
       ==============================================

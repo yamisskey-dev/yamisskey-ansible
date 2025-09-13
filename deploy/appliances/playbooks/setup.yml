@@ -14,7 +14,7 @@
           TrueNAS Scale 25.04 Complete Setup
           ==============================================
           Target: {{ inventory_hostname }}
-          Domain: {{ truenas_minio_domain }}
+          Domain: {{ truenas_minio_domain | default('example.invalid') }}
           Pool: {{ truenas_pool_name }}
           ==============================================
 
@@ -36,11 +36,11 @@
           ==============================================
           ✅ Core Infrastructure: ZFS, Users, Snapshots
           ✅ Applications: MinIO + Cloudflared Custom App
-          ✅ Cloudflare Tunnel: {{ truenas_minio_domain }}
-          ✅ Management UI: {{ truenas_api_url }}
+          ✅ Cloudflare Tunnel: {{ truenas_minio_domain | default('example.invalid') }}
+          ✅ Management UI: {{ truenas_api_url | default('https://truenas.local') }}
           
           🔧 Next Steps:
-          1. Configure Cloudflare DNS: {{ truenas_minio_domain }}
+          1. Configure Cloudflare DNS: {{ truenas_minio_domain | default('example.invalid') }}
           2. Run migration: migrate-minio-truenas.yml
           3. Update application configs
           ==============================================

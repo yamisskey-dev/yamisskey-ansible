@@ -1,0 +1,1 @@
+shebang roles/modsecurity-nginx/templates/monitor-modsecurity.sh.j2  # template shell script, not a module

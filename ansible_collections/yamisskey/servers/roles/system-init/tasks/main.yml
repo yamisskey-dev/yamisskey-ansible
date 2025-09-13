@@ -6,7 +6,7 @@
       OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
       Architecture: {{ ansible_architecture }}
       Hostname: {{ ansible_hostname }}
-      User: {{ ansible_user }}
+      User: {{ ansible_user | default(ansible_user_id | default('root')) }}
   tags:
     - always
 
