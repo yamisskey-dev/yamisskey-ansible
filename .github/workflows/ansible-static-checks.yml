@@ -51,7 +51,7 @@ jobs:
 
       - name: yamllint (Collections-aware)
         run: |
-          yamllint .github ansible_collections deploy requirements.yml ansible-collections.cfg || echo "⚠️ Some YAML validation warnings (non-blocking)"
+          yamllint .github ansible_collections deploy requirements.yml || echo "⚠️ Some YAML validation warnings (non-blocking)"
 
       - name: ansible-lint (yamisskey.servers Collection)
         env:
