@@ -2,6 +2,25 @@
 description = "Allow encrypted secrets and known patterns"
 regexes = [
   # SOPS encrypted values (we do not decrypt in CI)
-  'ENC\[AES256_GCM,.+\]'
+  'ENC\[AES256_GCM,.+\]',
+  # Ansible variable references
+  '\{\{\s*vault_.*\}\}',
+  '\{\{\s*.*_password\s*\}\}',
+  '\{\{\s*.*_key\s*\}\}',
+  '\{\{\s*.*_token\s*\}\}',
+  '\{\{\s*.*_api_key\s*\}\}',
+  # Ansible stdout_lines references (CrowdSec bouncer token generation)
+  'bouncer_token\.stdout_lines\[2\]\s*\|\s*trim',
+  # Placeholder values in configuration files
+  'POSTGRES_PASSWORD:\s*"\{\{\s*postgres_password\s*\}\}"',
+  'PICTRS__SERVER__API_KEY:\s*"\{\{\s*postgres_password\s*\}\}"',
+  'truenas_api_key:\s*"\{\{\s*truenas_api_token\s*\}\}"'
+]
+
+paths = [
+  # Allow Ansible vault variable files
+  'deploy/servers/group_vars/vault.yml.example',
+  # Allow template files
+  '.*\.j2$'
 ]
 
