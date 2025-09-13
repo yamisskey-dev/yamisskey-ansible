@@ -1,0 +1,24 @@
+---
+- name: Check if Tailscale is already installed
+  ansible.builtin.command: which tailscale
+  register: tailscale_check
+  failed_when: false
+  changed_when: false
+
+- name: Download and install Tailscale (cross-distro script)
+  ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+  when: install_tailscale | default(true) and tailscale_check.rc != 0
+  register: tailscale_install
+  changed_when: tailscale_check.rc != 0
+
+- name: Verify Tailscale installation
+  ansible.builtin.command: tailscale version
+  register: tailscale_version
+  changed_when: false
+  failed_when: false
+
+- name: Display Tailscale installation result
+  ansible.builtin.debug:
+    msg: |
+      ✅ Tailscale installation completed
+      Version: {{ tailscale_version.stdout if tailscale_version.rc == 0 else 'Installation failed' }}

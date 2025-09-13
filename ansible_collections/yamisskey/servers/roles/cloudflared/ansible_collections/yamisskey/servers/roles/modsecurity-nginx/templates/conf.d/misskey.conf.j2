@@ -1,0 +1,230 @@
+# ModSecurity-Nginx configuration for Misskey
+# This file is included in the main ModSecurity-Nginx container
+
+# Upstream definition
+upstream misskey_backend {
+    server localhost:{{ host_services.balthasar.misskey }} weight=1 max_fails=3 fail_timeout=10s;
+    keepalive 64;
+    keepalive_requests 1000;
+    keepalive_timeout 60s;
+}
+
+# Server block for Misskey
+server {
+    listen {{ host_services.balthasar.modsecurity_nginx }};
+    http2 on;
+    server_name {{ domain }};
+
+    # TCP tuning for many connections
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    reset_timedout_connection on;
+
+    # Error page handling - redirect to maintenance page when backend is down
+    error_page 502 503 504 @maintenance_redirect;
+
+    # Maintenance page redirect location
+    location @maintenance_redirect {
+        return 302 https://down.yami.ski;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    
+    # Rate limiting
+    limit_req zone=misskey_limit burst=100 nodelay;
+    
+    # Proxy settings
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;  # Always HTTPS from Cloudflare
+    
+    # WebSocket support
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    
+    # Timeouts
+    proxy_connect_timeout 30s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+    
+    # Main location
+    location / {
+        # Rate limiting
+        limit_req zone=misskey_limit burst=1000 nodelay;
+        
+        proxy_pass http://misskey_backend;
+        proxy_http_version 1.1;
+        proxy_redirect off;
+        
+        # API cache for GET requests
+        proxy_cache api_cache;
+        proxy_cache_methods GET HEAD;
+        proxy_cache_revalidate on;
+        proxy_cache_min_uses 1;
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+        proxy_cache_background_update on;
+        proxy_cache_lock on;
+        proxy_cache_lock_timeout 10s;
+        proxy_cache_lock_age 30s;
+        proxy_cache_valid 200 1h;
+        proxy_cache_valid 404 5m;
+        proxy_cache_key "$scheme$request_method$host$request_uri";
+        
+        # Reduce buffering for WebSocket
+        proxy_buffering off;
+        
+        # Header to indicate cache status
+        add_header X-Cache-Status $upstream_cache_status;
+    }
+    
+    # Static assets from Misskey application (fonts, icons, etc.)
+    location ~* ^/(static-assets|vite)/.*\.(css|js|woff|woff2|ttf|eot|svg|ico|png|jpg|gif|map|json)$ {
+        proxy_pass http://misskey_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        # Static content cache - extended for better performance
+        proxy_cache static_cache;
+        proxy_cache_valid 200 30d;  # 1日から30日に延長
+        proxy_cache_valid 404 1h;
+        proxy_cache_use_stale error timeout updating;
+        proxy_cache_key "$scheme$request_method$host$request_uri";
+        proxy_cache_revalidate on;
+        proxy_cache_background_update on;
+        proxy_cache_lock on;
+
+        add_header X-Cache-Status $upstream_cache_status;
+        expires 30d;  # 1日から30日に延長
+        add_header Cache-Control "public, immutable, max-age=2592000";  # 30日のmax-age追加
+    }
+
+    # User uploaded images from MinIO
+    location ~* /{{ minio_bucket_name_for_misskey }}/.*\.(jpg|jpeg|png|gif|ico|svg|webp|bmp|tiff)$ {
+        proxy_pass https://{{ minio_api_server_name }};
+        proxy_set_header Host {{ minio_api_server_name }};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        # Media cache for user images - moderate extension for performance
+        proxy_cache media_cache;
+        proxy_cache_valid 200 14d;  # 7日から14日に適度に延長（ユーザー画像のため）
+        proxy_cache_valid 404 1h;
+        proxy_cache_use_stale error timeout updating;
+        proxy_cache_key "$scheme$request_method$host$request_uri";
+        proxy_cache_revalidate on;
+        proxy_cache_background_update on;
+        proxy_cache_lock on;
+
+        # Buffer optimization for media
+        proxy_buffer_size 64k;
+        proxy_buffers 8 128k;
+        proxy_busy_buffers_size 256k;
+
+        add_header X-Cache-Status $upstream_cache_status;
+        add_header Access-Control-Allow-Origin * always;
+        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS' always;
+        add_header Access-Control-Allow-Headers 'Origin, Content-Type, Accept' always;
+
+        expires 14d;  # 7日から14日に適度に延長
+        add_header Cache-Control "public, max-age=1209600";  # 14日のmax-age
+    }
+
+    
+    # Client body size for uploads
+    client_max_body_size 80m;
+    
+    # Enhanced compression settings
+    gzip on;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/xml+rss
+        application/atom+xml
+        image/svg+xml
+        font/truetype
+        font/opentype
+        application/vnd.ms-fontobject;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_min_length 128;
+    gzip_buffers 16 8k;
+    gzip_comp_level 7;
+    gzip_disable "msie6";
+    
+    # Add Brotli compression if available
+    # brotli on;
+    # brotli_comp_level 6;
+    # brotli_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    
+    # API endpoints (no caching)
+    location ~* ^/api/ {
+        proxy_pass http://misskey_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_cache off;
+        
+        # Larger timeouts for API
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+    
+    # Streaming endpoints
+    location ~* ^/streaming {
+        proxy_pass http://misskey_backend;
+        proxy_http_version 1.1;
+        proxy_cache off;
+        proxy_buffering off;
+        
+        # WebSocket specific
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Keep connections alive
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+    
+    # Media uploads
+    location ~* ^/api/drive/files/create {
+        client_max_body_size 500M;
+        proxy_pass http://misskey_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_cache off;
+        
+        # Longer timeouts for uploads
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        client_body_timeout 600s;
+    }
+    
+    # Disable access log to reduce I/O load
+    access_log off;
+    error_log /dev/null crit;
+
+    # Open file cache for static content
+    open_file_cache max=10000 inactive=30s;
+    open_file_cache_valid 60s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+    # Additional performance tuning
+    send_timeout 10s;
+    client_body_timeout 10s;
+    client_header_timeout 10s;
+    sendfile on;
+    sendfile_max_chunk 1m;
+    client_header_buffer_size 4k;
+    large_client_header_buffers 4 16k;
+}

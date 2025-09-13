@@ -1,0 +1,41 @@
+tunnel: {{ cloudflared_tunnel_uuid | default('<Tunnel-UUID>') }}
+credentials-file: {{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid | default('<Tunnel-UUID>') }}.json
+{% if cloudflared_tunnel_uuid is not defined %}
+origincert: {{ cloudflared_config_dir }}/cert.pem
+{% endif %}
+
+protocol: {{ cloudflared_protocol }}
+dns:
+  upstreams:
+{% for upstream in cloudflared_dns_upstreams %}
+    - {{ upstream }}
+{% endfor %}
+
+retries: {{ cloudflared_retries }}
+timeout: {{ cloudflared_timeout }}
+compression: {{ cloudflared_compression }}
+noTLSVerify: {{ cloudflared_no_tls_verify }}
+max_backoff: {{ cloudflared_max_backoff }}
+connection_strategy: "{{ cloudflared_connection_strategy }}"
+
+originRequest:
+{% for key, value in cloudflared_origin_request.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+
+metrics: localhost:{{ cloudflared_metrics_port }}
+
+ingress:
+{% if cloudflared_ingress[ansible_hostname] is defined %}
+{% for service in cloudflared_ingress[ansible_hostname] %}
+  - hostname: {{ service.hostname }}
+    service: {{ service.service }}
+{% endfor %}
+{% else %}
+  # Default configuration for unconfigured hosts
+  - hostname: {{ cloudflared_hostname | default('example.com') }}
+    service: http://localhost:{{ cloudflared_service_port | default('8080') }}
+{% endif %}
+
+  # Catch-all
+  - service: http_status:404

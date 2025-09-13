@@ -1,0 +1,75 @@
+---
+# DNS Records Update via Cloudflare API
+
+- name: Get current DNS records
+  uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cloudflare_zone_id }}/dns_records"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ cloudflare_api_token }}"
+      Content-Type: "application/json"
+  register: dns_records_response
+  retries: "{{ cloudflare_api_retries }}"
+  delay: "{{ cloudflare_api_delay }}"
+
+- name: Filter relevant DNS records
+  set_fact:
+    relevant_dns_records: "{{ dns_records_response.json.result | selectattr('name', 'in', cloudflared_hostnames) | list }}"
+
+- name: Display current DNS records
+  debug:
+    msg: |
+      Current DNS Records:
+      {% for record in relevant_dns_records %}
+      - {{ record.name }}: {{ record.content }} ({{ record.type }})
+      {% endfor %}
+
+- name: Update DNS records to new tunnel
+  uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cloudflare_zone_id }}/dns_records/{{ item.id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ cloudflare_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "CNAME"
+      name: "{{ item.name }}"
+      content: "{{ cloudflared_tunnel_uuid }}.cfargotunnel.com"
+      proxied: true
+      ttl: 1
+  loop: "{{ relevant_dns_records }}"
+  when: item.content != cloudflared_tunnel_uuid + '.cfargotunnel.com'
+  register: dns_update_results
+  retries: "{{ cloudflare_api_retries }}"
+  delay: "{{ cloudflare_api_delay }}"
+
+- name: Display DNS update results
+  debug:
+    msg: |
+      DNS Update Results:
+      {% for result in dns_update_results.results %}
+      {% if result.changed %}
+      ✅ Updated: {{ result.json.result.name }} → {{ result.json.result.content }}
+      {% else %}
+      ➖ No change: {{ result.item.name }}
+      {% endif %}
+      {% endfor %}
+
+- name: Verify DNS propagation
+  uri:
+    url: "https://dns.google/resolve?name={{ item }}&type=CNAME"
+    method: GET
+  loop: "{{ cloudflared_hostnames }}"
+  register: dns_verification
+  retries: 5
+  delay: 10
+  failed_when: false
+
+- name: Display DNS verification
+  debug:
+    msg: |
+      DNS Verification:
+      {% for result in dns_verification.results %}
+      {{ result.item }}: {{ 'OK' if result.status == 200 else 'PENDING' }}
+      {% endfor %}

@@ -1,0 +1,188 @@
+---
+# Repository Manager - Verification Tasks
+# Final validation and integrity checks
+
+- name: Final repository existence verification
+  stat:
+    path: "{{ item.dest }}/.git"
+  register: final_repo_check
+  loop: "{{ target_repositories }}"
+  tags: ['verify', 'validation']
+
+- name: Check required repositories are present
+  fail:
+    msg: "Required repository '{{ item.item.name }}' is missing from {{ item.item.dest }}"
+  loop: "{{ final_repo_check.results }}"
+  when:
+    - not item.stat.exists
+    - item.item.required | default(false)
+  tags: ['verify', 'critical']
+
+- name: Verify git repository integrity
+  shell: |
+    cd "{{ item.item.dest }}"
+    git fsck --no-progress 2>&1
+  register: git_integrity_check
+  loop: "{{ final_repo_check.results }}"
+  when:
+    - item.stat.exists
+    - verify_git_status | bool
+  failed_when: false
+  changed_when: false
+  tags: ['verify', 'git']
+
+- name: Verify branch consistency
+  shell: |
+    cd "{{ item.item.dest }}"
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    expected_branch="{{ item.item.branch | default('master') }}"
+    if [ "$current_branch" != "$expected_branch" ] && [ "$expected_branch" != "HEAD" ]; then
+      echo "BRANCH_MISMATCH: current=$current_branch expected=$expected_branch"
+      exit 1
+    fi
+    echo "BRANCH_OK: $current_branch"
+  register: branch_check
+  loop: "{{ final_repo_check.results }}"
+  when:
+    - item.stat.exists
+    - verify_branch_consistency | bool
+  failed_when: false
+  changed_when: false
+  tags: ['verify', 'branch']
+
+- name: Test remote connectivity
+  shell: |
+    cd "{{ item.item.dest }}"
+    timeout 10 git ls-remote origin HEAD >/dev/null 2>&1
+    echo "REMOTE_OK"
+  register: remote_check
+  loop: "{{ final_repo_check.results }}"
+  when:
+    - item.stat.exists
+    - verify_remote_connectivity | bool
+  failed_when: false
+  changed_when: false
+  tags: ['verify', 'remote']
+
+- name: Verify file permissions
+  shell: |
+    find "{{ item.item.dest }}" -type f -not -path "*/\.git/*" -not -perm -u+r | head -5
+  register: permission_check
+  loop: "{{ final_repo_check.results }}"
+  when:
+    - item.stat.exists
+    - repo_operation in ['clone', 'restore']
+  failed_when: false
+  changed_when: false
+  tags: ['verify', 'permissions']
+
+- name: Display verification results
+  debug:
+    msg: |
+      ✅ Repository Verification Results:
+      
+      📊 Repository Status:
+      {% for result in final_repo_check.results %}
+      - {{ result.item.name }}: {{ '✅ Present' if result.stat.exists else ('❌ Missing' + (' (Required)' if result.item.required else ' (Optional)')) }}
+      {% endfor %}
+      
+      {% if git_integrity_check is defined %}
+      🔍 Git Integrity Check:
+      {% for result in git_integrity_check.results %}
+      {% if result.item is defined %}
+      - {{ result.item.item.name }}: {{ '✅ Clean' if result.rc == 0 else '⚠️ Issues detected' }}
+      {% if result.rc != 0 and result.stderr %}
+        Error: {{ result.stderr | truncate(100) }}
+      {% endif %}
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+      
+      {% if branch_check is defined %}
+      🌿 Branch Consistency:
+      {% for result in branch_check.results %}
+      {% if result.item is defined %}
+      - {{ result.item.item.name }}: {{ result.stdout.strip() }}
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+      
+      {% if remote_check is defined %}
+      🔗 Remote Connectivity:
+      {% for result in remote_check.results %}
+      {% if result.item is defined %}
+      - {{ result.item.item.name }}: {{ '✅ Connected' if result.rc == 0 else '❌ Connection failed' }}
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+      
+      {% if permission_check is defined %}
+      🔐 Permission Issues:
+      {% for result in permission_check.results %}
+      {% if result.item is defined and result.stdout %}
+      - {{ result.item.item.name }}: ⚠️ Files with permission issues detected
+      {% elif result.item is defined %}
+      - {{ result.item.item.name }}: ✅ Permissions OK
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+  tags: ['verify', 'info']
+
+- name: Generate verification summary
+  set_fact:
+    verification_summary:
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      host: "{{ inventory_hostname }}"
+      operation: "{{ repo_operation }}"
+      total_repositories: "{{ target_repositories | length }}"
+      verified_repositories: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
+      missing_required: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | selectattr('required', 'equalto', true) | list | length }}"
+      integrity_issues: "{{ git_integrity_check.results | selectattr('rc', 'ne', 0) | list | length if git_integrity_check is defined else 0 }}"
+      branch_mismatches: "{{ branch_check.results | selectattr('stdout', 'search', 'BRANCH_MISMATCH') | list | length if branch_check is defined else 0 }}"
+      remote_failures: "{{ remote_check.results | selectattr('rc', 'ne', 0) | list | length if remote_check is defined else 0 }}"
+  tags: ['verify', 'summary']
+
+- name: Fail if critical issues detected
+  fail:
+    msg: |
+      ❌ Critical verification failures detected:
+      - Missing required repositories: {{ verification_summary.missing_required }}
+      - Git integrity issues: {{ verification_summary.integrity_issues }}
+      - Branch mismatches: {{ verification_summary.branch_mismatches }}
+  when:
+    - verification_summary.missing_required > 0 or verification_summary.integrity_issues > 0 or verification_summary.branch_mismatches > 0
+    - repo_operation in ['clone', 'restore']
+  tags: ['verify', 'critical']
+
+- name: Display final success message
+  debug:
+    msg: |
+      🎉 Repository {{ repo_operation | title }} Completed Successfully!
+      
+      📈 Summary:
+      ✅ Verified repositories: {{ verification_summary.verified_repositories }}/{{ verification_summary.total_repositories }}
+      🕐 Completed at: {{ verification_summary.timestamp }}
+      🖥️ Host: {{ verification_summary.host }}
+      
+      {% if repo_operation == 'clone' %}
+      💡 Next steps:
+      1. Configure repository-specific settings
+      2. Set up development environments
+      3. Review and commit any initial changes
+      {% elif repo_operation == 'update' %}
+      💡 Next steps:
+      1. Review updated code for breaking changes
+      2. Test applications after updates
+      3. Restart services if necessary
+      {% elif repo_operation == 'backup' %}
+      💡 Next steps:
+      1. Verify backup archives if needed
+      2. Test restore procedure periodically
+      3. Monitor backup storage usage
+      {% elif repo_operation == 'restore' %}
+      💡 Next steps:
+      1. Test restored repositories
+      2. Verify application functionality
+      3. Update configurations if necessary
+      {% endif %}
+  tags: ['verify', 'success']

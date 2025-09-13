@@ -1,0 +1,207 @@
+# ==================================================
+# Yamisskey Blackbox Configuration - Misskey Specific Tests
+# ==================================================
+# Enhanced monitoring for Misskey application components
+
+modules:
+  # Basic HTTP/HTTPS checks
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # Misskey API health check (public endpoint)
+  misskey_api_meta:
+    prober: http
+    timeout: 10s
+    http:
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: "{}"
+      valid_status_codes: [200]
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      fail_if_body_not_matches_regexp:
+        - '"name":'
+        - '"version":'
+      preferred_ip_protocol: "ip4"
+
+  # Misskey public timeline check
+  misskey_api_timeline:
+    prober: http
+    timeout: 15s
+    http:
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: '{"limit": 1}'
+      valid_status_codes: [200]
+      fail_if_body_not_matches_regexp:
+        - '^\[\]$|^\[.*\]$'  # Empty array or array with content
+      preferred_ip_protocol: "ip4"
+
+  # WebSocket streaming endpoint check
+  misskey_websocket:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      headers:
+        Connection: "Upgrade"
+        Upgrade: "websocket"
+        Sec-WebSocket-Key: "dGhlIHNhbXBsZSBub25jZQ=="
+        Sec-WebSocket-Version: "13"
+      valid_status_codes: [101, 426]  # 101 Switching Protocols or 426 Upgrade Required
+      preferred_ip_protocol: "ip4"
+
+  # Misskey nodeinfo check (federation health)
+  misskey_nodeinfo:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_body_not_matches_regexp:
+        - '"software":'
+        - '"name":"misskey"'
+        - '"usage":'
+      preferred_ip_protocol: "ip4"
+
+  # Misskey well-known webfinger (federation discovery)
+  misskey_webfinger:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_body_not_matches_regexp:
+        - '"subject":'
+        - '"links":'
+      preferred_ip_protocol: "ip4"
+
+  # MinIO/Drive endpoint health
+  minio_health:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: [200, 403]  # 403 is acceptable for health check
+      preferred_ip_protocol: "ip4"
+
+  # Advanced HTTP check with custom user agent
+  http_custom_ua:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      headers:
+        User-Agent: "Yamisskey-Monitor/1.0"
+      valid_status_codes: [200, 404]
+      preferred_ip_protocol: "ip4"
+
+  # SSL/TLS certificate check
+  tls_connect:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      tls: true
+      tls_config:
+        insecure_skip_verify: false
+
+  # TCP connectivity check
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+
+  # ICMP ping check
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"
+
+  # DNS resolution check
+  dns_a:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: "{{ primary_domain }}"
+      query_type: "A"
+      valid_rcodes:
+        - NOERROR
+      validate_answer_rrs:
+        fail_if_matches_regexp:
+          - ".*127\\.0\\.0\\.1.*"  # Should not resolve to localhost
+
+  # DNS MX record check (for federation)
+  dns_mx:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: "{{ primary_domain }}"
+      query_type: "MX"
+      valid_rcodes:
+        - NOERROR
+        - NXDOMAIN  # MX records are optional for Misskey
+
+  # Advanced Misskey-specific checks
+  misskey_stats:
+    prober: http
+    timeout: 15s
+    http:
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: "{}"
+      valid_status_codes: [200]
+      fail_if_body_not_matches_regexp:
+        - '"notesCount":'
+        - '"usersCount":'
+        - '"instancesCount":'
+      preferred_ip_protocol: "ip4"
+
+  # Federation connectivity test
+  misskey_federation:
+    prober: http
+    timeout: 20s
+    http:
+      method: GET
+      headers:
+        Accept: "application/activity+json"
+      valid_status_codes: [200, 404]  # 404 is acceptable if user doesn't exist
+      preferred_ip_protocol: "ip4"
+
+  # Media proxy functionality check
+  misskey_media_proxy:
+    prober: http
+    timeout: 15s
+    http:
+      method: HEAD  # Use HEAD to avoid downloading actual media
+      valid_status_codes: [200, 404, 403]
+      headers:
+        User-Agent: "Yamisskey-Media-Check/1.0"
+      preferred_ip_protocol: "ip4"
+
+{% if monitoring_advanced_checks | default(true) %}
+  # Advanced performance check
+  misskey_performance:
+    prober: http
+    timeout: 30s
+    http:
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body: '{"limit": 10}'
+      valid_status_codes: [200]
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      preferred_ip_protocol: "ip4"
+{% endif %}

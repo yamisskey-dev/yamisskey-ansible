@@ -1,0 +1,16 @@
+---
+# システム情報変数
+os_name: "{{ ansible_distribution | lower }}"
+codename: "{{ ansible_distribution_release }}"
+arch: "{{ ansible_architecture }}"
+
+# インストール制御フラグ
+install_docker: true
+install_tailscale: true
+install_cloudflare: true
+install_warp: true
+install_cloudflared: true
+install_playit: true
+
+# 検証制御フラグ
+verify_installations: true

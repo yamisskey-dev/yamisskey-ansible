@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+    vikunja:
+        image: vikunja/vikunja
+        environment:
+            VIKUNJA_SERVICE_PUBLICURL: 'https://{{ vikunja_server_name }}/'
+            VIKUNJA_FRONTEND_APIURL: 'https://{{ vikunja_server_name }}/api/v1'
+            VIKUNJA_DATABASE_HOST: db
+            VIKUNJA_DATABASE_PASSWORD: '{{ vikunja_secrets.db_password }}'
+            VIKUNJA_DATABASE_TYPE: mysql
+            VIKUNJA_DATABASE_USER: '{{ vikunja_secrets.db_user }}'
+            VIKUNJA_DATABASE_DATABASE: 'vikunja_production'
+            VIKUNJA_SERVICE_JWTSECRET: '{{ vikunja_secrets.jwt_secret }}'
+            VIKUNJA_SERVICE_ENABLEREGISTRATION: 'true'
+            VIKUNJA_MAILER_ENABLED: 'true'
+            VIKUNJA_MAILER_HOST: 'smtp.protonmail.ch'
+            VIKUNJA_MAILER_PORT: '465'
+            VIKUNJA_MAILER_USERNAME: 'admin@{{ domain }}'
+            VIKUNJA_MAILER_PASSWORD: '{{ vikunja_secrets.mailer_password }}'
+            VIKUNJA_MAILER_FROMEMAIL: 'admin@{{ domain }}'
+            VIKUNJA_MAILER_FORCESSL: 'true'
+            VIKUNJA_MAILER_SKIPTLSVERIFY: 'false'
+        ports:
+            - 3456:3456
+        volumes:
+            - ./files:/app/vikunja/files
+        depends_on:
+            db:
+                condition: service_healthy
+        restart: unless-stopped
+    db:
+        image: mariadb:10.11
+        command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+        environment:
+            MYSQL_ROOT_PASSWORD: '{{ vikunja_secrets.db_root_password }}'
+            MYSQL_USER:  '{{ vikunja_secrets.db_user }}'
+            MYSQL_PASSWORD: '{{ vikunja_secrets.db_password }}'
+            MYSQL_DATABASE: 'vikunja_production'
+        volumes:
+            - ./db:/var/lib/mysql
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD"]
+            interval: 2s
+            start_period: 30s

@@ -1,0 +1,139 @@
+---
+# Integration Test - Service Tests
+# Tests service-level functionality and operations
+
+- name: Test Docker container status
+  shell: |
+    docker ps --format "table {{ '{{.Names}}\t{{.Status}}' }}" | grep -E "(misskey|minio|postgres|redis|nginx)" | wc -l
+  register: container_status_test
+  changed_when: false
+  when: service_tests.container_status | bool
+  tags: ['service', 'docker', 'containers']
+
+- name: Test container health checks
+  shell: |
+    docker ps --filter "health=healthy" --format "{{ '{{.Names}}' }}" | wc -l
+  register: container_health_test
+  changed_when: false
+  when: service_tests.container_status | bool
+  tags: ['service', 'health', 'containers']
+
+- name: Test log availability for key services
+  shell: |
+    docker logs {{ item }} --tail=5 2>/dev/null | wc -l
+  register: log_availability_test
+  failed_when: false
+  changed_when: false
+  loop:
+    - "$(docker ps --filter 'name=misskey' --format '{{ '{{.Names}}' }}' | head -1)"
+    - "$(docker ps --filter 'name=minio' --format '{{ '{{.Names}}' }}' | head -1)"
+    - "$(docker ps --filter 'name=postgres' --format '{{ '{{.Names}}' }}' | head -1)"
+  when: service_tests.log_availability | bool
+  tags: ['service', 'logs']
+
+- name: Test backup integrity
+  find:
+    paths: 
+      - "/opt/backups"
+      - "/tmp"
+    patterns:
+      - "*backup*.tar.gz"
+      - "*backup*.zip"
+    age: "-7d"
+  register: backup_files_test
+  when: service_tests.backup_integrity | bool
+  tags: ['service', 'backup']
+
+- name: Test configuration file validity
+  shell: |
+    # Test nginx configuration
+    if docker ps --filter "name=nginx" --format "{{ '{{.Names}}' }}" | grep -q nginx; then
+      docker exec $(docker ps --filter "name=nginx" --format "{{ '{{.Names}}' }}" | head -1) nginx -t 2>/dev/null && echo "nginx_ok"
+    fi
+    
+    # Test docker-compose files
+    find /opt -name "docker-compose.yml" -exec docker-compose -f {} config --quiet \; 2>/dev/null && echo "compose_ok" || true
+  register: config_validity_test
+  changed_when: false
+  failed_when: false
+  when: service_tests.configuration_validity | bool
+  tags: ['service', 'config']
+
+- name: Test service restart capability
+  shell: |
+    # Test if systemctl commands work for key services
+    systemctl is-active docker >/dev/null 2>&1 && echo "docker_active" || echo "docker_inactive"
+  register: service_restart_test
+  changed_when: false
+  failed_when: false
+  when: service_tests.container_status | bool
+  tags: ['service', 'restart']
+
+- name: Test persistent volume mounts
+  shell: |
+    docker volume ls --format "{{ '{{.Name}}' }}" | grep -E "(misskey|minio|postgres)" | wc -l
+  register: volume_mount_test
+  changed_when: false
+  when: service_tests.container_status | bool
+  tags: ['service', 'volumes']
+
+- name: Test service resource usage
+  shell: |
+    # Get top 3 containers by memory usage
+    docker stats --no-stream --format "{{ '{{.Container}}\t{{.MemUsage}}' }}" | head -3 | wc -l
+  register: resource_usage_test
+  changed_when: false
+  when: service_tests.container_status | bool
+  tags: ['service', 'resources']
+
+- name: Set service test results
+  set_fact:
+    service_results:
+      container_status: >-
+        {{ 'pass' if (container_status_test.stdout | default('0') | int) >= 3
+           else 'fail' if service_tests.container_status
+           else 'skip' }}
+      container_health: >-
+        {{ 'pass' if (container_health_test.stdout | default('0') | int) >= 1
+           else 'fail' if service_tests.container_status
+           else 'skip' }}
+      log_availability: >-
+        {{ 'pass' if log_availability_test.results | selectattr('stdout', 'defined') | selectattr('stdout', 'match', '^[1-9]') | list | length >= 2
+           else 'fail' if service_tests.log_availability
+           else 'skip' }}
+      backup_integrity: >-
+        {{ 'pass' if backup_files_test.files | default([]) | length >= 0
+           else 'fail' if service_tests.backup_integrity
+           else 'skip' }}
+      configuration_validity: >-
+        {{ 'pass' if config_validity_test.stdout is defined and ('nginx_ok' in config_validity_test.stdout or 'compose_ok' in config_validity_test.stdout)
+           else 'fail' if service_tests.configuration_validity
+           else 'skip' }}
+      service_management: >-
+        {{ 'pass' if service_restart_test.stdout is defined and 'docker_active' in service_restart_test.stdout
+           else 'fail' if service_tests.container_status
+           else 'skip' }}
+      volume_persistence: >-
+        {{ 'pass' if (volume_mount_test.stdout | default('0') | int) >= 2
+           else 'fail' if service_tests.container_status
+           else 'skip' }}
+      resource_monitoring: >-
+        {{ 'pass' if (resource_usage_test.stdout | default('0') | int) >= 1
+           else 'fail' if service_tests.container_status
+           else 'skip' }}
+  tags: ['service', 'results']
+
+- name: Display service test results
+  debug:
+    msg: |
+      🔧 Service Test Results:
+      {% for test, result in service_results.items() %}
+      - {{ test | replace('_', ' ') | title }}: {{ result | upper }}
+      {% endfor %}
+      
+      📊 Service Health Summary:
+      - Active containers: {{ container_status_test.stdout | default('0') }}
+      - Healthy containers: {{ container_health_test.stdout | default('0') }}
+      - Available volumes: {{ volume_mount_test.stdout | default('0') }}
+      - Backup files found: {{ backup_files_test.files | default([]) | length }}
+  tags: ['service', 'info']

@@ -1,0 +1,116 @@
+---
+# Migration Validator - Parameter Validation Tasks
+# Validates migration parameters and configuration
+
+- name: Display current execution context
+  debug:
+    msg: |
+      🔍 Parameter Validation Context:
+      - Running on: {{ inventory_hostname }}
+      - Current host: {{ ansible_hostname }}
+      - Available groups: {{ groups.keys() | list }}
+      - All hosts: {{ groups['all'] }}
+  tags: ['info', 'context']
+
+- name: Validate required parameters are defined
+  assert:
+    that:
+      - source_minio_host is defined
+      - target_minio_host is defined
+      - source_minio_host | length > 0
+      - target_minio_host | length > 0
+    fail_msg: |
+      ❌ Missing required migration parameters:
+      - Source host: {{ source_minio_host | default('undefined') }}
+      - Target host: {{ target_minio_host | default('undefined') }}
+      Please define both source_minio_host and target_minio_host variables.
+  tags: ['validation', 'required']
+
+- name: Validate hosts are different
+  assert:
+    that:
+      - source_minio_host != target_minio_host
+    fail_msg: |
+      ❌ Invalid migration configuration:
+      Source and target hosts cannot be the same: {{ source_minio_host }}
+  tags: ['validation', 'logic']
+
+- name: Validate source host exists in inventory
+  assert:
+    that:
+      - source_minio_host in groups['all']
+    fail_msg: |
+      ❌ Source host not found in inventory:
+      - Requested: {{ source_minio_host }}
+      - Available: {{ groups['all'] }}
+  tags: ['validation', 'inventory']
+
+- name: Validate target host exists in inventory
+  assert:
+    that:
+      - target_minio_host in groups['all']
+    fail_msg: |
+      ❌ Target host not found in inventory:
+      - Requested: {{ target_minio_host }}
+      - Available: {{ groups['all'] }}
+  tags: ['validation', 'inventory']
+
+- name: Validate bucket configuration
+  assert:
+    that:
+      - minio_bucket_name_for_misskey is defined
+      - minio_bucket_name_for_outline is defined
+      - minio_bucket_name_for_misskey | length > 0
+      - minio_bucket_name_for_outline | length > 0
+    fail_msg: |
+      ❌ MinIO bucket configuration is incomplete:
+      - Misskey bucket: {{ minio_bucket_name_for_misskey | default('undefined') }}
+      - Outline bucket: {{ minio_bucket_name_for_outline | default('undefined') }}
+  tags: ['validation', 'buckets']
+
+- name: Extract host information
+  set_fact:
+    source_host_info:
+      hostname: "{{ source_minio_host }}"
+      ansible_host: "{{ hostvars[source_minio_host]['ansible_host'] | default(source_minio_host) }}"
+      ansible_user: "{{ hostvars[source_minio_host]['ansible_user'] | default(ansible_user) }}"
+    target_host_info:
+      hostname: "{{ target_minio_host }}"
+      ansible_host: "{{ hostvars[target_minio_host]['ansible_host'] | default('localhost') }}"
+      ansible_user: "{{ hostvars[target_minio_host]['ansible_user'] | default(ansible_user) }}"
+  tags: ['validation', 'facts']
+
+- name: Display validated migration configuration
+  debug:
+    msg: |
+      ✅ Migration Configuration Validated:
+      ==========================================
+      📍 Source Host Details:
+        - Hostname: {{ source_host_info.hostname }}
+        - IP/FQDN: {{ source_host_info.ansible_host }}
+        - User: {{ source_host_info.ansible_user }}
+      
+      📍 Target Host Details:
+        - Hostname: {{ target_host_info.hostname }}
+        - IP/FQDN: {{ target_host_info.ansible_host }}
+        - User: {{ target_host_info.ansible_user }}
+      
+      📦 Migration Buckets:
+        - Misskey: {{ minio_bucket_name_for_misskey }}
+        - Outline: {{ minio_bucket_name_for_outline }}
+      
+      🔧 Operation Mode: {{ migration_operation }}
+      🔍 Validation Phase: {{ validation_phase }}
+      ==========================================
+  tags: ['info', 'summary']
+
+- name: Set parameter validation status
+  set_fact:
+    validation_results:
+      parameters:
+        status: "passed"
+        timestamp: "{{ ansible_date_time.iso8601 }}"
+        details: "All migration parameters validated successfully"
+        critical: true
+        score: 100
+  tags: ['validation', 'results']

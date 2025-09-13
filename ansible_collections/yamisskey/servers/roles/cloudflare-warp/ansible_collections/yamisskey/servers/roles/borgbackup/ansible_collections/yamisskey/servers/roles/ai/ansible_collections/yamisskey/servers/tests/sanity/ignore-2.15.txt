@@ -1,0 +1,5 @@
+# ansible-test sanity ignore file for Ansible 2.15
+# Format: <test-name> <path>
+# 例) validate-modules plugins/modules/my_module.py
+
+# 現時点では明示的な無視対象はありません。

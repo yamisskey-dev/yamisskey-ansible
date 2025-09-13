@@ -1,0 +1,28 @@
+---
+galaxy_info:
+  author: yamisskey-dev
+  description: Enterprise-grade common server setup with security packages
+  company: yamisskey
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+  galaxy_tags:
+    - system
+    - common
+    - packages
+    - security
+    - unattended-upgrades
+
+dependencies: []
+
+collections:
+  - ansible.posix
+  - community.general

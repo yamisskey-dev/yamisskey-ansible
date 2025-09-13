@@ -1,0 +1,43 @@
+module.exports = {
+    // 基本設定
+    httpUnsafeOrigin: 'https://{{ cryptpad_server_name }}',
+    httpSafeOrigin: 'https://{{ cryptpad_server_name }}',
+    httpAddress: '0.0.0.0',
+    httpPort: 3000,
+    websocketPath: '/cryptpad_websocket',
+    websocketPort: 3003,
+
+    // 管理者設定
+    adminEmail: 'admin@{{ domain }}',
+    supportMailbox: 'support@{{ domain }}',
+
+    // ファイルパス設定
+    filePath: '/cryptpad/datastore/',
+    archivePath: '/cryptpad/data/archive',
+    pinPath: '/cryptpad/data/pins',
+    taskPath: '/cryptpad/data/tasks',
+    blockPath: '/cryptpad/block',
+    blobPath: '/cryptpad/blob',
+    blobStagingPath: '/cryptpad/data/blobstage',
+    decreePath: '/cryptpad/data/decrees',
+    logPath: '/cryptpad/data/logs',
+
+    // セキュリティ設定
+    sessionSecret: '{{ cryptpad_secret_key }}',
+    adminKeys: [],
+    maxUploadSize: 100 * 1024 * 1024,
+    defaultStorageLimit: 1024 * 1024 * 1024,
+
+    // ログ設定
+    logToStdout: true,
+    logToFile: true,
+    logLevel: 'info',
+    verbose: false,
+
+    // その他の設定
+    removeDonateButton: true,
+    allowSubscriptions: false,
+    requireAuthentication: false,
+    restrictRegistration: false,
+    installMethod: 'docker'
+};

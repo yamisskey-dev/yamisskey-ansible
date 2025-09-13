@@ -1,0 +1,3 @@
+---
+# CTFd specific variables
+ctfd_server_name: ctf.{{ domain }}

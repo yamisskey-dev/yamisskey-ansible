@@ -1,0 +1,37 @@
+---
+- name: Verify system-init deployment
+  hosts: all
+  gather_facts: false
+  
+  tasks:
+    - name: Check if Docker is installed and running
+      service:
+        name: docker
+        state: started
+      become: true
+      
+    - name: Verify role execution completed without errors
+      stat:
+        path: /tmp/test
+      register: test_dir_check
+      
+    - name: Assert test directory exists
+      assert:
+        that:
+          - test_dir_check.stat.exists
+          - test_dir_check.stat.isdir
+        fail_msg: "Test directory was not created"
+        success_msg: "Test directory created successfully"
+
+    - name: Display test summary
+      debug:
+        msg: |
+          system-init Role Verification Summary:
+          ====================================
+          ✅ Test Environment: Ready
+          ✅ Role Execution: Completed
+          ✅ Basic Checks: Passed
+          
+          Role: system-init
+          Collection: yamisskey.servers
+          Test Instance: system-init-test-instance

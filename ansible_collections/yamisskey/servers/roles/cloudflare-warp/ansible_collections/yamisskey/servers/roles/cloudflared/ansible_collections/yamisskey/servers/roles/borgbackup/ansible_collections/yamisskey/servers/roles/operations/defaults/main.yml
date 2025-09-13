@@ -1,0 +1,45 @@
+---
+# Operation parameters
+operation: "{{ op | default('status') }}"
+target_service: "{{ service | default('all') }}"
+log_lines: "{{ lines | default('50') }}"
+
+# Log management options
+log_filter: "{{ log_filter | default(omit) }}"
+log_level: "{{ log_level | default(omit) }}"
+log_timestamps: "{{ log_timestamps | default(false) }}"
+export_logs: "{{ export_logs | default(false) }}"
+
+# Service directories based on existing deployment structure
+known_services:
+  - misskey
+  - minio
+  - modsecurity-nginx
+  - cloudflared
+  - monitoring
+  - ai
+  - cryptpad
+  - lemmy
+  - matrix
+  - neo-quesdon
+  - outline
+  - vikunja
+  - ctfd
+  - zitadel
+  - mcaptcha
+  - uptime
+  - deeplx
+  - impostor
+  - minecraft
+  - stalwart
+  - searxng
+
+# Custom health endpoints (can be extended per host)
+custom_health_endpoints: []
+# Example:
+# custom_health_endpoints:
+#   - service: "my-service"
+#     port: 8080
+#     path: "/health"
+#     method: "GET"
+#     timeout: 10

@@ -1,0 +1,153 @@
+# 必要なディレクトリを作成
+- name: Create synapse directory
+  file:
+    path: /var/www/synapse
+    state: directory
+
+- name: Create element directory
+  file:
+    path: /var/www/element
+    state: directory
+
+- name: Create element-config directory
+  file:
+    path: /var/www/element/element-config
+    state: directory
+
+# PostgreSQLの秘密情報をsecrets.ymlから読み込む
+- name: Load PostgreSQL secrets from secrets.yml
+  set_fact:
+    postgresql_user: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.user }}"
+    postgresql_password: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.password }}"
+    postgresql_database: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.database }}"
+    postgresql_host: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.host }}"
+
+# Docker Composeファイルをテンプレートから生成
+- name: Add required configurations to Docker Compose file
+  template:
+    src: synapse_docker-compose.yml.j2
+    dest: /var/www/synapse/docker-compose.yml
+
+- name: Copy docker-compose.yml for element
+  template:
+    src: element_docker-compose.yml.j2
+    dest: /var/www/element/docker-compose.yml
+
+# Synapseのコンテナが実行されているか確認
+- name: Check if synapse container is running
+  shell: docker ps --filter "name=synapse" --format "{{ '{{.Names}}' }}"
+  register: synapse_container
+
+- name: Generate synapse configuration using docker-compose
+  shell: |
+    docker-compose run --rm synapse generate
+  args:
+    chdir: /var/www/synapse
+  when: synapse_container.stdout == ""
+
+# secrets.ymlから秘密情報を確認
+- name: Check if secrets file exists
+  stat:
+    path: '{{ synapse_secrets_file }}'
+  register: synapse_secrets_file_stat
+
+- name: Generate registration_shared_secret if not exists
+  shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
+  register: registration_shared_secret_output
+  when: not synapse_secrets_file_stat.stat.exists
+
+- name: Set registration_shared_secret fact
+  set_fact:
+    registration_shared_secret: "{{ (lookup('file', synapse_secrets_file) | from_yaml).registration_shared_secret if synapse_secrets_file_stat.stat.exists else registration_shared_secret_output.stdout }}"
+
+- name: Generate macaroon_secret_key if not exists
+  shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
+  register: macaroon_secret_key_output
+  when: not synapse_secrets_file_stat.stat.exists
+
+- name: Set macaroon_secret_key fact
+  set_fact:
+    macaroon_secret_key: "{{ (lookup('file', synapse_secrets_file) | from_yaml).macaroon_secret_key if synapse_secrets_file_stat.stat.exists else macaroon_secret_key_output.stdout }}"
+
+- name: Generate form_secret if not exists
+  shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
+  register: form_secret_output
+  when: not synapse_secrets_file_stat.stat.exists
+
+- name: Set form_secret fact
+  set_fact:
+    form_secret: "{{ (lookup('file', synapse_secrets_file) | from_yaml).form_secret if synapse_secrets_file_stat.stat.exists else form_secret_output.stdout }}"
+
+# 秘密情報をファイルに保存
+- name: Save secrets to file
+  copy:
+    dest: '{{ synapse_secrets_file }}'
+    content: |
+      registration_shared_secret: "{{ registration_shared_secret }}"
+      macaroon_secret_key: "{{ macaroon_secret_key }}"
+      form_secret: "{{ form_secret }}"
+      postgresql:
+        user: "{{ postgresql_user }}"
+        password: "{{ postgresql_password }}"
+        database: "{{ postgresql_database }}"
+        host: "{{ postgresql_host }}"
+  when: not synapse_secrets_file_stat.stat.exists
+
+# Synapseの設定ファイルを反映
+- name: Add required configurations to Synapse configuration file
+  template:
+    src: synapse.homeserver.yaml.j2
+    dest: /var/www/synapse/synapse-data/homeserver.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+# Synapse用ディレクトリの作成
+- name: Create well-known directory for Synapse
+  file:
+    path: /var/www/synapse/.well-known/matrix
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+  become: true
+
+# /.well-known/matrix/client にE2EE設定ファイルをコピー (Synapse側)
+- name: Configure E2EE settings for Synapse
+  template:
+    src: synapse_well_known_client.json.j2
+    dest: /var/www/synapse/.well-known/matrix/client
+    owner: www-data
+    group: www-data
+    mode: '0644'
+
+# Synapseの設定ファイルを反映
+- name: Add required configurations to Synapse configuration file
+  template:
+    src: synapse.homeserver.yaml.j2
+    dest: /var/www/synapse/synapse-data/homeserver.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+# Synapseコンテナを起動
+- name: Start Synapse container
+  community.docker.docker_compose_v2:
+    project_src: /var/www/synapse
+    recreate: never
+
+# Elementコンテナの起動
+- name: Start element
+  community.docker.docker_compose_v2:
+    project_src: /var/www/element
+    state: restarted
+
+# Element用カスタム設定ファイルのコピー
+- name: Copy element custom configuration file
+  template:
+    src: "config.{{ element_server_name }}.json.j2"
+    dest: "/var/www/element/element-config/config.{{ element_server_name }}.json"
+    mode: '0644'
+  notify: Restart element

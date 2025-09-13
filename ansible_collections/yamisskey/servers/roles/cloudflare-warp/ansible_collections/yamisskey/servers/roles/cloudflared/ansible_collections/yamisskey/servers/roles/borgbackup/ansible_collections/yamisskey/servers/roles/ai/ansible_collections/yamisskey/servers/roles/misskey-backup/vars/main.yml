@@ -1,0 +1,3 @@
+---
+backup_dir: '/home/{{ ansible_user }}/backups'
+misskey_backup_secrets_file: '/opt/misskey-backup/secrets.yml'

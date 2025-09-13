@@ -1,0 +1,32 @@
+---
+# Misskey role default variables
+# These values can be overridden in group_vars or host_vars
+
+# Service configuration
+misskey_dir: '/var/www/misskey'
+misskey_port: "{{ host_services.balthasar.misskey | default(3001) }}"
+
+# Database configuration
+misskey_db_host: 'localhost'
+misskey_db_port: 5432
+misskey_db_name: 'example_misskey_db'
+misskey_db_user: 'example_misskey_user'
+misskey_db_pass: 'example_misskey_pass'
+
+# Redis configuration
+misskey_redis_host: 'localhost'
+misskey_redis_port: 6379
+
+# Proxy configuration
+misskey_proxy: "http://127.0.0.1:{{ host_services.linode_prox.squid | default(3128) }}"
+
+# Domain and URLs
+misskey_url: "https://{{ domain }}"
+misskey_host: "{{ domain }}"
+
+# Security settings
+misskey_secrets_file: "{{ misskey_dir }}/secrets.yml"
+
+# Docker configuration
+misskey_image_tag: 'latest'
+misskey_enable_dev_mode: false

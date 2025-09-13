@@ -1,0 +1,110 @@
+---
+# Integration Test - Application Tests
+# Tests application-level functionality and APIs
+
+- name: Test Misskey API health endpoint
+  uri:
+    url: "http://localhost:3000/api/ping"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    body: "{}"
+    body_format: json
+    timeout: 10
+  register: misskey_api_test
+  failed_when: false
+  when: application_tests.misskey_api | bool
+  tags: ['app', 'misskey', 'api']
+
+- name: Test MinIO health endpoint
+  uri:
+    url: "http://localhost:9000/minio/health/live"
+    method: GET
+    timeout: 10
+  register: minio_health_test
+  failed_when: false
+  when: application_tests.minio_health | bool
+  tags: ['app', 'minio', 'api']
+
+- name: Test web interface accessibility
+  uri:
+    url: "http://localhost:{{ item.port }}{{ item.path }}"
+    method: GET
+    status_code: [200, 301, 302]
+    timeout: 10
+  register: web_interface_test
+  failed_when: false
+  loop:
+    - { port: 3000, path: "/" }          # Misskey
+    - { port: 9001, path: "/" }          # MinIO Console
+    - { port: 80, path: "/" }            # Nginx
+  when: application_tests.web_interface | bool
+  tags: ['app', 'web', 'interface']
+
+- name: Test database connectivity
+  shell: |
+    docker exec $(docker ps --filter "name=postgres" --format "{{ '{{.Names}}' }}" | head -1) \
+    psql -U postgres -c "SELECT version();" 2>/dev/null || echo "DB_CONNECT_FAILED"
+  register: database_test
+  failed_when: false
+  changed_when: false
+  when: application_tests.database_connectivity | bool
+  tags: ['app', 'database', 'postgres']
+
+- name: Test Redis connectivity
+  shell: |
+    docker exec $(docker ps --filter "name=redis" --format "{{ '{{.Names}}' }}" | head -1) \
+    redis-cli ping 2>/dev/null || echo "REDIS_CONNECT_FAILED"
+  register: redis_test
+  failed_when: false
+  changed_when: false
+  when: application_tests.database_connectivity | bool
+  tags: ['app', 'redis', 'cache']
+
+- name: Test file upload functionality
+  uri:
+    url: "http://localhost:9000/minio/health/ready"
+    method: GET
+    timeout: 5
+  register: file_upload_test
+  failed_when: false
+  when: application_tests.minio_health | bool
+  tags: ['app', 'upload', 'storage']
+
+- name: Set application test results
+  set_fact:
+    application_results:
+      misskey_api: >-
+        {{ 'pass' if (misskey_api_test.status | default(0)) == 200 
+           else 'fail' if application_tests.misskey_api 
+           else 'skip' }}
+      minio_health: >-
+        {{ 'pass' if (minio_health_test.status | default(0)) == 200 
+           else 'fail' if application_tests.minio_health 
+           else 'skip' }}
+      web_interfaces: >-
+        {{ 'pass' if (web_interface_test.results | selectattr('status', 'in', [200, 301, 302]) | list | length) > 0
+           else 'fail' if application_tests.web_interface
+           else 'skip' }}
+      database_connectivity: >-
+        {{ 'pass' if database_test.stdout is defined and 'PostgreSQL' in database_test.stdout
+           else 'fail' if application_tests.database_connectivity
+           else 'skip' }}
+      redis_connectivity: >-
+        {{ 'pass' if redis_test.stdout is defined and 'PONG' in redis_test.stdout
+           else 'fail' if application_tests.database_connectivity
+           else 'skip' }}
+      file_storage: >-
+        {{ 'pass' if (file_upload_test.status | default(0)) == 200
+           else 'fail' if application_tests.minio_health
+           else 'skip' }}
+  tags: ['app', 'results']
+
+- name: Display application test results
+  debug:
+    msg: |
+      📱 Application Test Results:
+      {% for test, result in application_results.items() %}
+      - {{ test | replace('_', ' ') | title }}: {{ result | upper }}
+      {% endfor %}
+  tags: ['app', 'info']

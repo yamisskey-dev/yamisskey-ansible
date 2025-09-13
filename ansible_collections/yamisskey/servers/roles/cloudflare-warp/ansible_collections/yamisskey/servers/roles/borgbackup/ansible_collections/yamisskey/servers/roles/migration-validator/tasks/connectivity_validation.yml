@@ -1,0 +1,186 @@
+---
+# Migration Validator - Connectivity Validation Tasks
+# Tests network connectivity and SSH access between hosts
+
+- name: Test SSH connectivity to source host
+  shell: |
+    ssh -o ConnectTimeout={{ ssh_connect_timeout }} \
+        -o StrictHostKeyChecking={{ 'yes' if ssh_strict_host_key_checking else 'no' }} \
+        -o BatchMode=yes \
+        {{ source_host_info.ansible_user }}@{{ source_host_info.ansible_host }} \
+        "echo 'SSH connection successful from {{ inventory_hostname }}'"
+  register: ssh_test_source
+  failed_when: false
+  changed_when: false
+  when: source_minio_host != inventory_hostname
+  tags: ['connectivity', 'ssh']
+
+- name: Test SSH connectivity to target host
+  shell: |
+    ssh -o ConnectTimeout={{ ssh_connect_timeout }} \
+        -o StrictHostKeyChecking={{ 'yes' if ssh_strict_host_key_checking else 'no' }} \
+        -o BatchMode=yes \
+        {{ target_host_info.ansible_user }}@{{ target_host_info.ansible_host }} \
+        "echo 'SSH connection successful from {{ inventory_hostname }}'"
+  register: ssh_test_target
+  failed_when: false
+  changed_when: false
+  when: target_minio_host != inventory_hostname
+  tags: ['connectivity', 'ssh']
+
+- name: Test network connectivity to MinIO ports
+  wait_for:
+    host: "{{ item.host }}"
+    port: "{{ item.port }}"
+    timeout: "{{ connectivity_timeout_seconds }}"
+    state: started
+  register: port_connectivity
+  failed_when: false
+  loop:
+    - { host: "{{ source_host_info.ansible_host }}", port: "{{ minio_default_port }}" }
+    - { host: "{{ target_host_info.ansible_host }}", port: "{{ minio_default_port }}" }
+  when: item.host != 'localhost'
+  tags: ['connectivity', 'ports']
+
+- name: Test DNS resolution
+  shell: |
+    nslookup {{ item }} || host {{ item }} || getent hosts {{ item }}
+  register: dns_resolution
+  failed_when: false
+  changed_when: false
+  loop:
+    - "{{ source_host_info.ansible_host }}"
+    - "{{ target_host_info.ansible_host }}"
+  when: item not in ['localhost', '127.0.0.1']
+  tags: ['connectivity', 'dns']
+
+- name: Ping test between hosts
+  shell: |
+    ping -c 3 -W {{ connectivity_timeout_seconds }} {{ item }}
+  register: ping_test
+  failed_when: false
+  changed_when: false
+  loop:
+    - "{{ source_host_info.ansible_host }}"
+    - "{{ target_host_info.ansible_host }}"
+  when: item not in ['localhost', '127.0.0.1']
+  tags: ['connectivity', 'ping']
+
+- name: Display connectivity test results
+  debug:
+    msg: |
+      🔗 Connectivity Validation Results:
+      
+      📡 SSH Connectivity:
+      {% if source_minio_host == inventory_hostname %}
+      ✅ Source is local host (no SSH needed)
+      {% elif ssh_test_source is defined %}
+      {{ '✅ SSH to source host successful' if ssh_test_source.rc == 0 else '❌ SSH to source host failed: ' + (ssh_test_source.stderr | default('Unknown error')) }}
+      {% endif %}
+      
+      {% if target_minio_host == inventory_hostname %}
+      ✅ Target is local host (no SSH needed)
+      {% elif ssh_test_target is defined %}
+      {{ '✅ SSH to target host successful' if ssh_test_target.rc == 0 else '❌ SSH to target host failed: ' + (ssh_test_target.stderr | default('Unknown error')) }}
+      {% endif %}
+      
+      🔌 Port Connectivity:
+      {% if port_connectivity is defined %}
+      {% for result in port_connectivity.results %}
+      {% if result.item is defined %}
+      - {{ result.item.host }}:{{ result.item.port }} - {{ '✅ Open' if not result.failed else '❌ Closed/Timeout' }}
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      ℹ️ Port connectivity tests skipped (localhost targets)
+      {% endif %}
+      
+      🌐 DNS Resolution:
+      {% if dns_resolution is defined %}
+      {% for result in dns_resolution.results %}
+      {% if result.item is defined %}
+      - {{ result.item }}: {{ '✅ Resolved' if result.rc == 0 else '❌ Failed' }}
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      ℹ️ DNS resolution tests skipped (localhost targets)
+      {% endif %}
+      
+      📶 Network Ping:
+      {% if ping_test is defined %}
+      {% for result in ping_test.results %}
+      {% if result.item is defined %}
+      - {{ result.item }}: {{ '✅ Reachable' if result.rc == 0 else '❌ Unreachable' }}
+      {% endif %}
+      {% endfor %}
+      {% else %}
+      ℹ️ Ping tests skipped (localhost targets)
+      {% endif %}
+  tags: ['connectivity', 'info']
+
+- name: Evaluate connectivity status
+  set_fact:
+    connectivity_score: |
+      {%- set score = 0 -%}
+      {%- set max_score = 0 -%}
+      
+      {# SSH connectivity scoring #}
+      {%- if source_minio_host == inventory_hostname -%}
+        {%- set score = score + 25 -%}
+      {%- elif ssh_test_source is defined -%}
+        {%- set score = score + (25 if ssh_test_source.rc == 0 else 0) -%}
+      {%- endif -%}
+      {%- set max_score = max_score + 25 -%}
+      
+      {%- if target_minio_host == inventory_hostname -%}
+        {%- set score = score + 25 -%}
+      {%- elif ssh_test_target is defined -%}
+        {%- set score = score + (25 if ssh_test_target.rc == 0 else 0) -%}
+      {%- endif -%}
+      {%- set max_score = max_score + 25 -%}
+      
+      {# Port connectivity scoring #}
+      {%- if port_connectivity is defined -%}
+        {%- for result in port_connectivity.results -%}
+          {%- if result.item is defined -%}
+            {%- set score = score + (25 if not result.failed else 0) -%}
+            {%- set max_score = max_score + 25 -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- else -%}
+        {%- set score = score + 50 -%}
+        {%- set max_score = max_score + 50 -%}
+      {%- endif -%}
+      
+      {# Network reachability scoring #}
+      {%- if ping_test is defined -%}
+        {%- for result in ping_test.results -%}
+          {%- if result.item is defined -%}
+            {%- set score = score + (25 if result.rc == 0 else 0) -%}
+            {%- set max_score = max_score + 25 -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- else -%}
+        {%- set score = score + 50 -%}
+        {%- set max_score = max_score + 50 -%}
+      {%- endif -%}
+      
+      {{ (score * 100 / max_score) | int }}
+  tags: ['connectivity', 'scoring']
+
+- name: Set connectivity validation status
+  set_fact:
+    validation_results: "{{ validation_results | default({}) | combine({'connectivity': {'status': 'passed' if connectivity_score | int >= 80 else ('warning' if connectivity_score | int >= 60 else 'failed'), 'timestamp': ansible_date_time.iso8601, 'score': connectivity_score | int, 'details': 'Connectivity validation completed with ' + (connectivity_score | string) + '% success rate', 'critical': true, 'ssh_source': ssh_test_source.rc | default(0) if ssh_test_source is defined else 'local', 'ssh_target': ssh_test_target.rc | default(0) if ssh_test_target is defined else 'local'}}) }}"
+  tags: ['connectivity', 'results']
+
+- name: Fail on critical connectivity issues
+  fail:
+    msg: |
+      ❌ Critical connectivity issues detected:
+      Connectivity score: {{ connectivity_score }}% (minimum required: 80%)
+      
+      Please resolve connectivity issues before proceeding with migration.
+  when: 
+    - fail_on_validation_error | bool
+    - connectivity_score | int < 80
+  tags: ['connectivity', 'critical']

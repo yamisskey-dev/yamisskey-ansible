@@ -1,0 +1,187 @@
+---
+- name: Verify Misskey deployment
+  hosts: all
+  gather_facts: false
+  vars:
+    misskey_dir: "/opt/test-misskey"
+    backup_dir: "/tmp/test-backup"
+  
+  tasks:
+    - name: Check if Docker is installed
+      command: docker --version
+      register: docker_version
+      changed_when: false
+      
+    - name: Verify Docker is installed
+      assert:
+        that:
+          - docker_version.rc == 0
+        fail_msg: "Docker is not installed"
+        success_msg: "Docker is installed successfully"
+
+    - name: Check if Misskey directory was created
+      stat:
+        path: "{{ misskey_dir }}"
+      register: misskey_dir_check
+      
+    - name: Verify Misskey directory exists
+      assert:
+        that:
+          - misskey_dir_check.stat.exists
+          - misskey_dir_check.stat.isdir
+        fail_msg: "Misskey directory was not created"
+        success_msg: "Misskey directory created successfully"
+
+    - name: Check if required subdirectories were created
+      stat:
+        path: "{{ misskey_dir }}/{{ item }}"
+      register: subdir_checks
+      loop:
+        - ".config"
+        - "files"
+        - "redis"
+        - "db"
+        
+    - name: Verify subdirectories exist
+      assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+        fail_msg: "Subdirectory {{ item.item }} was not created"
+        success_msg: "Subdirectory {{ item.item }} created successfully"
+      loop: "{{ subdir_checks.results }}"
+
+    - name: Check if configuration files were created
+      stat:
+        path: "{{ misskey_dir }}/.config/{{ item }}"
+      register: config_files
+      loop:
+        - "default.yml"
+        - "docker.env"
+        - "postgresql.conf"
+        
+    - name: Verify configuration files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Configuration file {{ item.item }} was not created"
+        success_msg: "Configuration file {{ item.item }} created successfully"
+      loop: "{{ config_files.results }}"
+
+    - name: Check if docker-compose.yml was created
+      stat:
+        path: "{{ misskey_dir }}/docker-compose.yml"
+      register: docker_compose_check
+      
+    - name: Verify docker-compose.yml exists
+      assert:
+        that:
+          - docker_compose_check.stat.exists
+        fail_msg: "docker-compose.yml was not created"
+        success_msg: "docker-compose.yml created successfully"
+
+    - name: Check if database initialization file exists
+      stat:
+        path: "{{ misskey_dir }}/db/PG_VERSION"
+      register: pg_version_check
+      
+    - name: Verify database initialization
+      assert:
+        that:
+          - pg_version_check.stat.exists
+        fail_msg: "Database initialization file missing"
+        success_msg: "Database appears to be initialized"
+
+    - name: Check if backup directory was created
+      stat:
+        path: "{{ backup_dir }}/misskey"
+      register: backup_dir_check
+      
+    - name: Verify backup directory exists
+      assert:
+        that:
+          - backup_dir_check.stat.exists
+          - backup_dir_check.stat.isdir
+        fail_msg: "Backup directory was not created"
+        success_msg: "Backup directory created successfully"
+
+    - name: Check if VAPID keys file exists (generated during deployment)
+      stat:
+        path: "{{ backup_dir }}/misskey/vapid_keys.yml"
+      register: vapid_keys_check
+      
+    - name: Check files directory permissions
+      stat:
+        path: "{{ misskey_dir }}/files"
+      register: files_dir_permissions
+      
+    - name: Verify files directory has correct permissions
+      assert:
+        that:
+          - files_dir_permissions.stat.exists
+          - files_dir_permissions.stat.mode == "0777"
+        fail_msg: "Files directory permissions are incorrect"
+        success_msg: "Files directory permissions are correct"
+
+    - name: Check external network configuration
+      shell: docker network ls | grep external_network || echo "Network not found"
+      register: network_check
+      changed_when: false
+      
+    - name: Verify Docker network handling
+      debug:
+        msg: "External network check: {{ network_check.stdout }}"
+
+    - name: Read docker-compose.yml content for validation
+      slurp:
+        src: "{{ misskey_dir }}/docker-compose.yml"
+      register: compose_content
+      
+    - name: Verify docker-compose.yml has valid content
+      assert:
+        that:
+          - compose_content.content | b64decode | length > 0
+          - '"version:" in (compose_content.content | b64decode) or "services:" in (compose_content.content | b64decode)'
+        fail_msg: "docker-compose.yml content is invalid"
+        success_msg: "docker-compose.yml has valid content"
+
+    - name: Read configuration files for validation
+      slurp:
+        src: "{{ misskey_dir }}/.config/{{ item }}"
+      register: config_contents
+      loop:
+        - "default.yml"
+        - "docker.env"
+      
+    - name: Verify configuration files have content
+      assert:
+        that:
+          - item.content | b64decode | length > 0
+        fail_msg: "Configuration file {{ item.item }} is empty"
+        success_msg: "Configuration file {{ item.item }} has content"
+      loop: "{{ config_contents.results }}"
+
+    - name: Display test summary
+      debug:
+        msg: |
+          Misskey Deployment Verification Summary:
+          ======================================
+          ✅ Docker Installation: {{ 'OK' if docker_version.rc == 0 else 'Failed' }}
+          ✅ Misskey Directory: {{ 'Created' if misskey_dir_check.stat.exists else 'Missing' }}
+          ✅ Config Subdirectory: {{ 'Created' if subdir_checks.results[0].stat.exists else 'Missing' }}
+          ✅ Files Subdirectory: {{ 'Created' if subdir_checks.results[1].stat.exists else 'Missing' }}
+          ✅ Redis Subdirectory: {{ 'Created' if subdir_checks.results[2].stat.exists else 'Missing' }}
+          ✅ DB Subdirectory: {{ 'Created' if subdir_checks.results[3].stat.exists else 'Missing' }}
+          ✅ Docker Compose File: {{ 'Created' if docker_compose_check.stat.exists else 'Missing' }}
+          ✅ Default Config: {{ 'Created' if config_files.results[0].stat.exists else 'Missing' }}
+          ✅ Environment Config: {{ 'Created' if config_files.results[1].stat.exists else 'Missing' }}
+          ✅ PostgreSQL Config: {{ 'Created' if config_files.results[2].stat.exists else 'Missing' }}
+          ✅ Database Init: {{ 'Simulated' if pg_version_check.stat.exists else 'Missing' }}
+          ✅ Backup Directory: {{ 'Created' if backup_dir_check.stat.exists else 'Missing' }}
+          ✅ Files Permissions: {{ 'Correct' if files_dir_permissions.stat.mode == '0777' else 'Incorrect' }}
+          
+          Test Configuration:
+          - Misskey Directory: {{ misskey_dir }}
+          - Backup Directory: {{ backup_dir }}
+          - Docker Compose Command: Simulated for testing
+          - Database: Pre-initialized for testing

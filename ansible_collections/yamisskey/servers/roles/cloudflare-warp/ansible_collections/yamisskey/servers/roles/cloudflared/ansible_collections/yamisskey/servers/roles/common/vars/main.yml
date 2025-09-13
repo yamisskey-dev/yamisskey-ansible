@@ -1,0 +1,24 @@
+packages:
+  - btop
+  - net-tools
+  - nmap
+  - inetutils-traceroute
+  - rsync
+  - zip
+  - tor
+  - mecab
+  - libmecab-dev
+  - mecab-ipadic-utf8
+  - prometheus
+  - rclone
+  - fail2ban
+  - unattended-upgrades
+  - debsums
+  - apt-show-versions
+  - clamav
+  - clamav-daemon
+  - lynis
+  - apparmor
+  - auditd
+  - sysstat
+  - python3-passlib

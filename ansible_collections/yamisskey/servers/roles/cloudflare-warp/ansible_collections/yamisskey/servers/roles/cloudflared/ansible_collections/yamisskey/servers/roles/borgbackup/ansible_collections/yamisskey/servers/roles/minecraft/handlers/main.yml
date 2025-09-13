@@ -1,0 +1,28 @@
+---
+# Minecraft Server Handlers
+
+- name: stop minecraft containers
+  community.docker.docker_compose_v2:
+    project_src: '{{ minecraft_dir }}'
+    state: absent
+  failed_when: false
+  listen: "restart minecraft"
+
+- name: start minecraft server
+  community.docker.docker_compose_v2:
+    project_src: '{{ minecraft_dir }}'
+    pull: always
+  listen: "restart minecraft"
+
+- name: reload systemd
+  systemd:
+    daemon_reload: true
+  become: true
+
+- name: restart playit service
+  systemd:
+    name: playit
+    state: restarted
+    enabled: true
+  become: true
+  listen: "restart playit"

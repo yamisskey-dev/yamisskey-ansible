@@ -1,0 +1,177 @@
+---
+# Integration Test - Performance Tests
+# Tests system performance and resource usage
+
+- name: Test API response times
+  uri:
+    url: "{{ item.url }}"
+    method: "{{ item.method }}"
+    headers: "{{ item.headers | default({}) }}"
+    body: "{{ item.body | default('') }}"
+    body_format: "{{ item.format | default('raw') }}"
+    timeout: 30
+  register: response_time_test
+  failed_when: false
+  loop:
+    - { url: "http://localhost:3000/api/ping", method: "POST", headers: {"Content-Type": "application/json"}, body: "{}", format: "json" }
+    - { url: "http://localhost:9000/minio/health/live", method: "GET" }
+    - { url: "http://localhost/", method: "GET" }
+  when: performance_thresholds.response_time_ms is defined
+  tags: ['perf', 'response', 'api']
+
+- name: Test memory usage of containers
+  shell: |-
+    docker stats --no-stream --format "{{ '{{.Container}}\t{{.MemUsage}}' }}" | while read container memory; do
+      mem_mb=$(echo $memory | sed 's/MiB.*//' | sed 's/.*\///')
+      if [ ! -z "$mem_mb" ] && [ "$mem_mb" -gt 0 ]; then
+        echo "$container:$mem_mb"
+      fi
+    done
+  register: memory_usage_test
+  changed_when: false
+  when: performance_thresholds.memory_usage_mb is defined
+  tags: ['perf', 'memory', 'containers']
+
+- name: Test CPU usage
+  shell: |-
+    docker stats --no-stream --format "{{ '{{.Container}}\t{{.CPUPerc}}' }}" | while read container cpu; do
+      cpu_num=$(echo $cpu | sed 's/%//')
+      if [ ! -z "$cpu_num" ]; then
+        echo "$container:$cpu_num"
+      fi
+    done
+  register: cpu_usage_test
+  changed_when: false
+  when: performance_thresholds.cpu_usage_percent is defined
+  tags: ['perf', 'cpu', 'containers']
+
+- name: Test disk I/O performance
+  shell: |-
+    # Simple disk write/read test
+    time_start=$(date +%s%N)
+    dd if=/dev/zero of=/tmp/perf_test_file bs=1M count=10 2>/dev/null
+    dd if=/tmp/perf_test_file of=/dev/null bs=1M 2>/dev/null
+    time_end=$(date +%s%N)
+    rm -f /tmp/perf_test_file
+    echo $(( ($time_end - $time_start) / 1000000 ))  # Convert to milliseconds
+  register: disk_io_test
+  changed_when: false
+  tags: ['perf', 'disk', 'io']
+
+- name: Test database query performance
+  shell: |-
+    container=$(docker ps --filter "name=postgres" --format "{{ '{{.Names}}' }}" | head -1)
+    if [ ! -z "$container" ]; then
+      start_time=$(date +%s%N)
+      docker exec $container psql -U postgres -c "SELECT COUNT(*) FROM information_schema.tables;" >/dev/null 2>&1
+      end_time=$(date +%s%N)
+      echo $(( ($end_time - $start_time) / 1000000 ))
+    else
+      echo "0"
+    fi
+  register: db_performance_test
+  changed_when: false
+  failed_when: false
+  tags: ['perf', 'database', 'query']
+
+- name: Test network latency
+  shell: |-
+    # Test internal network latency
+    for host in localhost 127.0.0.1; do
+      ping -c 3 -W 1000 $host 2>/dev/null | grep "avg" | sed 's/.*= [0-9.]*\/\([0-9.]*\)\/.*/\1/' || echo "999"
+    done | sort -n | head -1
+  register: network_latency_test
+  changed_when: false
+  tags: ['perf', 'network', 'latency']
+
+- name: Test concurrent connection handling
+  shell: |-
+    # Test if services can handle multiple connections
+    for port in 3000 9000; do
+      if netstat -tuln | grep -q ":$port "; then
+        # Check if port is accepting connections
+        timeout 5 bash -c "</dev/tcp/localhost/$port" 2>/dev/null && echo "port_${port}_ok" || true
+      fi
+    done
+  register: concurrent_connection_test
+  changed_when: false
+  failed_when: false
+  tags: ['perf', 'connections', 'load']
+
+- name: Evaluate performance metrics
+  set_fact:
+    performance_metrics:
+      avg_response_time: |-
+        {% set total_time = 0 %}
+        {% set valid_responses = 0 %}
+        {% for result in response_time_test.results %}
+          {% if result.elapsed is defined %}
+            {% set total_time = total_time + (result.elapsed * 1000) %}
+            {% set valid_responses = valid_responses + 1 %}
+          {% endif %}
+        {% endfor %}
+        {{ (total_time / valid_responses) | round | int if valid_responses > 0 else 0 }}
+      max_memory_usage: |-
+        {% set max_mem = 0 %}
+        {% for line in memory_usage_test.stdout_lines | default([]) %}
+          {% if ':' in line %}
+            {% set mem = line.split(':')[1] | int %}
+            {% set max_mem = [max_mem, mem] | max %}
+          {% endif %}
+        {% endfor %}
+        {{ max_mem }}
+      max_cpu_usage: |-
+        {% set max_cpu = 0 %}
+        {% for line in cpu_usage_test.stdout_lines | default([]) %}
+          {% if ':' in line %}
+            {% set cpu = line.split(':')[1] | float %}
+            {% set max_cpu = [max_cpu, cpu] | max %}
+          {% endif %}
+        {% endfor %}
+        {{ max_cpu | round(1) }}
+      disk_io_time: "{{ disk_io_test.stdout | default('0') | int }}"
+      db_query_time: "{{ db_performance_test.stdout | default('0') | int }}"
+      network_latency: "{{ network_latency_test.stdout | default('999') | float }}"
+
+- name: Set performance test results
+  set_fact:
+    performance_results:
+      response_time: >-
+        {{ 'pass' if performance_metrics.avg_response_time | int < performance_thresholds.response_time_ms
+           else 'fail' }}"
+      memory_usage: >-
+        {{ 'pass' if performance_metrics.max_memory_usage | int < performance_thresholds.memory_usage_mb
+           else 'fail' }}
+      cpu_usage: >-
+        {{ 'pass' if performance_metrics.max_cpu_usage | float < performance_thresholds.cpu_usage_percent
+           else 'fail' }}
+      disk_performance: >-
+        {{ 'pass' if performance_metrics.disk_io_time | int < 5000
+           else 'fail' }}
+      database_performance: >-
+        {{ 'pass' if performance_metrics.db_query_time | int < 1000
+           else 'fail' }}
+      network_performance: >-
+        {{ 'pass' if performance_metrics.network_latency | float < 10
+           else 'fail' }}
+      connection_handling: >-
+        {{ 'pass' if 'port_3000_ok' in concurrent_connection_test.stdout or 'port_9000_ok' in concurrent_connection_test.stdout
+           else 'fail' }}
+  tags: ['perf', 'results']
+
+- name: Display performance test results
+  debug:
+    msg: |-
+      ⚡ Performance Test Results:
+      {% for test, result in performance_results.items() %}
+      - {{ test | replace('_', ' ') | title }}: {{ result | upper }}
+      {% endfor %}
+      
+      📊 Performance Metrics:
+      - Average response time: {{ performance_metrics.avg_response_time }}ms (threshold: {{ performance_thresholds.response_time_ms }}ms)
+      - Max memory usage: {{ performance_metrics.max_memory_usage }}MB (threshold: {{ performance_thresholds.memory_usage_mb }}MB)
+      - Max CPU usage: {{ performance_metrics.max_cpu_usage }}% (threshold: {{ performance_thresholds.cpu_usage_percent }}%)
+      - Disk I/O time: {{ performance_metrics.disk_io_time }}ms
+      - DB query time: {{ performance_metrics.db_query_time }}ms
+      - Network latency: {{ performance_metrics.network_latency }}ms
+  tags: ['perf', 'info']

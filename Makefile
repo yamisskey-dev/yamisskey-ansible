@@ -36,7 +36,7 @@ VERSION ?= 1.0.0
 # Core variables
 ANSIBLE_CMD := ansible-playbook
 TIMESTAMP := $(shell date +%Y%m%dT%H%M%S)
-PATH_WITH_ANSIBLE := $$HOME/.local/bin:$$PATH
+PATH_WITH_ANSIBLE := $$HOME/.local/share/pipx/venvs/molecule/bin:$$HOME/.local/bin:$$PATH
 COLLECTIONS_PATH := .
 
 # Ensure directories exist
@@ -86,13 +86,20 @@ install:
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
 	uv tool install ansible; \
 	uv tool install ansible-lint
+	@echo "📦 Installing Molecule with pipx..."
+	@command -v pipx >/dev/null || (echo "Installing pipx..." && python3 -m pip install --user pipx)
+	@export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
+	pipx install molecule; \
+	pipx inject molecule molecule-plugins[docker]
 	@echo "📦 Installing Collections..."
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	ansible-galaxy collection install -r requirements.yml
-	@echo "✅ Ansible and Collections installed"
-	@echo "🔍 Verifying Collections:"
-	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	ansible-galaxy collection list | grep yamisskey || echo "⚠️  yamisskey Collections not found"
+	ansible-galaxy collection install -r requirements.yml; \
+	$$HOME/.local/share/pipx/venvs/molecule/bin/ansible-galaxy collection install community.docker --force
+	@echo "✅ Ansible, Molecule and Collections installed"
+	@echo "🔍 Verifying installation:"
+	@export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
+	ansible-galaxy collection list | grep yamisskey || echo "⚠️  yamisskey Collections not found"; \
+	molecule --version && echo "✅ Molecule installed" || echo "⚠️  Molecule installation failed"
 
 # Create inventory from template with environment variable substitution
 inventory:
@@ -253,7 +260,7 @@ test:
 	  *) echo "❌ Invalid MODE. Use: syntax, converge, cleanup, or test"; exit 1;; \
 	esac; \
 	export PATH="$(PATH_WITH_ANSIBLE)"; \
-	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
+	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH):$$HOME/.ansible/collections"; \
 	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
 	if [ -n "$(ROLE)" ]; then \
 		ROLE_EFF="$(ROLE)"; \
@@ -262,8 +269,8 @@ test:
 		if [ ! -d "$$ROLE_DIR" ]; then echo "❌ Role not found: $(ROLE) in $$ROLES_DIR"; exit 1; fi; \
 		if [ ! -f "$$ROLE_DIR/molecule/default/molecule.yml" ]; then echo "❌ Molecule scenario missing for role: $(ROLE)"; exit 1; fi; \
 		echo "🧪 $(COLLECTION) • $(ROLE) • molecule $$SUBCMD"; \
-		cd "$$ROLE_DIR" && molecule $$SUBCMD; \
-		if [ -n "$$EXTRA" ]; then cd "$$ROLE_DIR" && molecule $$EXTRA; fi; \
+		(cd "$$ROLE_DIR" && molecule $$SUBCMD); \
+		if [ -n "$$EXTRA" ]; then (cd "$$ROLE_DIR" && molecule $$EXTRA); fi; \
 	else \
 		ROLES=$$(find "$$ROLES_DIR" -mindepth 1 -maxdepth 1 -type d -exec test -f {}/molecule/default/molecule.yml \; -print 2>/dev/null | sort); \
 		if [ -z "$$ROLES" ]; then echo "⚠️  No roles with Molecule found under $$ROLES_DIR"; exit 0; fi; \
@@ -272,8 +279,8 @@ test:
 		for r in $$ROLES; do \
 			role_name=$$(basename "$$r"); \
 			echo "📋 Testing $$role_name..."; \
-			cd "$$r" && molecule $$SUBCMD; \
-			if [ -n "$$EXTRA" ]; then cd "$$r" && molecule $$EXTRA; fi; \
+			(cd "$$r" && molecule $$SUBCMD); \
+			if [ -n "$$EXTRA" ]; then (cd "$$r" && molecule $$EXTRA); fi; \
 		done; \
 	fi
 

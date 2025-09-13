@@ -1,0 +1,61 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: minio-test-instance
+    image: quay.io/ansible/molecule-ubuntu:20.04
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    tmpfs:
+      - /run
+      - /tmp
+    capabilities:
+      - SYS_ADMIN
+    command: /lib/systemd/systemd
+    networks:
+      - name: molecule-test-network
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callbacks_enabled: profile_tasks,timer,yaml
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      minio-test-instance:
+        # MinIO test configuration
+        minio_secrets_file: "/tmp/test-secrets.yml"
+        minio_alias: "testminio"
+        minio_bucket_name_for_misskey: "test-misskey-files"
+        minio_bucket_name_for_outline: "test-outline-assets"
+        minio_api_server_name: "test.example.com"
+        
+        # Mock host services for testing
+        host_services:
+          joseph:
+            minio_api: 9000
+        
+        # Override some complex operations for testing
+        ansible_hostname: "test-host"
+        ansible_date_time:
+          epoch: "1234567890"
+verifier:
+  name: ansible
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - destroy

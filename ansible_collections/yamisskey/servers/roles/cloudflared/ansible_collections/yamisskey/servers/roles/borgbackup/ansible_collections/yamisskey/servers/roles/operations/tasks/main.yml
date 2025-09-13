@@ -1,0 +1,68 @@
+---
+- name: Validate operation parameters
+  fail:
+    msg: "Operation '{{ operation }}' is not supported. Supported operations: status, health, logs, restart, stop, start, update, cleanup"
+  when: operation not in ['status', 'health', 'logs', 'restart', 'stop', 'start', 'update', 'cleanup']
+
+- name: Validate service parameter
+  fail:
+    msg: "Service '{{ target_service }}' is not supported. Supported services: {{ known_services | join(', ') }}, all"
+  when:
+    - target_service != 'all'
+    - target_service not in known_services
+
+- name: Find service directories
+  find:
+    paths: /opt
+    file_type: directory
+    patterns: "{{ known_services }}"
+  register: service_dirs
+  when: target_service == 'all'
+
+- name: Check if specific service directory exists
+  stat:
+    path: "/opt/{{ target_service }}"
+  register: service_dir_check
+  when: target_service != 'all'
+
+- name: Fail if specific service directory doesn't exist
+  fail:
+    msg: "Service directory /opt/{{ target_service }} does not exist"
+  when:
+    - target_service != 'all'
+    - not service_dir_check.stat.exists
+
+- name: Set single service directory
+  set_fact:
+    single_service_dir: "/opt/{{ target_service }}"
+  when: target_service != 'all'
+
+- name: Execute Docker operations
+  include_tasks: docker_operations.yml
+  when: operation in ['status', 'restart', 'stop', 'start', 'update', 'cleanup']
+  tags:
+    - docker
+    - operations
+
+- name: Execute health checks
+  include_tasks: health_checks.yml
+  when: operation == 'health'
+  tags:
+    - health
+    - monitoring
+
+- name: Execute log management
+  include_tasks: log_management.yml
+  when: operation == 'logs'
+  tags:
+    - logs
+    - debugging
+
+- name: Display operation summary
+  debug:
+    msg: |
+      🎯 Operation '{{ operation }}' completed on {{ target_service }}
+      📊 Host: {{ inventory_hostname }}
+      ⏰ Timestamp: {{ ansible_date_time.iso8601 }}
+  tags:
+    - always

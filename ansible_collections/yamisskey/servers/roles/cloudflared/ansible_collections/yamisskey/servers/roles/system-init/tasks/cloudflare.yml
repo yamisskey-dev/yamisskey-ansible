@@ -1,0 +1,85 @@
+---
+# Cloudflare WARP installation
+- name: Install Cloudflare WARP
+  block:
+    - name: Add Cloudflare WARP GPG key
+      ansible.builtin.get_url:
+        url: https://pkg.cloudflareclient.com/pubkey.gpg
+        dest: /tmp/cloudflare-warp.gpg
+        mode: '0644'
+
+    - name: Install Cloudflare WARP GPG key
+      ansible.builtin.command: gpg --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg /tmp/cloudflare-warp.gpg
+      args:
+        creates: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+
+    - name: Set GPG key permissions
+      ansible.builtin.file:
+        path: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+        mode: '0644'
+
+    - name: Add Cloudflare WARP repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ {{ codename }} main"
+        filename: cloudflare-client
+        state: present
+
+    - name: Clean up temporary GPG file
+      ansible.builtin.file:
+        path: /tmp/cloudflare-warp.gpg
+        state: absent
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Cloudflare WARP
+      ansible.builtin.apt:
+        name: cloudflare-warp
+        state: present
+
+  when: 
+    - ansible_os_family == "Debian"
+    - install_warp | default(true)
+
+# Cloudflared installation
+- name: Install Cloudflared
+  block:
+    - name: Download Cloudflared
+      ansible.builtin.get_url:
+        url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{{ 'amd64' if arch == 'x86_64' else arch }}.deb"
+        dest: "/tmp/cloudflared.deb"
+
+    - name: Install Cloudflared
+      ansible.builtin.apt:
+        deb: "/tmp/cloudflared.deb"
+        state: present
+
+    - name: Remove temporary deb file
+      ansible.builtin.file:
+        path: "/tmp/cloudflared.deb"
+        state: absent
+
+  when: 
+    - ansible_os_family == "Debian"
+    - install_cloudflared | default(true)
+
+- name: Verify Cloudflare installations
+  block:
+    - name: Check WARP installation
+      ansible.builtin.command: warp-cli --version
+      register: warp_version
+      failed_when: false
+      changed_when: false
+
+    - name: Check Cloudflared installation
+      ansible.builtin.command: cloudflared version
+      register: cloudflared_version
+      failed_when: false
+      changed_when: false
+
+    - name: Display Cloudflare installation results
+      ansible.builtin.debug:
+        msg: |
+          Cloudflare WARP: {{ '✅ ' + warp_version.stdout if warp_version.rc == 0 else '⚠️ Installation may have failed' }}
+          Cloudflared: {{ '✅ ' + cloudflared_version.stdout if cloudflared_version.rc == 0 else '⚠️ Installation may have failed' }}

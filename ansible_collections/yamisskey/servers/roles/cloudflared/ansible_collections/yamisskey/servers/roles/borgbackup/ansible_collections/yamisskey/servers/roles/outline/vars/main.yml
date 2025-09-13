@@ -1,0 +1,5 @@
+---
+# Outline specific variables
+outline_server_name: "wiki.{{ domain }}"
+outline_dir: '/var/www/outline'
+outline_secrets_file: '{{ outline_dir }}/secrets.yml'

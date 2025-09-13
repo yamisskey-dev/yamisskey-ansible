@@ -1,0 +1,5 @@
+---
+# Impostor specific variables
+impostor_dir: '/opt/impostor'
+impostor_server_name: "amongus.{{ domain }}"
+impostor_public_ip: 172.234.90.188

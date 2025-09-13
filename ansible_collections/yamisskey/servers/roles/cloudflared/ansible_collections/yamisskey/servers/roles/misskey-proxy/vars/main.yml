@@ -1,0 +1,36 @@
+---
+# Proxy server configuration variables
+proxy_dir: '/opt'
+proxy_squid_config_dir: '/etc/squid'
+
+# Docker containers configuration
+proxy_containers:
+  - name: 'media-proxy-rs-server'
+    image: 'ghcr.io/{{ github_org }}/media-proxy-rs:main'
+    port: '{{ host_services.linode_prox.media_proxy_rs }}:{{ host_services.linode_prox.media_proxy_rs }}'
+  - name: 'nginx-proxy'
+    image: 'nginx'
+    port: '{{ host_services.linode_prox.nginx }}:{{ host_services.linode_prox.nginx }}'
+
+# Squid configuration
+squid_cache_dir: '/var/spool/squid'
+squid_cache_size: 1000
+squid_log_dir: '/var/log/squid'
+squid_port: '{{ host_services.linode_prox.squid }}'
+
+# DNS servers
+squid_dns_servers:
+  - '1.1.1.1'
+  - '8.8.8.8'
+
+# Misskey servers Tailscale IPs (should be defined in host_vars or group_vars)
+# misskey_server_ips:
+#   - '{{ misskey_production_tailscale_ip }}'  # Misskey production server
+#   - '{{ misskey_test_tailscale_ip }}'        # Misskey test server
+#
+# Default fallback (should be overridden)
+misskey_server_ips: '{{ misskey_tailscale_ips | default([]) }}'
+
+# Repository URLs
+summaly_repo: 'https://github.com/{{ github_org }}/summaly-docker.git'
+summaly_dir: '{{ proxy_dir }}/summaly-docker'

@@ -1,0 +1,14 @@
+---
+# Migration configuration defaults
+source_minio_host: "balthasar"
+source_minio_ip: "{{ hostvars[source_minio_host]['ansible_default_ipv4']['address'] }}"
+source_minio_port: "{{ host_services.joseph.minio_api }}"
+target_minio_port: "{{ host_services.joseph.minio_api }}"
+source_minio_alias: "source-minio"
+target_minio_alias: "yaminio"
+migration_temp_dir: "/tmp/minio-migration"
+
+# Default buckets to migrate
+buckets_to_migrate:
+  - "{{ minio_bucket_name_for_misskey }}"
+  - "{{ minio_bucket_name_for_outline }}"

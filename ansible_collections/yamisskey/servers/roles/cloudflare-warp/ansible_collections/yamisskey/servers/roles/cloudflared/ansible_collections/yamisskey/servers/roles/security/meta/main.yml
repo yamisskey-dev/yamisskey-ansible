@@ -1,0 +1,30 @@
+---
+galaxy_info:
+  author: yamisskey-dev
+  description: Enterprise-grade security hardening and monitoring setup
+  company: yamisskey
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+  galaxy_tags:
+    - security
+    - hardening
+    - monitoring
+    - fail2ban
+    - firewall
+    - audit
+
+dependencies:
+  - role: common
+
+collections:
+  - ansible.posix
+  - community.general

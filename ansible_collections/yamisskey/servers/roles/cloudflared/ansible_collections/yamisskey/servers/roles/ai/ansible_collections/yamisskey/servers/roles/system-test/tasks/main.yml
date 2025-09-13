@@ -1,0 +1,105 @@
+---
+- name: Initialize test results
+  set_fact:
+    test_results: []
+    passed_tests: 0
+    total_tests: 0
+
+- name: Display test header
+  debug:
+    msg: |
+      🎯 === System Test Suite for {{ inventory_hostname }} ===
+      Starting comprehensive system validation...
+
+- name: Run infrastructure tests
+  include_tasks: infrastructure.yml
+  tags:
+    - infrastructure
+    - always
+
+- name: Run migration system tests
+  include_tasks: migration.yml
+  tags:
+    - migration
+
+- name: Run service health tests
+  include_tasks: services.yml
+  when: inventory_hostname in host_services | default({})
+  tags:
+    - services
+
+- name: Calculate final test scores
+  set_fact:
+    passed_tests: >-
+      {{
+        [
+          inventory_test | default('❌'),
+          tailscale_test | default('❌'),
+          ansible_test | default('❌'),
+          docker_test | default('❌'),
+          migrate_test | default('❌'),
+          progress_test | default('❌')
+        ] | select('match', '✅.*') | list | length
+      }}
+    total_tests: 6
+
+- name: Compile final test summary
+  set_fact:
+    test_summary: |
+      🎯 === System Test Summary for {{ inventory_hostname }} ===
+
+      📊 Overall Score: {{ passed_tests }}/{{ total_tests }} tests passed
+
+      📋 Infrastructure Tests:
+      - Inventory: {{ inventory_test | default('❌ Error') }}
+      - Tailscale: {{ tailscale_test | default('❌ Error') }}
+      - Ansible: {{ ansible_test | default('❌ Error') }}
+      - Docker: {{ docker_test | default('❌ Error') }}
+
+      🔧 Migration System Tests:
+      - Migrate Role: {{ migrate_test | default('❌ Error') }}
+      - Progress Monitoring: {{ progress_test | default('❌ Error') }}
+
+      🏥 Service Health:
+      {% if service_health.results is defined %}
+      {% for result in service_health.results %}
+      - {{ result.item.name }}: {{ '✅ OK' if result.status == 200 else ('❌ Failed' if result.item.required else '⚠️ Unavailable') }}
+      {% endfor %}
+      {% else %}
+      - No services tested (not configured for this host)
+      {% endif %}
+
+      🚀 Available Operations:
+      - Repository cloning: ansible-playbook -i inventory playbooks/clone-repos.yml
+      - Service operations: ansible-playbook -i inventory playbooks/operations.yml -e op=status
+      - System initialization: ansible-playbook -i inventory playbooks/system-init.yml
+
+      📊 Legend: ✅ = Pass, ⚠️ = Warning, ❌ = Fail
+
+      {% if passed_tests | int >= (total_tests | int * 0.8) %}
+      🎉 System is ready for production use!
+      {% elif passed_tests | int >= (total_tests | int * 0.5) %}
+      ⚠️ System has some issues but may be functional
+      {% else %}
+      ❌ System has critical issues that need to be resolved
+      {% endif %}
+
+- name: Display final test summary
+  debug:
+    msg: "{{ test_summary }}"
+  tags:
+    - always
+
+- name: Set overall test result
+  set_fact:
+    test_passed: "{{ passed_tests | int >= (total_tests | int * 0.8) }}"
+
+- name: Fail if critical tests failed
+  fail:
+    msg: "Critical system tests failed. Please resolve issues before proceeding."
+  when:
+    - not test_passed
+    - ansible_test is defined and '❌' in ansible_test
+    - docker_test is defined and '❌' in docker_test
+  tags:
+    - always

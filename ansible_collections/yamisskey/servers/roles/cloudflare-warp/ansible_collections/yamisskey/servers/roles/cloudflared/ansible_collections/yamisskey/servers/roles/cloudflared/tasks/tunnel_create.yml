@@ -1,0 +1,63 @@
+---
+# Cloudflared Tunnel Creation and Management
+
+- name: Check if tunnel already exists
+  shell: |
+    cloudflared tunnel list --output json 2>/dev/null | jq -r '.[] | select(.name=="{{ cloudflared_tunnel_name }}") | .id' || echo ""
+  register: existing_tunnel
+  changed_when: false
+  failed_when: false
+
+- name: Display tunnel check result
+  debug:
+    msg: |
+      Tunnel check result:
+      Name: {{ cloudflared_tunnel_name }}
+      Existing UUID: {{ existing_tunnel.stdout if existing_tunnel.stdout else 'Not found' }}
+
+- name: Create tunnel if not exists
+  command: cloudflared tunnel create {{ cloudflared_tunnel_name }}
+  register: tunnel_create_result
+  when: existing_tunnel.stdout == ""
+
+- name: Display tunnel creation result
+  debug:
+    msg: |
+      Tunnel creation result:
+      {{ tunnel_create_result.stdout }}
+  when: tunnel_create_result is defined and tunnel_create_result.changed
+
+- name: Get tunnel UUID
+  shell: |
+    cloudflared tunnel list --output json 2>/dev/null | jq -r '.[] | select(.name=="{{ cloudflared_tunnel_name }}") | .id'
+  register: tunnel_uuid_result
+  changed_when: false
+  retries: 3
+  delay: 2
+
+- name: Fail if tunnel UUID not found
+  fail:
+    msg: "Failed to get tunnel UUID for {{ cloudflared_tunnel_name }}"
+  when: tunnel_uuid_result.stdout == ""
+
+- name: Set tunnel UUID fact
+  set_fact:
+    cloudflared_tunnel_uuid: "{{ tunnel_uuid_result.stdout }}"
+
+- name: Display tunnel information
+  debug:
+    msg: |
+      Tunnel Information:
+      Name: {{ cloudflared_tunnel_name }}
+      UUID: {{ cloudflared_tunnel_uuid }}
+      Credentials File: {{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json
+
+- name: Verify tunnel credentials file exists
+  stat:
+    path: "{{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
+  register: tunnel_credentials_file
+
+- name: Fail if credentials file not found
+  fail:
+    msg: "Tunnel credentials file not found: {{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
+  when: not tunnel_credentials_file.stat.exists

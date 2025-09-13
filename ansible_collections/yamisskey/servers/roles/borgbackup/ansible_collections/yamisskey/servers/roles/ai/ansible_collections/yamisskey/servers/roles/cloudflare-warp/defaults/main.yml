@@ -1,0 +1,21 @@
+---
+# Cloudflare WARP role defaults
+
+# Systemd service name for Cloudflare WARP
+warp_service_name: "warp-svc.service"
+
+# Optional license key (set via extra-vars or group_vars)
+# Example: ansible-playbook ... -e warp_license_key=XXXX-XXXX-XXXX-XXXX
+warp_license_key: ""
+
+# Desired WARP mode
+# Common values: "warp", "warp+doh"
+warp_mode: "warp+doh"
+
+# Hosts to exclude from WARP (for direct cloudflared connections)
+warp_excluded_hosts:
+  - region1.v2.argotunnel.com
+  - region2.v2.argotunnel.com
+
+# Timeout for connectivity verification to Cloudflare trace endpoint
+warp_verify_timeout: 10

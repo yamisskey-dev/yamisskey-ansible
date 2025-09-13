@@ -1,0 +1,5 @@
+---
+- name: restart cryptpad
+  community.docker.docker_compose_v2:
+    project_src: "{{ cryptpad_dir }}"
+    state: restarted
