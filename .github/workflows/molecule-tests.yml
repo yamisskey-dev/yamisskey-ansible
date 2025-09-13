@@ -58,69 +58,9 @@ jobs:
             echo "matrix=[]" >> "$GITHUB_OUTPUT"
           fi
 
-  # Syntax check for all changed roles
-  syntax-check:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.changed-roles != ''
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
-      fail-fast: false
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies (pin ansible-core < 2.19)
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade --force-reinstall 'ansible-core<2.19'
-          pip install molecule molecule-plugins[docker] ansible-lint
-
-      - name: Check Docker availability
-        run: |
-          docker --version
-          docker info | sed -n '1,30p'
-
-      - name: Install required Ansible collections (remote only)
-        run: |
-          ansible-galaxy collection install community.docker ansible.posix community.sops community.general
-
-      - name: Run Molecule syntax check
-        working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
-        run: |
-          set -euo pipefail
-          mkdir -p "${{ runner.temp }}/ansible-local" \
-                   "${{ runner.temp }}/molecule" \
-                   "${{ runner.temp }}/molecule-state" \
-                   "${{ runner.temp }}/.cache" \
-                   "${{ runner.temp }}/galaxy-cache"
-          pwd && ls -la
-          echo "ANSIBLE_CONFIG=${ANSIBLE_CONFIG}"
-          which ansible-galaxy || true
-          ansible-galaxy --version || true
-          ansible-galaxy collection list || true
-          molecule --version
-          ansible --version || true
-          molecule syntax
-        env:
-          ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
-          ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
-          MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
-          MOLECULE_STATE_DIRECTORY: ${{ runner.temp }}/molecule-state
-          XDG_CACHE_HOME: ${{ runner.temp }}/.cache
-          ANSIBLE_GALAXY_CACHE_DIR: ${{ runner.temp }}/galaxy-cache
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
-          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
-
   # Full Molecule test for changed roles
   molecule-test:
-    needs: [detect-changes, syntax-check]
+    needs: detect-changes
     if: needs.detect-changes.outputs.changed-roles != ''
     runs-on: ubuntu-latest
     strategy:
