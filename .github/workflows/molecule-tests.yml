@@ -91,11 +91,12 @@ jobs:
           ansible-galaxy collection install community.docker ansible.posix community.sops
 
       - name: Run Molecule syntax check
+        working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
         run: |
-          cd ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
           molecule syntax
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 
   # Full Molecule test for changed roles
   molecule-test:
@@ -130,11 +131,12 @@ jobs:
           ansible-galaxy collection install community.docker ansible.posix community.sops
 
       - name: Run Molecule test
+        working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
         run: |
-          cd ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
           molecule test
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 
   # Optional: Full test suite for main branch
   full-test-suite:
