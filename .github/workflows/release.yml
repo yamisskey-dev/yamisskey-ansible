@@ -1,4 +1,4 @@
-name: Release (tagged)
+name: 🚀 Release (tagged)
 
 on:
   push:
