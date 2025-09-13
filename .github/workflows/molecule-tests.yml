@@ -95,7 +95,8 @@ jobs:
           cd ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
           molecule syntax
         env:
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
 
   # Full Molecule test for changed roles
   molecule-test:
@@ -134,7 +135,8 @@ jobs:
           cd ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
           molecule test
         env:
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
 
   # Optional: Full test suite for main branch
   full-test-suite:
@@ -172,4 +174,5 @@ jobs:
         run: |
           make test TARGET=${{ matrix.collection }} MODE=${{ matrix.mode }}
         env:
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
