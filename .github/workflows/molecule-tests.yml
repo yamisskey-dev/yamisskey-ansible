@@ -39,17 +39,23 @@ jobs:
             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }})
           fi
           
-          # Extract role names from changed files
-          CHANGED_ROLES=$(echo "$CHANGED_FILES" | grep -E '^ansible_collections/.*/roles/' | cut -d'/' -f4 | sort -u || true)
-          
-          # Create JSON matrix for parallel execution
-          if [ -n "$CHANGED_ROLES" ]; then
-            MATRIX_JSON=$(echo "$CHANGED_ROLES" | jq -R -s 'split("\n") | map(select(length > 0)) | map({role: ., collection: (if test("^ansible_collections/yamisskey/servers/") then "servers" else "appliances" end)})')
-            echo "roles=$CHANGED_ROLES" >> $GITHUB_OUTPUT
-            echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          # Extract unique collection/role pairs from changed files
+          # Path pattern: ansible_collections/<ns>/<collection>/roles/<role>/...
+          PAIRS=$(echo "$CHANGED_FILES" \
+            | awk -F/ '/^ansible_collections\/[^^/]+\/[^^/]+\/roles\// {print $3 "/" $5}' \
+            | sort -u || true)
+
+          # Prepare outputs
+          if [ -n "$PAIRS" ]; then
+            # Space-separated role list (kept for quick checks)
+            CHANGED_ROLES=$(printf '%s\n' "$PAIRS" | awk -F/ '{print $2}' | sort -u | tr '\n' ' ')
+            # Compact JSON array for matrix include
+            MATRIX_JSON=$(printf '%s\n' "$PAIRS" | awk -F/ '{print "{\"collection\":\""$1"\",\"role\":\""$2"\"}"}' | jq -s -c '.')
+            echo "roles=$CHANGED_ROLES" >> "$GITHUB_OUTPUT"
+            echo "matrix=$MATRIX_JSON" >> "$GITHUB_OUTPUT"
           else
-            echo "roles=" >> $GITHUB_OUTPUT
-            echo "matrix=[]" >> $GITHUB_OUTPUT
+            echo "roles=" >> "$GITHUB_OUTPUT"
+            echo "matrix=[]" >> "$GITHUB_OUTPUT"
           fi
 
   # Syntax check for all changed roles
@@ -75,12 +81,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install molecule molecule-plugins[docker] ansible-lint
 
-      - name: Install Docker
+      - name: Check Docker availability
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo usermod -aG docker $USER
+          docker --version
+          docker info | sed -n '1,30p'
 
       - name: Install Ansible collections
         run: |
@@ -117,12 +121,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install molecule molecule-plugins[docker] ansible-lint
 
-      - name: Install Docker
+      - name: Check Docker availability
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo usermod -aG docker $USER
+          docker --version
+          docker info | sed -n '1,30p'
 
       - name: Install Ansible collections
         run: |
@@ -159,12 +161,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install molecule molecule-plugins[docker] ansible-lint
 
-      - name: Install Docker
+      - name: Check Docker availability
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo usermod -aG docker $USER
+          docker --version
+          docker info | sed -n '1,30p'
 
       - name: Install Ansible collections
         run: |
