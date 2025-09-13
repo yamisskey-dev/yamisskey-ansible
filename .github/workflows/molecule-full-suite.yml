@@ -1,8 +1,6 @@
 name: 🧪 Molecule Full Test Suite
 
 on:
-  push:
-    branches: [main]
   schedule:
     # Run full suite every night at 2 AM JST (17:00 UTC)
     - cron: '0 17 * * *'
