@@ -1,0 +1,68 @@
+name: 📋 Syntax Check
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PY_COLORS: '1'
+  ANSIBLE_FORCE_COLOR: '1'
+
+jobs:
+  syntax-check:
+    name: Ansible Syntax Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [servers, appliances]
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ansible-core
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core
+
+      - name: Install external Collections
+        run: |
+          set -euo pipefail
+          cat > requirements-ci.yml <<'YAML'
+          ---
+          collections:
+            - name: community.docker
+              version: ">=3.0.0"
+            - name: community.sops
+              version: ">=1.6.0"
+            - name: ansible.posix
+              version: ">=1.5.0"
+            - name: community.general
+              version: ">=8.0.0"
+          YAML
+          ansible-galaxy collection install -r requirements-ci.yml
+          echo "✅ External Collections installed"
+
+      - name: Ansible syntax-check for ${{ matrix.target }} playbooks
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_CONFIG: ${{ matrix.target == 'servers' && 'deploy/servers/ansible.cfg' || 'deploy/appliances/ansible.cfg' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          echo "📋 Syntax checking deploy ${{ matrix.target }} playbooks..."
+          for f in deploy/${{ matrix.target }}/playbooks/*.yml; do
+            echo "-- syntax-check: $f"
+            ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
+          done

@@ -1,0 +1,150 @@
+name: 🧪 Molecule Full Test Suite
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Run full suite every night at 2 AM JST (17:00 UTC)
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+    inputs:
+      collection:
+        description: 'Collection to test (servers, appliances, or both)'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - servers
+          - appliances
+
+env:
+  PY_COLORS: '1'
+  ANSIBLE_FORCE_COLOR: '1'
+
+jobs:
+  full-test-suite:
+    name: Full Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        collection: ${{ github.event.inputs.collection == 'both' && fromJson('["servers", "appliances"]') || github.event.inputs.collection && fromJson(format('["{0}"]', github.event.inputs.collection)) || fromJson('["servers", "appliances"]') }}
+        mode: [syntax]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies (pin ansible-core < 2.19)
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade --force-reinstall 'ansible-core<2.19'
+          pip install molecule molecule-plugins[docker] ansible-lint
+
+      - name: Check Docker availability
+        run: |
+          docker --version
+          docker info | sed -n '1,30p'
+
+      - name: Install required Ansible collections (remote only)
+        run: |
+          ansible-galaxy collection install community.docker ansible.posix community.sops community.general
+
+      - name: Run full test suite for ${{ matrix.collection }}
+        run: |
+          echo "🧪 Running full test suite for ${{ matrix.collection }} collection"
+          make test TARGET=${{ matrix.collection }} MODE=${{ matrix.mode }}
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+
+  comprehensive-validation:
+    name: Comprehensive Validation
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        validation_type: [structure, dependencies, compatibility]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install validation tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core ansible-lint
+
+      - name: Run ${{ matrix.validation_type }} validation
+        run: |
+          case "${{ matrix.validation_type }}" in
+            structure)
+              echo "🔍 Validating collection structure..."
+              find ansible_collections/ -name "*.yml" -exec yamllint {} \;
+              find ansible_collections/ -name "galaxy.yml" -exec cat {} \;
+              ;;
+            dependencies)
+              echo "📦 Validating dependencies..."
+              ansible-galaxy collection list
+              if [ -f requirements.yml ]; then
+                ansible-galaxy collection install -r requirements.yml --dry-run
+              fi
+              ;;
+            compatibility)
+              echo "🔗 Validating compatibility..."
+              ansible-galaxy collection build ansible_collections/yamisskey/servers
+              ansible-galaxy collection build ansible_collections/yamisskey/appliances
+              ;;
+          esac
+
+  performance-analysis:
+    name: Performance Analysis
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.collection == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install performance tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core
+
+      - name: Analyze playbook performance
+        run: |
+          echo "⏱️ Analyzing playbook performance..."
+          
+          # Count tasks per playbook
+          echo "📊 Task counts per playbook:"
+          for playbook in deploy/servers/playbooks/*.yml deploy/appliances/playbooks/*.yml; do
+            if [ -f "$playbook" ]; then
+              task_count=$(grep -c "^  - name:" "$playbook" || echo "0")
+              echo "  $(basename "$playbook"): $task_count tasks"
+            fi
+          done
+          
+          # Analyze role complexity
+          echo "📊 Role complexity analysis:"
+          for role_dir in ansible_collections/yamisskey/*/roles/*/; do
+            if [ -d "$role_dir" ]; then
+              role_name=$(basename "$role_dir")
+              collection=$(echo "$role_dir" | cut -d'/' -f3)
+              task_files=$(find "$role_dir/tasks" -name "*.yml" 2>/dev/null | wc -l)
+              template_files=$(find "$role_dir/templates" -name "*.j2" 2>/dev/null | wc -l)
+              echo "  $collection.$role_name: $task_files task files, $template_files templates"
+            fi
+          done

@@ -1,0 +1,112 @@
+name: 🔐 Security Scan
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy configuration scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          hide-progress: true
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          scanners: misconfig,secret
+          skip-dirs: .git,.github,.ansible,ansible_collections/community,ansible_collections/ansible
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for AGE private keys
+        run: |
+          if grep -RIn "AGE-SECRET-KEY-" . --exclude-dir=.git --exclude-dir=.github; then
+            echo '🚨 AGE private key found in repo. Remove it and push again.'
+            exit 1
+          fi
+          echo '✅ No AGE private keys detected.'
+
+      - name: Check for other sensitive patterns
+        run: |
+          # Check for common secret patterns
+          PATTERNS=(
+            "BEGIN RSA PRIVATE KEY"
+            "BEGIN OPENSSH PRIVATE KEY" 
+            "BEGIN PRIVATE KEY"
+            "-----BEGIN CERTIFICATE-----"
+            "AKIA[0-9A-Z]{16}"  # AWS Access Key
+            "password\\s*=\\s*['\"][^'\"]{8,}['\"]"  # Hardcoded passwords
+            "api[_-]?key\\s*[=:]\\s*['\"][^'\"]{16,}['\"]"  # API keys
+          )
+          
+          FOUND=false
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rEi "$pattern" . --exclude-dir=.git --exclude-dir=.github --exclude="*.md"; then
+              echo "🚨 Potential secret found: $pattern"
+              FOUND=true
+            fi
+          done
+          
+          if [ "$FOUND" = true ]; then
+            echo "🚨 Potential secrets detected. Please review and remove sensitive data."
+            exit 1
+          fi
+          
+          echo "✅ No obvious secrets detected."
+
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install safety
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety
+
+      - name: Check Python dependencies for vulnerabilities
+        run: |
+          # Create a requirements file from pip freeze if available
+          if [ -f "requirements.txt" ]; then
+            safety check -r requirements.txt
+          else
+            echo "✅ No requirements.txt found, skipping Python dependency check"
+          fi
+
+      - name: Check Ansible collection dependencies
+        run: |
+          if [ -f "requirements.yml" ]; then
+            echo "📋 Checking Ansible collection versions..."
+            cat requirements.yml
+            echo "✅ Ansible collections listed for manual review"
+          else
+            echo "✅ No requirements.yml found"
+          fi

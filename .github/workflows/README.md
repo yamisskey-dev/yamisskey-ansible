@@ -4,233 +4,241 @@
 
 ## 📋 ワークフロー一覧
 
-### 🔍 継続的インテグレーション (`ci.yml`)
+### 🔍 品質管理ワークフロー (分離型)
+
+#### 🔍 **Code Quality (Lint)** (`lint.yml`)
 - **トリガー**: Pull Request、mainブランチへのpush
-- **目的**: コード品質とAnsible設定の検証
-- **実行内容**: Linting、構文チェック、検証
+- **目的**: コード品質とスタイルの統一
+- **実行内容**: 
+  - YAML Lint (yamllint)
+  - Ansible Lint (ansible-lint) - 並列実行
+  - Ansible Sanity Tests (ansible-test sanity)
+  - Collections構造検証
 
-### 🚀 リリース管理 (`release.yml`)
-- **トリガー**: タグ作成時
-- **目的**: 自動リリース作成
-- **実行内容**: リリースノート生成、アーティファクト作成
+#### 📋 **Syntax Check** (`syntax.yml`)
+- **トリガー**: Pull Request、mainブランチへのpush
+- **目的**: Ansible構文の検証
+- **実行内容**:
+  - Servers/Appliances プレイブックの構文チェック
+  - 並列実行による高速化
 
-## 🔍 CI ワークフロー詳細
+#### 🔐 **Security Scan** (`security.yml`)
+- **トリガー**: Pull Request、mainブランチへのpush
+- **目的**: セキュリティ脆弱性の検出
+- **実行内容**:
+  - Trivy設定スキャン (misconfig, secret)
+  - AGE秘密鍵の検出
+  - その他機密情報パターンチェック
+  - 依存関係脆弱性チェック
 
-### 実行ジョブ
+#### 🔄 **Idempotency Tests** (`idempotency.yml`)
+- **トリガー**: Pull Request、mainブランチへのpush
+- **目的**: Ansibleプレイブックのべき等性検証
+- **実行内容**:
+  - `--check --diff`モードでのドライラン
+  - Servers: Core Infrastructure + Application Stack
+  - Appliances: TrueNAS Setup
+  - 並列実行とアーティファクト共有
 
-#### 1. **Ansible Lint**
-```yaml
-- name: Run ansible-lint
-  run: |
-    ansible-lint ansible_collections/yamisskey/servers
-    ansible-lint ansible_collections/yamisskey/appliances
-```
-- Ansibleプレイブックとロールの品質チェック
-- ベストプラクティス遵守の確認
-- 潜在的な問題の早期発見
+### ⚛ **テスティングワークフロー**
 
-#### 2. **YAML Lint** 
-```yaml
-- name: Run yamllint
-  run: yamllint .
-```
-- YAML構文とスタイルのチェック
-- インデント、改行、文字数制限の検証
-- 設定ファイルの一貫性確保
+#### 📋 **Role-Specific Molecule Tests** (`molecule-tests.yml`)
+- **トリガー**: Role変更時の自動検出 (PR/push)
+- **目的**: 変更されたロールの効率的テスト
+- **実行内容**:
+  - 変更検出による動的テスト対象選択
+  - ロール単位でのMoleculeテスト実行
+  - 高速フィードバックループ
 
-#### 3. **Ansible Syntax Check**
-```yaml
-- name: Check ansible syntax
-  run: |
-    ansible-playbook --syntax-check deploy/servers/playbooks/*.yml
-    ansible-playbook --syntax-check deploy/appliances/playbooks/*.yml
-```
-- Ansibleプレイブックの構文検証
-- 実行前のエラー検出
-- インポート・インクルードの整合性確認
+#### 🧪 **Full Test Suite** (`molecule-full-suite.yml`)
+- **トリガー**: mainブランチpush、スケジュール実行 (毎晩2時JST)、手動実行
+- **目的**: 包括的な品質保証とパフォーマンス分析
+- **実行内容**:
+  - **Full Test Suite**: 全コレクション横断テスト
+  - **Comprehensive Validation**: 構造・依存関係・互換性検証
+  - **Performance Analysis**: プレイブック・ロール複雑性分析
+  - **Scheduled Deep Testing**: 定期的な品質監査
 
-#### 4. **Makefile Validation**
-```yaml
-- name: Validate Makefile
-  run: |
-    make help
-    make list
-    make list TARGET=appliances
-```
-- Makefile機能の基本動作確認
-- 統一コマンド体系の検証
-- ヘルプとリスト機能のテスト
+### 🚀 **リリース管理**
+- **Collections Release** (`release-collections.yml`): Ansibleコレクションリリース
+- **General Release** (`release.yml`): プロジェクト全体のリリース
 
-### 検証対象
+## 🔧 新しいワークフロー設計の利点
 
-#### 📁 ディレクトリ構造
-- `ansible_collections/yamisskey/servers/` - 再配布可能なサーバーコレクション
-- `ansible_collections/yamisskey/appliances/` - 再配布可能なアプライアンスコレクション
-- `deploy/servers/` - 実行用プレイブック/インベントリ/設定
-- `deploy/appliances/` - 実行用プレイブック/インベントリ/設定
-- `.yamllint.yaml` - YAML Lint設定
-- `.ansible-lint` - Ansible Lint設定
+### 🚀 **パフォーマンス向上**
+- **並列実行**: 各ワークフローが独立して実行
+- **早期フィードバック**: Lint/Syntaxが先に完了
+- **失敗高速検出**: 問題カテゴリーの即時特定
 
-#### 📝 設定ファイル
-- プレイブック (`*.yml`)
-- インベントリファイル
-- 変数ファイル (`group_vars/`, `host_vars/`)
-- Ansible設定 (`ansible.cfg`)
+### 🎯 **責務分離**
+- **Lint**: コード品質 (yamllint, ansible-lint, sanity)
+- **Syntax**: 構文正確性 (playbook syntax-check)
+- **Security**: セキュリティ (Trivy, secret detection)
+- **Idempotency**: 運用信頼性 (--check --diff tests)
 
-#### 🔧 スクリプト・ツール
-- `Makefile` - 統一Ansibleラッパー
-- テンプレートファイル (`*.j2`)
-- 要件ファイル (`requirements.yml`)
+### 🐛 **デバッグ効率化**
+- **問題特定の高速化**: カテゴリー別の明確な分離
+- **部分的再実行**: 特定領域のみの修正・テスト
+- **ログ分散**: 各ワークフローで独立したログ
 
-## 🚀 リリースワークフロー詳細
+## 📊 ワークフロー詳細
 
-### 自動リリース機能
+### 🔍 Lint Workflow
 
-#### トリガー条件
+#### ジョブ構成
+1. **yaml-lint**: YAML構文・スタイルチェック
+2. **ansible-lint**: Ansibleベストプラクティス検証 (servers/appliances並列)
+3. **ansible-test-sanity**: Ansibleコレクション内部検証
+4. **verify-structure**: ディレクトリ構造確認
+
+#### 特徴
+- **マトリックス戦略**: servers/appliancesの並列処理
+- **外部Collection**: 自動インストール・キャッシュ
+- **非ブロッキング**: 一部警告は許可
+
+### 📋 Syntax Workflow
+
+#### ジョブ構成
+- **syntax-check**: 全プレイブックの構文検証
+- **マトリックス**: servers/appliances並列実行
+
+#### 実行範囲
+- `deploy/servers/playbooks/*.yml`
+- `deploy/appliances/playbooks/*.yml`
+
+### 🔐 Security Workflow
+
+#### ジョブ構成
+1. **trivy-scan**: インフラ設定の脆弱性スキャン
+2. **secret-scan**: 機密情報の誤コミット検出
+3. **dependency-check**: 依存関係セキュリティチェック
+
+#### 検出対象
+- **設定ミス**: Trivy misconfig
+- **機密情報**: AGE keys, API keys, passwords, certificates
+- **脆弱性**: Python/Ansible依存関係
+
+### 🔄 Idempotency Workflow
+
+#### ジョブ構成
+1. **prepare-inventory**: テスト用インベントリ作成・共有
+2. **servers-core-infrastructure**: [common, security, system-init]
+3. **servers-application-stack**: [misskey, minio, monitoring] 
+4. **appliances-truenas**: [setup, migrate-minio-truenas]
+
+#### テスト戦略
+- **ドライラン**: `--check --diff`での安全な検証
+- **並列実行**: プレイブック単位でのマトリックス
+- **アーティファクト共有**: インベントリファイルの効率的再利用
+
+## ⚙️ 設定・トリガー
+
+### 共通トリガー
 ```yaml
 on:
+  pull_request:
+    branches: ["**"]
   push:
-    tags:
-      - 'v*'
-```
-- `v1.0.0`, `v2.1.3`等のセマンティックバージョニングタグ
-- タグ作成時に自動実行
-
-#### リリース作成
-```yaml
-- name: Create Release
-  uses: actions/create-release@v1
-  with:
-    tag_name: ${{ github.ref }}
-    release_name: Release ${{ github.ref }}
-    body: |
-      Changes in this Release
-      - Added: 新機能追加
-      - Changed: 既存機能の変更
-      - Fixed: バグ修正
-    draft: false
-    prerelease: false
+    branches: [main]
 ```
 
-### リリース内容
-- **リリースノート**: 変更履歴の自動生成
-- **アーティファクト**: 設定ファイルのアーカイブ
-- **タグ管理**: セマンティックバージョニング
-
-## ⚙️ 設定ファイル
-
-### Linting設定
-
-#### `.yamllint.yaml`
+### 並行性制御
 ```yaml
-extends: default
-rules:
-  line-length:
-    max: 120
-  indentation:
-    spaces: 2
-  comments:
-    min-spaces-from-content: 1
-```
-
-#### `.ansible-lint`
-```yaml
-exclude_paths:
-  - .cache/
-  - .github/
-  - backups/
-  - logs/
-
-skip_list:
-  - yaml[line-length]
-  - name[casing]
-```
-
-### GitHub Actions設定
-```yaml
-env:
-  ANSIBLE_FORCE_COLOR: 1
-  ANSIBLE_HOST_KEY_CHECKING: False
-  PY_COLORS: 1
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 ```
 
 ## 🔧 ローカル開発
 
-### 事前実行推奨
+### 事前実行推奨 (カテゴリー別)
 ```bash
-# プッシュ前のローカル検証
+# Lint
 yamllint .
 ansible-lint ansible_collections/yamisskey/servers
 ansible-lint ansible_collections/yamisskey/appliances
-make help
-make list
+
+# Syntax  
+ansible-playbook --syntax-check deploy/servers/playbooks/*.yml
+ansible-playbook --syntax-check deploy/appliances/playbooks/*.yml
+
+# Security (手動確認)
+grep -r "AGE-SECRET-KEY" . --exclude-dir=.git
+
+# Idempotency (例)
+ansible-playbook -i inventory playbooks/common.yml --check --diff
 ```
 
-### 設定修正
-```bash
-# Linting エラー修正
-ansible-lint --fix ansible_collections/yamisskey/servers
-yamllint --format parsable . | head -20
-```
-
-## 📊 CI/CD メトリクス
+## 📈 CI/CD メトリクス
 
 ### 品質指標
 - **Lint通過率**: 100%目標
-- **構文エラー**: 0件
-- **実行時間**: 5分以内
-- **成功率**: 95%以上
+- **Security問題**: 0件 (CRITICAL/HIGH)
+- **Syntax エラー**: 0件
+- **Idempotency**: 全プレイブック通過
 
-### パフォーマンス
-- **並列実行**: マトリックス戦略活用
-- **キャッシュ**: 依存関係のキャッシュ
-- **最適化**: 不要なステップの除外
+### パフォーマンス目標
+- **Lint**: 3分以内
+- **Syntax**: 2分以内  
+- **Security**: 5分以内
+- **Idempotency**: 8分以内
+
+## 🔄 マイグレーション情報
+
+### 変更点
+- **責務分離**: 明確なカテゴリー別実行
+- **並列化強化**: matrix strategyの活用拡大
+
+### 互換性
+- **既存機能**: 全て新ワークフローで継承
+- **追加機能**: セキュリティスキャンの拡充
+- **設定**: トリガー条件・環境変数は維持
 
 ## 🐛 トラブルシューティング
 
-### よくあるエラー
+### カテゴリー別デバッグ
 
-#### Ansible Lint エラー
+#### Lint 失敗
 ```bash
-# 問題: name[casing] - Task名の命名規則
-# 解決: タスク名を適切にキャピタライズ
-
-# 問題: yaml[line-length] - 行長制限
-# 解決: 120文字以内に分割
+# ローカル再現
+yamllint .github ansible_collections deploy
+ansible-lint --offline -v ansible_collections/yamisskey/servers
 ```
 
-#### YAML Lint エラー
+#### Syntax 失敗
 ```bash
-# 問題: indentation - インデント不正
-# 解決: 2スペース統一
-
-# 問題: trailing-spaces - 末尾空白
-# 解決: エディタ設定で自動削除
+# 個別チェック
+ansible-playbook -i localhost, -c local deploy/servers/playbooks/common.yml --syntax-check
 ```
 
-### デバッグ方法
+#### Security 失敗
 ```bash
-# ローカルでCIと同等の検証
-docker run --rm -v $(pwd):/data cytopia/ansible-lint:latest ansible_collections/yamisskey/servers
-docker run --rm -v $(pwd):/data cytopia/yamllint:latest .
+# 機密情報チェック
+grep -rEi "password\s*=\s*['\"][^'\"]{8,}['\"]" . --exclude-dir=.git
+```
+
+#### Idempotency 失敗  
+```bash
+# ローカル --check
+ansible-playbook -i inventory playbook.yml --check --diff -e ansible_become=false
 ```
 
 ## 🔗 関連ドキュメント
 
-- [**GitHub Actions公式**](https://docs.github.com/en/actions) - ワークフロー詳細
-- [**Ansible Lint**](https://ansible-lint.readthedocs.io/) - Linting ルール
-- [**YAML Lint**](https://yamllint.readthedocs.io/) - YAML検証
-- [**プロジェクト全体**](../README.md) - 全体概要
+- [**GitHub Actions**](https://docs.github.com/en/actions) - ワークフロー仕様
+- [**Ansible Lint**](https://ansible-lint.readthedocs.io/) - リンティングルール
+- [**Trivy**](https://trivy.dev/) - セキュリティスキャナー
+- [**プロジェクト概要**](../README.md) - 全体アーキテクチャ
 
-## 📈 改善計画
+## 📋 今後の改善計画
 
-### 今後の拡張
-- **セキュリティスキャン**: GitLeaks、依存関係チェック
-- **テスト環境**: Docker-in-Docker でのプレイブック実行テスト
-- **通知機能**: Slack、Discord連携
-- **メトリクス**: パフォーマンス・品質追跡
+### 次期機能
+- **依存関係グラフ**: ワークフロー間の依存関係可視化
+- **キャッシュ最適化**: 共通依存関係の効率的共有
+- **通知統合**: Slack/Discord/Teams連携
+- **品質ゲート**: 品質スコアによる自動判定
 
-### 自動化強化
-- **自動マージ**: Dependabot PR の自動統合
-- **スケジュール実行**: 定期的な健全性チェック
-- **マルチ環境**: 複数OS・バージョンでのテスト
+### 監視・分析
+- **実行時間分析**: ボトルネック特定・最適化
+- **成功率追跡**: 品質トレンド監視
+- **リソース使用量**: コスト効率化
