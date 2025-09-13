@@ -442,7 +442,7 @@
             - postgres_verify_tables
             - postgres_verify_data
             - postgres_rollback
-            ignore_errors: true
+          ignore_errors: true
           
         - name: DR rehearsal cleanup summary
           debug:
