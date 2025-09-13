@@ -226,12 +226,20 @@
 
 - name: Backup and deploy fail2ban configuration
   block:
+    - name: Check if jail.conf exists
+      ansible.builtin.stat:
+        path: /etc/fail2ban/jail.conf
+      register: jail_conf_exists
+
     - name: Backup original jail.conf
       ansible.builtin.copy:
         src: /etc/fail2ban/jail.conf
         dest: /etc/fail2ban/jail.conf.bak
         remote_src: true
       become: true
+      when:
+        - jail_conf_exists.stat.exists
+        - not ansible_check_mode
 
     - name: Deploy fail2ban configuration
       ansible.builtin.template:

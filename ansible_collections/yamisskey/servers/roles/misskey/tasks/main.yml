@@ -111,7 +111,7 @@
 
 - name: Determine if updates are needed
   set_fact:
-    updates_needed: "{{ git_pull_output.stdout != 'Already up to date.' or git_submodule_update_output.stdout != '' }}"
+    updates_needed: "{{ (git_pull_output.stdout | default('Already up to date.')) != 'Already up to date.' or (git_submodule_update_output.stdout | default('')) != '' }}"
 
 - name: Stop Misskey services
   command: '{{ docker_compose_cmd }} stop'
