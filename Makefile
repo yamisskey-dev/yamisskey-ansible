@@ -37,7 +37,11 @@ VERSION ?= 1.0.0
 ANSIBLE_CMD := ansible-playbook
 TIMESTAMP := $(shell date +%Y%m%dT%H%M%S)
 PATH_WITH_ANSIBLE := $$HOME/.local/share/pipx/venvs/molecule/bin:$$HOME/.local/bin:$$PATH
-COLLECTIONS_PATH := .
+# Resolve repository root once to an absolute path
+REPO_ROOT := $(abspath .)
+COLLECTIONS_PATH := $(REPO_ROOT)
+# Absolute path for ansible.cfg (if present)
+CONFIG_ABS := $(abspath $(CONFIG))
 
 # Ensure directories exist
 $(shell mkdir -p $(LOG_DIR) $(BACKUP_DIR))
@@ -50,8 +54,8 @@ run:
 	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
 	@echo "🚀 Running $(COLLECTION): $(PLAYBOOK)"
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
-	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
+	export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
+	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
 	$(ANSIBLE_CMD) -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		$(if $(TAGS),--tags $(TAGS)) \
@@ -63,8 +67,8 @@ check:
 	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
 	@echo "🔍 Checking $(COLLECTION): $(PLAYBOOK)"
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH)"; \
-	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
+	export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
+	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
 	$(ANSIBLE_CMD) -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		--check --diff
@@ -260,7 +264,7 @@ test:
 	  *) echo "❌ Invalid MODE. Use: syntax, converge, cleanup, or test"; exit 1;; \
 	esac; \
 	export PATH="$(PATH_WITH_ANSIBLE)"; \
-	export ANSIBLE_COLLECTIONS_PATH="$(COLLECTIONS_PATH):$$HOME/.ansible/collections"; \
+	export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
 	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
 	if [ -n "$(ROLE)" ]; then \
 		ROLE_EFF="$(ROLE)"; \

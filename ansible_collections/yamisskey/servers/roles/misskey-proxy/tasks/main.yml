@@ -65,7 +65,7 @@
   changed_when: "'Creating' in summaly_deploy.stdout or 'Starting' in summaly_deploy.stdout"
 
 - name: Deploy media-proxy-rs container
-  community.docker.docker_container:
+  community.docker.docker:
     name: media-proxy-rs-server
     image: 'ghcr.io/yamisskey/media-proxy-rs:main'
     ports:
@@ -76,7 +76,7 @@
     pull: always
 
 - name: Deploy nginx proxy container
-  community.docker.docker_container:
+  community.docker.docker:
     name: proxy
     image: nginx
     ports:

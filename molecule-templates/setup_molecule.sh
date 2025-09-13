@@ -27,6 +27,9 @@ setup_molecule_for_role() {
     
     # Generate verify.yml
     sed -e "s/\${ROLE_NAME}/$role_name/g" -e "s/\${COLLECTION_NAME}/$collection_name/g" "$SCRIPT_DIR/verify.yml.template" > "$role_path/molecule/default/verify.yml"
+
+    # Generate requirements.yml (collections)
+    cp "$SCRIPT_DIR/requirements.yml.template" "$role_path/molecule/default/requirements.yml"
     
     echo "✅ Molecule setup completed for $role_name"
 }

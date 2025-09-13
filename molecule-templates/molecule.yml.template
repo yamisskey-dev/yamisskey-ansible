@@ -5,31 +5,41 @@ driver:
   name: docker
 platforms:
   - name: ${ROLE_NAME}-test-instance
-    image: quay.io/ansible/molecule-ubuntu:20.04
-    pre_build_image: true
-    privileged: true
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    tmpfs:
-      - /run
-      - /tmp
+    image: ubuntu:20.04
+    dockerfile: |
+      FROM ubuntu:20.04
+      ENV DEBIAN_FRONTEND=noninteractive
+      RUN apt-get update && apt-get install -y \
+          python3 python3-pip sudo systemd \
+          && apt-get clean \
+          && rm -rf /var/lib/apt/lists/* \
+          && useradd -m -s /bin/bash ansible \
+          && echo 'ansible:ansible' | chpasswd \
+          && usermod -aG sudo ansible \
+          && echo 'ansible ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+      CMD ["/bin/bash"]
+    command: /bin/bash -c "while true; do sleep 1000; done"
+    privileged: false
     capabilities:
-      - SYS_ADMIN
-    command: /lib/systemd/systemd
-    networks:
-      - name: molecule-test-network
+      - NET_ADMIN
 provisioner:
   name: ansible
+  connection_options:
+    ansible_connection: community.docker.docker
+  env:
+    ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/../../../../..:${HOME}/.ansible/collections:/usr/share/ansible/collections"
   config_options:
     defaults:
       callbacks_enabled: profile_tasks,timer,yaml
       stdout_callback: yaml
+      deprecation_warnings: False
+      remote_tmp: /tmp/ansible
   inventory:
     host_vars:
       ${ROLE_NAME}-test-instance:
-        # Role-specific test configuration will be added here
         ansible_user: "root"
+        ansible_connection: community.docker.docker
+        ansible_python_interpreter: /usr/bin/python3
 verifier:
   name: ansible
 scenario:

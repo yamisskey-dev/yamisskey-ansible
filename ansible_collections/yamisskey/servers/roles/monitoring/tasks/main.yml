@@ -34,7 +34,7 @@
 # 5. Exporters Setup
 ## 5.1 cAdvisor Setup
 - name: Deploy cAdvisor container
-  community.docker.docker_container:
+  community.docker.docker:
     name: cadvisor
     image: "gcr.io/cadvisor/cadvisor:v0.49.1"
     state: started
@@ -74,7 +74,7 @@
     - misskey_monitoring
 
 - name: Deploy Blackbox Exporter container
-  community.docker.docker_container:
+  community.docker.docker:
     name: blackbox_exporter
     image: quay.io/prometheus/blackbox-exporter:latest
     state: started

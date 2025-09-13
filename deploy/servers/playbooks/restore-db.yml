@@ -102,7 +102,7 @@
         - name: Backup current database (safety measure)
           block:
             - name: Create current DB backup
-              community.docker.docker_container:
+              community.docker.docker:
                 name: "{{ postgres_backup_container }}"
                 image: postgres:15
                 command: >
@@ -177,7 +177,7 @@
         - name: Perform database restore
           block:
             - name: Stop PostgreSQL container
-              community.docker.docker_container:
+              community.docker.docker:
                 name: "{{ postgres_container_name }}"
                 state: stopped
             
@@ -197,7 +197,7 @@
               become: true
               
             - name: Start PostgreSQL container for restore
-              community.docker.docker_container:
+              community.docker.docker:
                 name: "{{ postgres_container_name }}"
                 image: postgres:15
                 state: started
@@ -211,7 +211,7 @@
                   - name: misskey_default
             
             - name: Wait for PostgreSQL to be ready
-              community.docker.docker_container:
+              community.docker.docker:
                 name: postgres_restore_check
                 image: postgres:15
                 command: pg_isready -h {{ postgres_container_name }} -U {{ vault_postgres_user }}
@@ -224,7 +224,7 @@
               delay: 2
           
             - name: Restore database from backup
-              community.docker.docker_container:
+              community.docker.docker:
                 name: postgres_restore
                 image: postgres:15
                 command: >
@@ -246,7 +246,7 @@
         - name: Verify database restore
           block:
             - name: Check database connectivity
-              community.docker.docker_container:
+              community.docker.docker:
                 name: postgres_verify_connection
                 image: postgres:15
                 command: >
@@ -264,7 +264,7 @@
               register: db_connection_check
           
             - name: Verify critical tables exist
-              community.docker.docker_container:
+              community.docker.docker:
                 name: postgres_verify_tables
                 image: postgres:15
                 command: >
@@ -282,7 +282,7 @@
               register: tables_check
           
             - name: Verify user data integrity
-              community.docker.docker_container:
+              community.docker.docker:
                 name: postgres_verify_data
                 image: postgres:15
                 command: >
@@ -402,7 +402,7 @@
               Rolling back to original database...
           
         - name: Restore from current backup (rollback)
-          community.docker.docker_container:
+          community.docker.docker:
             name: postgres_rollback
             image: postgres:15
             command: >
@@ -431,7 +431,7 @@
 
       always:
         - name: Cleanup temporary containers
-          community.docker.docker_container:
+          community.docker.docker:
             name: "{{ item }}"
             state: absent
           loop:
