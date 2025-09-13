@@ -97,7 +97,9 @@ jobs:
           set -euo pipefail
           mkdir -p "${{ runner.temp }}/ansible-local" \
                    "${{ runner.temp }}/molecule" \
-                   "${{ runner.temp }}/molecule-state"
+                   "${{ runner.temp }}/molecule-state" \
+                   "${{ runner.temp }}/.cache" \
+                   "${{ runner.temp }}/galaxy-cache"
           pwd && ls -la
           echo "ANSIBLE_CONFIG=${ANSIBLE_CONFIG}"
           which ansible-galaxy || true
@@ -111,6 +113,8 @@ jobs:
           ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
           MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
           MOLECULE_STATE_DIRECTORY: ${{ runner.temp }}/molecule-state
+          XDG_CACHE_HOME: ${{ runner.temp }}/.cache
+          ANSIBLE_GALAXY_CACHE_DIR: ${{ runner.temp }}/galaxy-cache
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 
@@ -153,7 +157,9 @@ jobs:
           set -euo pipefail
           mkdir -p "${{ runner.temp }}/ansible-local" \
                    "${{ runner.temp }}/molecule" \
-                   "${{ runner.temp }}/molecule-state"
+                   "${{ runner.temp }}/molecule-state" \
+                   "${{ runner.temp }}/.cache" \
+                   "${{ runner.temp }}/galaxy-cache"
           pwd && ls -la
           which ansible-galaxy || true
           ansible-galaxy --version || true
@@ -166,6 +172,8 @@ jobs:
           ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
           MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
           MOLECULE_STATE_DIRECTORY: ${{ runner.temp }}/molecule-state
+          XDG_CACHE_HOME: ${{ runner.temp }}/.cache
+          ANSIBLE_GALAXY_CACHE_DIR: ${{ runner.temp }}/galaxy-cache
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 
