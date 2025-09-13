@@ -210,7 +210,7 @@ id: 'aidx'
 #outgoingAddressFamily: ipv4
 
 # Proxy for HTTP/HTTPS
-proxy: {{ misskey_proxy | default('http://127.0.0.1:' + host_services.linode_prox.squid|string) }}
+proxy: {{ misskey_proxy | default('http://127.0.0.1:3128') }}
 
 proxyBypassHosts:
   - api.deepl.com

@@ -140,7 +140,7 @@
       ansible.builtin.debug:
         msg: '{{ ufw_status.stdout }}'
   become: true
-  when: ansible_become | default(false)
+  when: (ansible_become | default(false)) | bool
 
 - name: Ensure UFW is enabled (finalize firewall)
   ansible.builtin.command: ufw --force enable

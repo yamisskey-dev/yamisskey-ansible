@@ -9,17 +9,20 @@
   ansible.builtin.command: gpg --dearmor -o /etc/apt/trusted.gpg.d/playit.gpg /tmp/playit.gpg
   args:
     creates: /etc/apt/trusted.gpg.d/playit.gpg
+  when: not ansible_check_mode
 
 - name: Set Playit GPG key permissions
   ansible.builtin.file:
     path: /etc/apt/trusted.gpg.d/playit.gpg
     mode: '0644'
+  when: not ansible_check_mode
 
 - name: Add Playit repository
   ansible.builtin.apt_repository:
     repo: "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./"
     filename: playit-cloud
     state: present
+  when: not ansible_check_mode
 
 - name: Clean up temporary GPG file
   ansible.builtin.file:
@@ -29,11 +32,13 @@
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true
+  when: not ansible_check_mode
 
 - name: Install Playit
   ansible.builtin.apt:
     name: playit
     state: present
+  when: not ansible_check_mode
 
 - name: Verify Playit installation
   ansible.builtin.command: playit --version

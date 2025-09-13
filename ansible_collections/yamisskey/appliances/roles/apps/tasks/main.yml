@@ -14,6 +14,12 @@
       Compose path: {{ (truenas_apps_config_path | default('/mnt/pool/apps')) }}/minio/docker-compose.yml
       ==============================================
 
+# Ensure base paths have safe defaults for CI/check
+- name: Set default paths for apps configs (CI safe)
+  set_fact:
+    truenas_apps_config_path: "{{ truenas_apps_config_path | default('/mnt/pool/apps') }}"
+    truenas_cloudflared_config_path: "{{ truenas_cloudflared_config_path | default(truenas_apps_config_path + '/cloudflared') }}"
+
 # 0) 互換レイヤ（servers側の命名を受けても動くように）
 - name: Load compatibility variable mapping
   import_tasks: 00_compat.yml
