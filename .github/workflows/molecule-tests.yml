@@ -93,8 +93,24 @@ jobs:
       - name: Run Molecule syntax check
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
         run: |
+          set -euo pipefail
+          mkdir -p "${{ runner.temp }}/home" \
+                   "${{ runner.temp }}/ansible-local" \
+                   "${{ runner.temp }}/molecule" \
+                   "${{ runner.temp }}/molecule-state"
+          pwd && ls -la
+          echo "ANSIBLE_CONFIG=${ANSIBLE_CONFIG}"
+          echo "HOME=${HOME}"
+          molecule --version
+          ansible --version || true
+          ansible-galaxy collection list || true
           molecule syntax
         env:
+          HOME: ${{ runner.temp }}/home
+          ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
+          ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
+          MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
+          MOLECULE_STATE_DIRECTORY: ${{ runner.temp }}/molecule-state
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 
@@ -133,8 +149,22 @@ jobs:
       - name: Run Molecule test
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
         run: |
+          set -euo pipefail
+          mkdir -p "${{ runner.temp }}/home" \
+                   "${{ runner.temp }}/ansible-local" \
+                   "${{ runner.temp }}/molecule" \
+                   "${{ runner.temp }}/molecule-state"
+          pwd && ls -la
+          molecule --version
+          ansible --version || true
+          ansible-galaxy collection list || true
           molecule test
         env:
+          HOME: ${{ runner.temp }}/home
+          ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
+          ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
+          MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
+          MOLECULE_STATE_DIRECTORY: ${{ runner.temp }}/molecule-state
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 
