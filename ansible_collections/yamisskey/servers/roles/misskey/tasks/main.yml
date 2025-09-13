@@ -44,6 +44,13 @@
     src: docker_example.yml.j2
     dest: '{{ misskey_dir }}/.config/default.yml'
     mode: '0644'
+  vars:
+    # Provide minimal safe defaults for CI/check runs
+    host_services: "{{ host_services | default({
+      'joseph': {'node_exporter': 9100},
+      'balthasar': {'cadvisor': 8085},
+      'caspar': {'blackbox_exporter': 9115, 'grafana': 3000}
+    }) }}"
   when: not required_files.results[1].stat.exists
 
 - name: Deploy docker.env from template

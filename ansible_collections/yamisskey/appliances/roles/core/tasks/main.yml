@@ -75,6 +75,7 @@
     path: "{{ truenas_backup_path }}"
     state: directory
     mode: '0755'
+  when: truenas_backup_path is defined
 
 - name: Save system configuration (download to file)
   vars:
@@ -89,3 +90,4 @@
       - "{{ cfgfile }}"
   register: cfgsave
   changed_when: cfgsave.rc == 0
+  when: truenas_backup_path is defined

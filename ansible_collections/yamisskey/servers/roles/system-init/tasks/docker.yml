@@ -4,23 +4,27 @@
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
+  when: not ansible_check_mode
 
 - name: Add Docker GPG key
   ansible.builtin.get_url:
     url: "https://download.docker.com/linux/{{ os_name }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
+  when: not ansible_check_mode
 
 - name: Set Docker GPG key permissions
   ansible.builtin.file:
     path: /etc/apt/keyrings/docker.asc
     mode: 'a+r'
+  when: not ansible_check_mode
 
 - name: Add Docker repository
   ansible.builtin.apt_repository:
     repo: "deb [arch={{ 'amd64' if arch == 'x86_64' else arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ os_name }} {{ codename }} stable"
     filename: docker
     state: present
+  when: not ansible_check_mode
 
 - name: Update apt cache for Docker
   ansible.builtin.apt:

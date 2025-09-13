@@ -6,9 +6,15 @@
     - rsyslog
     - logrotate
     - ufw
-    - tailscale
     - fail2ban
     - lynis
+  become: true
+
+- name: Ensure tailscale is installed (optional)
+  ansible.builtin.apt:
+    name: tailscale
+    state: present
+  when: install_tailscale | default(false)
   become: true
 
 - name: Ensure syslog user exists

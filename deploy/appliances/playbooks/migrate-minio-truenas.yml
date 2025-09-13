@@ -17,7 +17,7 @@
     migration_temp_dir: "/tmp/truenas-minio-migration"
     
     # TrueNAS Cloudflare Tunnel設定
-    target_minio_endpoint: "https://{{ truenas_minio_domain }}"
+    target_minio_endpoint: "https://{{ truenas_minio_domain | default('minio.example.invalid') }}"
     target_platform: "truenas-tunnel"
     
     # 移行するバケット
