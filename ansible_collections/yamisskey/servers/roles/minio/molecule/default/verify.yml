@@ -7,24 +7,24 @@
     test_secrets_file: "/tmp/test-secrets.yml"
   
   tasks:
-    - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
-      become: true
-      
+    - name: Check docker CLI (non-fatal)
+      command: docker --version
+      register: docker_cli
+      changed_when: false
+      failed_when: false
+
     - name: Verify MinIO container is running
-      community.docker.docker_container_info:
-        name: "{{ minio_container_name }}"
-      register: container_info
+      command: docker inspect -f '{{'{{'}}.State.Status{{'}}'}}' {{ minio_container_name }}
+      register: container_status
+      changed_when: false
+      failed_when: container_status.rc != 0
       
     - name: Assert container is running
       assert:
         that:
-          - container_info.exists
-          - container_info.container.State.Status == "running"
-        fail_msg: "MinIO container is not running"
-        success_msg: "MinIO container is running successfully"
+          - container_status.stdout == "running"
+          fail_msg: "MinIO container is not running"
+          success_msg: "MinIO container is running successfully"
 
     - name: Wait for MinIO to be ready
       wait_for:
@@ -160,7 +160,7 @@
         msg: |
           MinIO Deployment Verification Summary:
           ====================================
-          ✅ Container Status: {{ 'Running' if container_info.container.State.Status == 'running' else 'Failed' }}
+          ✅ Container Status: {{ 'Running' if container_status.stdout == 'running' else 'Failed' }}
           ✅ Health Check: {{ 'OK' if health_test.status in [200, 403] else 'Failed' }}
           ✅ Secrets File: {{ 'Created' if secrets_file_check.stat.exists else 'Missing' }}
           ✅ MinIO Client: {{ 'Installed' if mc_client_check.stat.exists else 'Missing' }}

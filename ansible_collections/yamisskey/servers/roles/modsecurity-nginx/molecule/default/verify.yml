@@ -7,24 +7,24 @@
     test_domain: "{{ domain | default('test.example.com') }}"
   
   tasks:
-    - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
-      become: true
-      
+    - name: Check docker CLI (non-fatal)
+      command: docker --version
+      register: docker_cli
+      changed_when: false
+      failed_when: false
+
     - name: Verify ModSecurity container is running
-      community.docker.docker_container_info:
-        name: "{{ test_container_name }}"
-      register: container_info
+      command: docker inspect -f '{{'{{'}}.State.Status{{'}}'}}' {{ test_container_name }}
+      register: container_status
+      changed_when: false
+      failed_when: container_status.rc != 0
       
     - name: Assert container is running
       assert:
         that:
-          - container_info.exists
-          - container_info.container.State.Status == "running"
-        fail_msg: "ModSecurity container is not running"
-        success_msg: "ModSecurity container is running successfully"
+          - container_status.stdout == "running"
+          fail_msg: "ModSecurity container is not running"
+          success_msg: "ModSecurity container is running successfully"
 
     - name: Wait for ModSecurity-nginx to be ready
       wait_for:

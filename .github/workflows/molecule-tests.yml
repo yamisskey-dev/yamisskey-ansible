@@ -2,12 +2,12 @@ name: ⚛ Molecule Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main,develop]
     paths:
       - 'ansible_collections/**'
       - '.github/workflows/molecule-tests.yml'
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'ansible_collections/**'
       - '.github/workflows/molecule-tests.yml'
