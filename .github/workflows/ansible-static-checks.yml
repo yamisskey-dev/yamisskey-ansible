@@ -1,4 +1,4 @@
-name: Static Checks (lint / syntax / sanity / security)
+name: ⚡ Static Checks (lint / syntax / sanity / security)
 
 on:
   pull_request:
@@ -59,14 +59,14 @@ jobs:
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           echo "🔍 Linting yamisskey.servers Collection..."
-          ansible-lint -v ansible_collections/yamisskey/servers
+          ansible-lint --offline -v ansible_collections/yamisskey/servers
 
       - name: ansible-lint (yamisskey.appliances Collection)
         env:
           ANSIBLE_COLLECTIONS_PATH: .
         run: |
           echo "🔍 Linting yamisskey.appliances Collection..."
-          ansible-lint -v ansible_collections/yamisskey/appliances
+          ansible-lint --offline -v ansible_collections/yamisskey/appliances
 
       - name: Ansible syntax-check (servers deploy playbooks)
         env:
