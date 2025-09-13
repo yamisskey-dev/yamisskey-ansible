@@ -57,24 +57,27 @@
           }
         mode: '0644'
 
-    - name: Ensure test-backend container is running (docker CLI)
-      shell: |
-        {% raw %}
-        if ! docker ps --format '{{.Names}}' | grep -q '^test-backend$'; then
-          docker run -d --name test-backend \
-            -p 8888:80 \
-            --network molecule-test-network \
-            -v /tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro \
-            --restart always \
-            nginx:alpine
-        else
-          # ensure it's started
-          docker start test-backend >/dev/null 2>&1 || true
-        fi
-        {% endraw %}
-      args:
-        executable: /bin/bash
+    - name: Check if test-backend exists
+      command: docker container inspect test-backend
+      register: backend_inspect
       changed_when: false
+      failed_when: false
+
+    - name: Run test-backend container if missing
+      command: >
+        docker run -d --name test-backend
+        -p 8888:80
+        --network molecule-test-network
+        -v /tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro
+        --restart always
+        nginx:alpine
+      when: backend_inspect.rc != 0
+
+    - name: Ensure test-backend is started
+      command: docker start test-backend
+      register: backend_start
+      changed_when: backend_start.rc == 0
+      failed_when: false
 
   tasks:
     - name: Apply ModSecurity-nginx role
