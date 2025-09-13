@@ -23,6 +23,7 @@
   loop: "{{ truenas_datasets }}"
   loop_control:
     loop_var: dataset
+  when: truenas_datasets is defined
 
 # 2) 権限設定（ACL前提の安全なやり方）
 #    POSIX運用なら stripacl=true でACLを剥がしてから mode/uid/gid を適用
@@ -44,6 +45,7 @@
              "stripacl": ((item.acl | default("POSIX")) == "POSIX")
            } | to_json }}
   loop: "{{ truenas_datasets }}"
+  when: truenas_datasets is defined
 
 # 3) グループ/ユーザー（存在チェック→作成）
 #    truenas_groups: [ { name: "apps", gid: 1800 } ]
