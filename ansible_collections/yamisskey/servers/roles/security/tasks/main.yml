@@ -185,6 +185,10 @@
     - name: Set Tailscale IPs
       ansible.builtin.set_fact:
         tailscale_ips: "{{ tailscale_status.stdout | from_json | json_query('Peer.*.TailscaleIPs') | flatten | select('match', '100\\..*') | list }}"
+      when:
+        - tailscale_status.stdout is defined
+        - tailscale_status.stdout | length > 0
+        - tailscale_status.stdout != ""
 
     - name: Allow SSH from Tailscale IPs
       ansible.builtin.command: ufw allow proto tcp from {{ item }} to any port 22

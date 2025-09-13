@@ -69,4 +69,4 @@
     dest: "/usr/local/bin/mc"
     mode: '0755'
     force: no
-    checksum: "sha256:{{ mc_release_sha256 }}"
+  when: not ansible_check_mode

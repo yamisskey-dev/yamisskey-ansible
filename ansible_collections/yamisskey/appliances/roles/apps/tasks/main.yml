@@ -52,6 +52,7 @@
     src: cloudflared-config.yml.j2
     dest: "{{ truenas_cloudflared_config_path }}/config.yml"
     mode: '0644'
+  when: truenas_minio_domain is defined
 
 - name: Deploy MinIO docker-compose.yml (Custom App YAML)
   when: truenas_manage_custom_compose | default(false)

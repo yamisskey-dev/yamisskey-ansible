@@ -95,7 +95,9 @@
   command: '{{ docker_compose_cmd }} down'
   args:
     chdir: '{{ misskey_dir }}'
-  when: not db_initialized.stat.exists
+  when:
+    - not db_initialized.stat.exists
+    - not ansible_check_mode
 
 - name: Initialize database (first time only)
   command: '{{ docker_compose_cmd }} run --rm web pnpm run init'
