@@ -145,9 +145,10 @@
 - name: Ensure UFW is enabled (finalize firewall)
   ansible.builtin.command: ufw --force enable
   changed_when: false
-  when: ufw_enable | default(true)
   become: true
-  when: (ansible_become | default(false)) | bool
+  when:
+    - ufw_enable | default(true)
+    - (ansible_become | default(false)) | bool
 - name: Check UFW status (post-enable)
   ansible.builtin.command: ufw status verbose
   register: ufw_status_post
