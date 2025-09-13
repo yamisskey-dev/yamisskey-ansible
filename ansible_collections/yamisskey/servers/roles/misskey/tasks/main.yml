@@ -103,7 +103,9 @@
   command: '{{ docker_compose_cmd }} run --rm web pnpm run init'
   args:
     chdir: '{{ misskey_dir }}'
-  when: not db_initialized.stat.exists
+  when:
+    - not db_initialized.stat.exists
+    - not ansible_check_mode
   register: init_output
   failed_when: init_output.rc != 0
 
@@ -115,12 +117,15 @@
   command: '{{ docker_compose_cmd }} stop'
   args:
     chdir: '{{ misskey_dir }}'
-  when: updates_needed or not db_initialized.stat.exists
+  when:
+    - updates_needed or not db_initialized.stat.exists
+    - not ansible_check_mode
 
 - name: Start Misskey
   command: '{{ docker_compose_cmd }} up -d'
   args:
     chdir: '{{ misskey_dir }}'
+  when: not ansible_check_mode
   register: start_output
   failed_when: start_output.rc != 0
 

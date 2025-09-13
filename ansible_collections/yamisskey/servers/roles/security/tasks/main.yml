@@ -194,10 +194,12 @@
       ansible.builtin.command: ufw allow proto tcp from {{ item }} to any port 22
       changed_when: false
       loop: "{{ tailscale_ips }}"
+      when: tailscale_ips is defined
 
     - name: Allow SSH from self Tailscale IP
       ansible.builtin.command: ufw allow proto tcp from {{ ansible_default_ipv4.address }} to any port 22
       changed_when: false
+      when: tailscale_ips is defined
   become: true
 
 - name: Configure SSH settings
