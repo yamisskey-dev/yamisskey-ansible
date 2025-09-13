@@ -29,7 +29,7 @@ provisioner:
   connection_options:
     ansible_connection: community.docker.docker
   env:
-    ANSIBLE_COLLECTIONS_PATHS: "${MOLECULE_PROJECT_DIRECTORY}/../../../../..:${HOME}/.ansible/collections:/usr/share/ansible/collections"
+    ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/../../../../..:${HOME}/.ansible/collections:/usr/share/ansible/collections"
   config_options:
     defaults:
       callbacks_enabled: profile_tasks,timer
