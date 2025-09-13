@@ -25,6 +25,7 @@ provisioner:
     defaults:
       callbacks_enabled: profile_tasks,timer,yaml
       stdout_callback: yaml
+      remote_tmp: /tmp/ansible
   inventory:
     host_vars:
       misskey-backup-test-instance:

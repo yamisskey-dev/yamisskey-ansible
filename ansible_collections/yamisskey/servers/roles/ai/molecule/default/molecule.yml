@@ -23,7 +23,7 @@ platforms:
     capabilities:
       - NET_ADMIN
     tmpfs:
-      - /tmp
+      - /tmp:rw,exec,nosuid,nodev,mode=1777
 provisioner:
   name: ansible
   connection_options:
@@ -32,13 +32,16 @@ provisioner:
     ANSIBLE_COLLECTIONS_PATHS: "${MOLECULE_PROJECT_DIRECTORY}/../../../../..:${HOME}/.ansible/collections:/usr/share/ansible/collections"
   config_options:
     defaults:
-      callbacks_enabled: profile_tasks,timer,yaml
-      stdout_callback: yaml
+      callbacks_enabled: profile_tasks,timer
+      stdout_callback: ansible.builtin.default
       deprecation_warnings: False
+      remote_tmp: /tmp/ansible
+    callback_default:
+      result_format: yaml
   inventory:
     host_vars:
       ai-test-instance:
-        ansible_user: "ansible"
+        ansible_user: "root"
         ansible_connection: community.docker.docker
 verifier:
   name: ansible

@@ -13,7 +13,7 @@ platforms:
       - /var/run/docker.sock:/var/run/docker.sock
     tmpfs:
       - /run
-      - /tmp
+      - /tmp:rw,exec,nosuid,nodev,mode=1777
     capabilities:
       - SYS_ADMIN
     command: /lib/systemd/systemd
@@ -23,8 +23,11 @@ provisioner:
   name: ansible
   config_options:
     defaults:
-      callbacks_enabled: profile_tasks,timer,yaml
-      stdout_callback: yaml
+      callbacks_enabled: profile_tasks,timer
+      stdout_callback: ansible.builtin.default
+      remote_tmp: /tmp/ansible
+    callback_default:
+      result_format: yaml
   inventory:
     host_vars:
       system-test-test-instance:

@@ -46,106 +46,81 @@
 - name: Configure UFW rules and service
   block:
     - name: Set default deny policy for incoming traffic
-      community.general.ufw:
-        policy: deny
-        direction: incoming
+      ansible.builtin.command: ufw default deny incoming
+      changed_when: false
       become: true
 
     - name: Set default allow policy for outgoing traffic
-      community.general.ufw:
-        policy: allow
-        direction: outgoing
+      ansible.builtin.command: ufw default allow outgoing
+      changed_when: false
       become: true
 
     - name: Allow specified TCP ports
-      community.general.ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: tcp
+      ansible.builtin.command: ufw allow {{ item }}/tcp
+      changed_when: false
       loop: "{{ ufw_ports }}"
       become: true
 
     - name: Allow specified Tailscale UDP ports
-      community.general.ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: udp
+      ansible.builtin.command: ufw allow {{ item }}/udp
+      changed_when: false
       loop: "{{ tailscale_ports }}"
       become: true
 
     - name: Allow QUIC and HTTP2 traffic to Cloudflare Tunnel for IPv4 addresses
-      community.general.ufw:
-        rule: allow
-        port: "{{ cloudflared_quic_port }}"
-        proto: udp
-        to_ip: "{{ item }}"
+      ansible.builtin.command: ufw allow proto udp to {{ item }} port {{ cloudflared_quic_port }}
+      changed_when: false
       loop: "{{ cloudflare_region1_ips_v4 + cloudflare_region2_ips_v4 }}"
       become: true
 
     - name: Allow QUIC and HTTP2 traffic to Cloudflare Tunnel for IPv6 addresses
-      community.general.ufw:
-        rule: allow
-        port: "{{ cloudflared_quic_port }}"
-        proto: udp
-        to_ip: "{{ item }}"
+      ansible.builtin.command: ufw allow proto udp to {{ item }} port {{ cloudflared_quic_port }}
+      changed_when: false
       loop: "{{ cloudflare_region1_ips_v6 + cloudflare_region2_ips_v6 }}"
       become: true
 
     - name: Optionally allow HTTPS traffic for Cloudflare services (IPv4)
-      community.general.ufw:
-        rule: allow
-        port: "{{ cloudflared_https_port }}"
-        proto: tcp
-        to_ip: "{{ item }}"
+      ansible.builtin.command: ufw allow proto tcp to {{ item }} port {{ cloudflared_https_port }}
+      changed_when: false
       loop: "{{ cloudflare_region1_ips_v4 + cloudflare_region2_ips_v4 }}"
       become: true
 
     - name: Optionally allow HTTPS traffic for Cloudflare services (IPv6)
-      community.general.ufw:
-        rule: allow
-        port: "{{ cloudflared_https_port }}"
-        proto: tcp
-        to_ip: "{{ item }}"
+      ansible.builtin.command: ufw allow proto tcp to {{ item }} port {{ cloudflared_https_port }}
+      changed_when: false
       loop: "{{ cloudflare_region1_ips_v6 + cloudflare_region2_ips_v6 }}"
       become: true
 
     - name: Open necessary ports for WARP and WireGuard
-      community.general.ufw:
-        rule: allow
-        port: "{{ item }}"
-        proto: udp
+      ansible.builtin.command: ufw allow {{ item }}/udp
+      changed_when: false
       loop: "{{ warp_wireguard_ports }}"
       become: true
 
     - name: Allow Cloudflare WARP IP ranges
-      community.general.ufw:
-        rule: allow
-        from: "{{ item }}"
+      ansible.builtin.command: ufw allow from {{ item }}
+      changed_when: false
       loop: "{{ cloudflare_warp_ips }}"
       become: true
 
     - name: Open necessary ports for QUIC (UDP 443)
-      community.general.ufw:
-        rule: allow
-        port: 443
-        proto: udp
+      ansible.builtin.command: ufw allow 443/udp
+      changed_when: false
       become: true
 
     - name: Allow UDP port 10000 for Jitsi media streaming
-      community.general.ufw:
-        rule: allow
-        port: 10000
-        proto: udp
+      ansible.builtin.command: ufw allow 10000/udp
+      changed_when: false
       become: true
 
     - name: Ensure UFW logging is off
-      community.general.ufw:
-        logging: 'off'
+      ansible.builtin.command: ufw logging off
+      changed_when: false
       become: true
 
     - name: Reload UFW to apply changes
-      community.general.ufw:
-        state: reloaded
+      ansible.builtin.command: ufw reload
+      changed_when: false
       become: true
 
     - name: Check UFW status
@@ -159,8 +134,8 @@
   become: true
 
 - name: Ensure UFW is enabled (finalize firewall)
-  community.general.ufw:
-    state: enabled
+  ansible.builtin.command: ufw --force enable
+  changed_when: false
   when: ufw_enable | default(true)
   become: true
 
@@ -199,19 +174,13 @@
         tailscale_ips: "{{ tailscale_status.stdout | from_json | json_query('Peer.*.TailscaleIPs') | flatten | select('match', '100\\..*') | list }}"
 
     - name: Allow SSH from Tailscale IPs
-      community.general.ufw:
-        rule: allow
-        port: 22
-        proto: tcp
-        from_ip: '{{ item }}'
+      ansible.builtin.command: ufw allow proto tcp from {{ item }} to any port 22
+      changed_when: false
       loop: "{{ tailscale_ips }}"
 
     - name: Allow SSH from self Tailscale IP
-      community.general.ufw:
-        rule: allow
-        port: 22
-        proto: tcp
-        from_ip: '{{ ansible_default_ipv4.address }}'
+      ansible.builtin.command: ufw allow proto tcp from {{ ansible_default_ipv4.address }} to any port 22
+      changed_when: false
   become: true
 
 - name: Configure SSH settings

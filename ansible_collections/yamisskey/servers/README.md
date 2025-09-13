@@ -96,7 +96,6 @@ This collection automatically manages the following dependencies:
 
 - `community.docker >= 3.0.0` - Docker container management
 - `community.sops >= 1.6.0` - Secret management with SOPS
-- `community.general >= 9.0.0` - General purpose modules
 - `ansible.posix >= 1.5.0` - POSIX system utilities
 
 ## ⚙️ Configuration

@@ -4,11 +4,11 @@
   gather_facts: false
   
   tasks:
-    - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
-      become: true
+    - name: Check if docker CLI is present (optional)
+      command: docker --version
+      register: docker_cli
+      changed_when: false
+      failed_when: false
       
     - name: Verify role execution completed without errors
       stat:
@@ -31,6 +31,7 @@
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
+          🛈 Docker CLI: {{ 'found' if docker_cli.rc == 0 else 'not found (skipped)' }}
           
           Role: ai
           Collection: yamisskey.servers

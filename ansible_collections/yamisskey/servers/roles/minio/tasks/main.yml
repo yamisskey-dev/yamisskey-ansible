@@ -64,10 +64,8 @@
     project_src: /opt/minio
 
 - name: Allow MinIO access from Tailscale network
-  community.general.ufw:
-    rule: allow
-    port: "{{ host_services.joseph.minio_api }}"
-    from_ip: 100.64.0.0/10
+  ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services.joseph.minio_api }} proto tcp
+  changed_when: false
   become: true
 
 - name: Wait for MinIO port to be ready

@@ -29,7 +29,6 @@ tags:
   - appliance
 
 dependencies:
-  community.general: ">=9.0.0"
   ansible.posix: ">=1.5.0"
 
 repository: https://github.com/yamisskey-dev/yamisskey-provision

@@ -27,5 +27,4 @@ dependencies:
   - role: security
 
 collections:
-  - community.general
   - ansible.posix
