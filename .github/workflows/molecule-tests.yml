@@ -95,19 +95,18 @@ jobs:
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
         run: |
           set -euo pipefail
-          mkdir -p "${{ runner.temp }}/home" \
-                   "${{ runner.temp }}/ansible-local" \
+          mkdir -p "${{ runner.temp }}/ansible-local" \
                    "${{ runner.temp }}/molecule" \
                    "${{ runner.temp }}/molecule-state"
           pwd && ls -la
           echo "ANSIBLE_CONFIG=${ANSIBLE_CONFIG}"
-          echo "HOME=${HOME}"
+          which ansible-galaxy || true
+          ansible-galaxy --version || true
+          ansible-galaxy collection list || true
           molecule --version
           ansible --version || true
-          ansible-galaxy collection list || true
           molecule syntax
         env:
-          HOME: ${{ runner.temp }}/home
           ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
           ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
           MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
@@ -152,17 +151,17 @@ jobs:
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
         run: |
           set -euo pipefail
-          mkdir -p "${{ runner.temp }}/home" \
-                   "${{ runner.temp }}/ansible-local" \
+          mkdir -p "${{ runner.temp }}/ansible-local" \
                    "${{ runner.temp }}/molecule" \
                    "${{ runner.temp }}/molecule-state"
           pwd && ls -la
+          which ansible-galaxy || true
+          ansible-galaxy --version || true
+          ansible-galaxy collection list || true
           molecule --version
           ansible --version || true
-          ansible-galaxy collection list || true
           molecule test
         env:
-          HOME: ${{ runner.temp }}/home
           ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
           ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
           MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
