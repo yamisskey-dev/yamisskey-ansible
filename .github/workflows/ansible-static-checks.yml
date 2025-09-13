@@ -42,6 +42,8 @@ jobs:
               version: ">=1.6.0"
             - name: ansible.posix
               version: ">=1.5.0"
+            - name: community.general
+              version: ">=8.0.0"
           YAML
           ansible-galaxy collection install -r requirements-ci.yml
           echo "✅ External Collections installed"

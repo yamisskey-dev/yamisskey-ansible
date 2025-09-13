@@ -88,7 +88,7 @@ jobs:
 
       - name: Install required Ansible collections (remote only)
         run: |
-          ansible-galaxy collection install community.docker ansible.posix community.sops
+          ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
       - name: Run Molecule syntax check
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
@@ -128,7 +128,7 @@ jobs:
 
       - name: Install required Ansible collections (remote only)
         run: |
-          ansible-galaxy collection install community.docker ansible.posix community.sops
+          ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
       - name: Run Molecule test
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
@@ -168,7 +168,7 @@ jobs:
 
       - name: Install required Ansible collections (remote only)
         run: |
-          ansible-galaxy collection install community.docker ansible.posix community.sops
+          ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
       - name: Run full test suite
         run: |
