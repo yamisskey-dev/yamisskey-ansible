@@ -148,7 +148,7 @@ vault_filen_encryption_key: "your-filen-encryption-key"
 
 # Age encryption keys for backup encryption
 vault_age_public_key: "age1..."  # Public key for encrypting backups
-vault_age_private_key: "AGE-SECRET-KEY-1..."  # Private key for decrypting backups
+vault_age_private_key: "AGE_SECRET_KEY_EXAMPLE"  # Placeholder; do NOT commit real AGE private keys
 
 # ========================================
 # Emergency Recovery Kit
