@@ -177,7 +177,7 @@
         - name: Perform database restore
           block:
             - name: Stop PostgreSQL container
-              community.docker.docker:
+              community.docker.docker_container:
                 name: "{{ postgres_container_name }}"
                 state: stopped
             
@@ -197,7 +197,7 @@
               become: true
               
             - name: Start PostgreSQL container for restore
-              community.docker.docker:
+              community.docker.docker_container:
                 name: "{{ postgres_container_name }}"
                 image: postgres:15
                 state: started
@@ -211,7 +211,7 @@
                   - name: misskey_default
             
             - name: Wait for PostgreSQL to be ready
-              community.docker.docker:
+              community.docker.docker_container:
                 name: postgres_restore_check
                 image: postgres:15
                 command: pg_isready -h {{ postgres_container_name }} -U {{ vault_postgres_user }}
@@ -219,12 +219,12 @@
                   - name: misskey_default
                 state: started
                 detach: false
-                cleanup: true
+                auto_remove: true
               retries: 30
               delay: 2
           
             - name: Restore database from backup
-              community.docker.docker:
+              community.docker.docker_container:
                 name: postgres_restore
                 image: postgres:15
                 command: >
@@ -240,13 +240,13 @@
                   - name: misskey_default
                 state: started
                 detach: false
-                cleanup: true
+                auto_remove: true
               register: restore_result
 
         - name: Verify database restore
           block:
             - name: Check database connectivity
-              community.docker.docker:
+              community.docker.docker_container:
                 name: postgres_verify_connection
                 image: postgres:15
                 command: >
@@ -260,11 +260,11 @@
                   - name: misskey_default
                 state: started
                 detach: false
-                cleanup: true
+                auto_remove: true
               register: db_connection_check
           
             - name: Verify critical tables exist
-              community.docker.docker:
+              community.docker.docker_container:
                 name: postgres_verify_tables
                 image: postgres:15
                 command: >
@@ -278,11 +278,11 @@
                   - name: misskey_default
                 state: started
                 detach: false
-                cleanup: true
+                auto_remove: true
               register: tables_check
           
             - name: Verify user data integrity
-              community.docker.docker:
+              community.docker.docker_container:
                 name: postgres_verify_data
                 image: postgres:15
                 command: >
@@ -296,7 +296,7 @@
                   - name: misskey_default
                 state: started
                 detach: false
-                cleanup: true
+                auto_remove: true
               register: data_integrity_check
           when: dr_verification_enabled
 
@@ -402,7 +402,7 @@
               Rolling back to original database...
           
         - name: Restore from current backup (rollback)
-          community.docker.docker:
+          community.docker.docker_container:
             name: postgres_rollback
             image: postgres:15
             command: >
@@ -418,7 +418,7 @@
               - name: misskey_default
             state: started
             detach: false
-            cleanup: true
+            auto_remove: true
           when: backup_current_db
           
         - name: Restart services after rollback
@@ -431,7 +431,7 @@
 
       always:
         - name: Cleanup temporary containers
-          community.docker.docker:
+          community.docker.docker_container:
             name: "{{ item }}"
             state: absent
           loop:
@@ -442,7 +442,7 @@
             - postgres_verify_tables
             - postgres_verify_data
             - postgres_rollback
-          ignore_errors: true
+            ignore_errors: true
           
         - name: DR rehearsal cleanup summary
           debug:
