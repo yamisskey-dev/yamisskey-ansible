@@ -70,12 +70,6 @@
   tags:
     - cloudflare
 
-- name: Install Playit
-  ansible.builtin.include_tasks: playit.yml
-  when: install_playit | default(true)
-  tags:
-    - playit
-
 - name: Verify installations
   ansible.builtin.include_tasks: verify.yml
   when: verify_installations | default(true)
