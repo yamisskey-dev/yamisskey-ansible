@@ -13,7 +13,6 @@ platforms:
       - /var/run/docker.sock:/var/run/docker.sock
     tmpfs:
       - /run
-      - /tmp
     capabilities:
       - SYS_ADMIN
     command: /lib/systemd/systemd

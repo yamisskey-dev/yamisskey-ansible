@@ -22,8 +22,6 @@ platforms:
     privileged: false
     capabilities:
       - NET_ADMIN
-    tmpfs:
-      - /tmp:rw,exec,nosuid,nodev,mode=1777
 provisioner:
   name: ansible
   connection_options:
