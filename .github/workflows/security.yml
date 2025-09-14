@@ -49,6 +49,24 @@ jobs:
 
       - name: Check for other sensitive patterns
         run: |
+          set -o pipefail
+
+          # Common grep excludes to reduce false positives
+          GREP_EXCLUDES=(
+            --exclude-dir=.git
+            --exclude-dir=.github
+            --exclude-dir=.ansible
+            --exclude-dir=molecule
+            --exclude-dir=molecule-templates
+            --exclude="*.md"
+            --exclude="*.example"
+            --exclude="*.j2"
+            --exclude="vault.yml.example"
+            --exclude="security.yml"
+            --exclude=".gitleaks.toml"
+            --exclude=".pre-commit-config.yaml"
+          )
+
           # Check for common secret patterns (excluding legitimate Ansible patterns)
           PATTERNS=(
             "BEGIN RSA PRIVATE KEY"
@@ -56,19 +74,10 @@ jobs:
             "BEGIN PRIVATE KEY"
             "AKIA[0-9A-Z]{16}"  # AWS Access Key
           )
-          
+
           FOUND=false
           for pattern in "${PATTERNS[@]}"; do
-            # Exclude .example files, Ansible vault variable references, and template files
-            if grep -rEi "$pattern" . \
-              --exclude-dir=.git \
-              --exclude-dir=.github \
-              --exclude-dir=.ansible \
-              --exclude="*.md" \
-              --exclude="*.example" \
-              --exclude="*.j2" \
-              --exclude="vault.yml.example" \
-              --exclude="security.yml" \
+            if grep -rEin ${GREP_EXCLUDES[@]} -- "$pattern" . \
               | grep -v "{{ vault_" \
               | grep -v "{{ .*_password" \
               | grep -v "{{ .*_key" \
@@ -76,37 +85,39 @@ jobs:
               | grep -v "vars/main.yml:" \
               | grep -v "templates/" \
               | grep -v "# Vault:" \
-              | grep -v "PATTERNS=" \
-              | grep -v "BEGIN.*PRIVATE.*KEY" \
-              | head -5; then
+              | grep -q "."; then
               echo "🚨 Potential secret found: $pattern"
+              # Print up to 5 matching lines with file and line number
+              grep -rEin ${GREP_EXCLUDES[@]} -- "$pattern" . \
+                | grep -v "{{ vault_" \
+                | grep -v "{{ .*_password" \
+                | grep -v "{{ .*_key" \
+                | grep -v "{{ .*_token" \
+                | grep -v "vars/main.yml:" \
+                | grep -v "templates/" \
+                | grep -v "# Vault:" \
+                | head -5 || true
               FOUND=true
             fi
           done
-          
+
           # Check for hardcoded passwords (excluding Ansible variables and examples)
           echo "🔍 Checking for hardcoded passwords..."
-          if grep -rEi 'password\s*=\s*['\''"][^'\''"]{8,}['\''"]' . \
-            --exclude-dir=.git \
-            --exclude-dir=.github \
-            --exclude="*.md" \
-            --exclude="*.example" \
-            --exclude="inventory.example" \
+          if grep -rEin ${GREP_EXCLUDES[@]} -- 'password\s*=\s*['\''"][^'\''"]{8,}['\''"]' . \
             | grep -v "{{ vault_" \
             | grep -v "{{ .*_password" \
-            | head -5; then
+            | grep -q "."; then
             echo "🚨 Potential hardcoded password found"
+            grep -rEin ${GREP_EXCLUDES[@]} -- 'password\s*=\s*['\''"][^'\''"]{8,}['\''"]' . \
+              | grep -v "{{ vault_" \
+              | grep -v "{{ .*_password" \
+              | head -5 || true
             FOUND=true
           fi
-          
+
           # Check for hardcoded API keys (excluding Ansible variables and examples)
           echo "🔍 Checking for hardcoded API keys..."
-          if grep -rEi 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{16,}['\''"]' . \
-            --exclude-dir=.git \
-            --exclude-dir=.github \
-            --exclude="*.md" \
-            --exclude="*.example" \
-            --exclude="vault.yml.example" \
+          if grep -rEin ${GREP_EXCLUDES[@]} -- 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{16,}['\''"]' . \
             | grep -v "{{ vault_" \
             | grep -v "{{ .*_key" \
             | grep -v "{{ .*_api_key" \
@@ -115,16 +126,26 @@ jobs:
             | grep -v "bouncer_token.stdout_lines" \
             | grep -v ".j2:" \
             | grep -v "vars/main.yml:" \
-            | head -5; then
+            | grep -q "."; then
             echo "🚨 Potential hardcoded API key found"
+            grep -rEin ${GREP_EXCLUDES[@]} -- 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{16,}['\''"]' . \
+              | grep -v "{{ vault_" \
+              | grep -v "{{ .*_key" \
+              | grep -v "{{ .*_api_key" \
+              | grep -v "{{ .*_token" \
+              | grep -v "{{ .*_password" \
+              | grep -v "bouncer_token.stdout_lines" \
+              | grep -v ".j2:" \
+              | grep -v "vars/main.yml:" \
+              | head -5 || true
             FOUND=true
           fi
-          
+
           if [ "$FOUND" = true ]; then
             echo "🚨 Potential secrets detected. Please review and remove sensitive data."
             exit 1
           fi
-          
+
           echo "✅ No obvious secrets detected."
 
   dependency-check:
