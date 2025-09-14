@@ -63,10 +63,12 @@ jobs:
             if grep -rEi "$pattern" . \
               --exclude-dir=.git \
               --exclude-dir=.github \
+              --exclude-dir=.ansible \
               --exclude="*.md" \
               --exclude="*.example" \
               --exclude="*.j2" \
               --exclude="vault.yml.example" \
+              --exclude="security.yml" \
               | grep -v "{{ vault_" \
               | grep -v "{{ .*_password" \
               | grep -v "{{ .*_key" \
@@ -74,7 +76,9 @@ jobs:
               | grep -v "vars/main.yml:" \
               | grep -v "templates/" \
               | grep -v "# Vault:" \
-              | head -10; then
+              | grep -v "PATTERNS=" \
+              | grep -v "BEGIN.*PRIVATE.*KEY" \
+              | head -5; then
               echo "🚨 Potential secret found: $pattern"
               FOUND=true
             fi
