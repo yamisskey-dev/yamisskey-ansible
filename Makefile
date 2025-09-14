@@ -108,11 +108,25 @@ install:
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
 	if [ -f /etc/gentoo-release ]; then \
 		echo "Gentoo detected - using system ansible-galaxy"; \
-		ansible-galaxy collection install -r requirements.yml; \
-		ansible-galaxy collection install community.docker --force; \
+		ansible-galaxy collection install -r requirements-dev.yml; \
+		echo "📂 Setting up local yamisskey collections..."; \
+		mkdir -p $$HOME/.ansible/collections/ansible_collections/yamisskey; \
+		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers" ]; then \
+			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/servers" "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers"; \
+		fi; \
+		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances" ]; then \
+			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/appliances" "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances"; \
+		fi; \
 	else \
-		ansible-galaxy collection install -r requirements.yml; \
-		$$HOME/.local/share/pipx/venvs/molecule/bin/ansible-galaxy collection install community.docker --force; \
+		ansible-galaxy collection install -r requirements-dev.yml; \
+		echo "📂 Setting up local yamisskey collections..."; \
+		mkdir -p $$HOME/.ansible/collections/ansible_collections/yamisskey; \
+		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers" ]; then \
+			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/servers" "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers"; \
+		fi; \
+		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances" ]; then \
+			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/appliances" "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances"; \
+		fi; \
 	fi
 	@echo "✅ Ansible, Molecule and Collections installed"
 	@echo "🔍 Verifying installation:"
