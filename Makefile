@@ -94,12 +94,15 @@ install:
 	uv tool install --python $(UV_PY) ansible; \
 	uv tool install --python $(UV_PY) ansible-lint
 	@echo "📦 Installing Galaxy collections to $(GALAXY_DIR) ..."
-	@ANSIBLE_GALAXY_CACHE_DIR="$(REPO_ROOT)/.galaxy/.cache" ansible-galaxy collection install -p "$(GALAXY_DIR)" -r requirements-dev.yml
+	@ANSIBLE_CONFIG="$(REPO_ROOT)/ansible.cfg" \
+	ANSIBLE_GALAXY_CACHE_DIR="$(REPO_ROOT)/.galaxy/.cache" \
+	ansible-galaxy collection install -p "$(GALAXY_DIR)" -r requirements-dev.yml
 	@echo "✅ Ansible and Collections installed via uv"
 	@echo "🔍 Verifying installation:"
-	@ansible --version | head -n1 || true
-	@ansible-lint --version || true
-	@ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" ansible-galaxy collection list | grep yamisskey && echo "✅ local yamisskey visible" || echo "ℹ️ yamisskey will be loaded from repo path"
+	@PATH="$$(awk -v RS=: '!a[$$0]++{printf s$$0; s=":"}' <<<"$$PATH")"; \
+	ansible --version | head -n1 || true; \
+	ansible-lint --version || true; \
+	ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" ansible-galaxy collection list | grep yamisskey || true
 	@echo "🧪 Molecule runtime (uvx) check:"
 	@$(MOLECULE) --version && echo "✅ Molecule available via uvx" || echo "⚠️ Molecule check failed (ensure Docker is available)"
 
