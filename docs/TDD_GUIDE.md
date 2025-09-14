@@ -239,7 +239,7 @@ molecule login
 2. **コレクション参照エラー**
    ```bash
    # ANSIBLE_COLLECTIONS_PATHの設定確認
-   export ANSIBLE_COLLECTIONS_PATH=$PWD:$HOME/.ansible/collections
+   export ANSIBLE_COLLECTIONS_PATHS=$PWD:$HOME/.ansible/collections
    ```
 
 3. **メモリ不足**
