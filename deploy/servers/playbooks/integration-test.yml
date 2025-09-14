@@ -52,7 +52,7 @@
           
           💡 Next steps:
           1. Review test results above
-          2. Check generated report in /tmp/
+          2. Check generated report in /var/tmp/
           3. Address any failed tests before deployment
           4. Run specific test categories if needed:
              ansible-playbook integration-test.yml --tags "infra"

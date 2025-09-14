@@ -14,7 +14,7 @@
     source_minio_port: 9000
     source_minio_alias: "source-minio"
     target_minio_alias: "truenas-tunnel"
-    migration_temp_dir: "/tmp/truenas-minio-migration"
+    migration_temp_dir: "/var/tmp/truenas-minio-migration"
     
     # TrueNAS Cloudflare Tunnel設定
     target_minio_endpoint: "https://{{ truenas_minio_domain | default('minio.example.invalid') }}"

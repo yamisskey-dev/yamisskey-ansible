@@ -22,7 +22,7 @@
     postgres_container_name: "misskey_db"
     postgres_backup_container: "postgres_backup_restore"
     postgres_data_path: "/var/lib/docker/volumes/misskey_db/_data"
-    postgres_backup_path: "/tmp/db-restore-{{ ansible_date_time.epoch }}"
+    postgres_backup_path: "/var/tmp/db-restore-{{ ansible_date_time.epoch }}"
     
     # Safety Settings
     require_confirmation: "{{ not (auto_confirm | default(false)) }}"

@@ -12,7 +12,7 @@
     verification_sample_size: 100
     verification_timeout: 300
     max_diff_retries: 3
-    temp_verification_dir: "/tmp/minio-verification"
+    temp_verification_dir: "/var/tmp/minio-verification"
     
     # Source and target MinIO aliases (defined in inventory)
     source_alias: "{{ source_minio_alias | default('source') }}"

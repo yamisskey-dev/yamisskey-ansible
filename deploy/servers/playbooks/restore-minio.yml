@@ -13,7 +13,7 @@
     
     # MinIO Configuration
     minio_data_path: "{{ truenas_minio_data_path | default('/mnt/tank/minio') }}"
-    minio_backup_path: "/tmp/minio-restore-{{ ansible_date_time.epoch }}"
+    minio_backup_path: "/var/tmp/minio-restore-{{ ansible_date_time.epoch }}"
     minio_container_name: "minio"
     minio_alias: "local-minio"
     

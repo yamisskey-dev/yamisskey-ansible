@@ -21,9 +21,11 @@ platforms:
 provisioner:
   name: ansible
   config_options:
+  env:
+    ANSIBLE_REMOTE_TEMP: /var/tmp/ansible
     defaults:
       callbacks_enabled: profile_tasks,timer
-      remote_tmp: /tmp/ansible
+      remote_tmp: /var/tmp/ansible
   inventory:
     host_vars:
       apps-test-instance:

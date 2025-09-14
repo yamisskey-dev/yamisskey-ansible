@@ -98,13 +98,13 @@ install:
 	@echo "📦 Installing Galaxy collections to $(GALAXY_DIR) ..."
 	@ANSIBLE_CONFIG="$(REPO_ROOT)/ansible.cfg" \
 	ANSIBLE_GALAXY_CACHE_DIR="$(REPO_ROOT)/.vendor/.cache" \
-	ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" \
+	ANSIBLE_COLLECTIONS_PATHS="$(ANSIBLE_PATHS)" \
 		"$(SHIM_DIR)/ansible-galaxy" collection install -p "$(GALAXY_DIR)" -r requirements-dev.yml
 	@echo "✅ Ansible and Collections installed via uv"
 	@echo "🔍 Verifying installation:"
 	@env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible --version | head -n1 || true
 	@uvx --python $(UV_PY) --from ansible-lint ansible-lint --version || true
-	@ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible-galaxy collection list | grep yamisskey || true
+	@ANSIBLE_COLLECTIONS_PATHS="$(ANSIBLE_PATHS)" env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible-galaxy collection list | grep yamisskey || true
 	@echo "🧪 Molecule runtime (uvx) check:"
 	@$(MOLECULE) --version && echo "✅ Molecule available via uvx" || echo "⚠️ Molecule check failed (ensure Docker is available)"
 

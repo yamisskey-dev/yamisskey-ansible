@@ -19,7 +19,7 @@
       tags: [docker]
     - name: Verify role execution completed without errors
       stat:
-        path: /tmp/test
+        path: /var/tmp/test
       register: test_dir_check
       
     - name: Assert test directory exists
