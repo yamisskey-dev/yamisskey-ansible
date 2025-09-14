@@ -58,7 +58,7 @@ jobs:
           echo "🧪 Running full test suite for ${{ matrix.collection }} collection"
           make test TARGET=${{ matrix.collection }} MODE=${{ matrix.mode }}
         env:
-          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
 
   comprehensive-validation:
     name: Comprehensive Validation

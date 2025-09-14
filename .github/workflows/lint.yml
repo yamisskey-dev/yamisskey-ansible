@@ -77,7 +77,7 @@ jobs:
 
       - name: Run ansible-lint for ${{ matrix.collection }} Collection
         env:
-          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ matrix.collection == 'servers' && 'deploy/servers/ansible.cfg' || '' }}
         run: |
           echo "🔍 Linting yamisskey.${{ matrix.collection }} Collection..."
@@ -110,7 +110,7 @@ jobs:
 
       - name: Run ansible-test sanity for ${{ matrix.collection }}
         env:
-          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           set -euo pipefail
           echo "🧪 ansible-test sanity for yamisskey.${{ matrix.collection }}"

@@ -97,7 +97,7 @@ jobs:
 
       - name: Test ${{ matrix.playbook }}.yml with --check --diff
         env:
-          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           set -euo pipefail
@@ -147,7 +147,7 @@ jobs:
 
       - name: Test ${{ matrix.playbook }}.yml with --check --diff
         env:
-          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/servers/ansible.cfg
         run: |
           set -euo pipefail
@@ -197,7 +197,7 @@ jobs:
 
       - name: Test ${{ matrix.playbook }}.yml with --check --diff
         env:
-          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: deploy/appliances/ansible.cfg
         run: |
           set -euo pipefail

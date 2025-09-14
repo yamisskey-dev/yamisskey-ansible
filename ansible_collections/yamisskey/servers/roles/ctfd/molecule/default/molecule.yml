@@ -13,10 +13,9 @@ platforms:
       - /var/run/docker.sock:/var/run/docker.sock
     tmpfs:
       - /run
-      - /tmp
     capabilities:
       - SYS_ADMIN
-    command: /lib/systemd/systemd
+    command: bash -c "mkdir -p /tmp/ansible && chmod 1777 /tmp/ansible && exec /lib/systemd/systemd"
     networks:
       - name: molecule-test-network
 provisioner:
@@ -25,13 +24,13 @@ provisioner:
     defaults:
       callbacks_enabled: profile_tasks,timer
       remote_tmp: /tmp/ansible
+  env:
+    ANSIBLE_REMOTE_TMP: /tmp/ansible
   inventory:
     host_vars:
       ctfd-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
-  playbooks:
-    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:
@@ -41,7 +40,6 @@ scenario:
     - destroy
     - syntax
     - create
-    - prepare
     - converge
     - idempotence
     - verify
