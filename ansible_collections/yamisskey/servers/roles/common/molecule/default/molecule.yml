@@ -37,6 +37,8 @@ provisioner:
         ansible_user: "root"
         ansible_connection: community.docker.docker
         ansible_python_interpreter: /usr/bin/python3
+  playbooks:
+    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:
