@@ -79,12 +79,12 @@ squid_proxy_enabled=true
 
 # --- Service Role Tags (必須) ---
 # タグベースの実行に必要
-service_tags:
-  social: ["misskey", "neo-quesdon", "outline"]
-  monitoring: ["prometheus", "grafana", "uptime-kuma"]
-  security: ["modsecurity", "crowdsec", "fail2ban"]
-  proxy: ["squid", "cloudflared", "warp"]
-  storage: ["minio", "backup"]
+# INI形式ではリスト構造はサポートされないため、コメントとして記載
+# service_tags_social="misskey,neo-quesdon,outline"
+# service_tags_monitoring="prometheus,grafana,uptime-kuma"
+# service_tags_security="modsecurity,crowdsec,fail2ban"
+# service_tags_proxy="squid,cloudflared,warp"
+# service_tags_storage="minio,backup"
 
 # ========================================
 # Host-Specific Network & Role Configuration
@@ -103,11 +103,8 @@ egress_route=warp
 warp_team_name="{{ vault_warp_team_name }}"
 warp_device_id="{{ vault_balthasar_warp_device_id }}"
 
-# Service Roles
-host_roles:
-  - social_frontend
-  - app_hosting
-  - reverse_proxy
+# Service Roles (converted to string for INI compatibility)
+host_roles=social_frontend,app_hosting,reverse_proxy
 service_priority=primary
 
 # Security Tags
@@ -128,11 +125,8 @@ egress_route=warp
 warp_team_name="{{ vault_warp_team_name }}"
 warp_device_id="{{ vault_caspar_warp_device_id }}"
 
-# Service Roles
-host_roles:
-  - monitoring_hub
-  - security_center
-  - ctf_environment
+# Service Roles (converted to string for INI compatibility)
+host_roles=monitoring_hub,security_center,ctf_environment
 service_priority=critical
 
 # Security Tags
@@ -152,11 +146,8 @@ external_ip="{{ vault_linode_proxy_external_ip }}"
 egress_route=direct
 squid_upstream_proxy="{{ vault_squid_upstream_proxy | default('') }}"
 
-# Service Roles
-host_roles:
-  - external_proxy
-  - media_proxy
-  - summaly_proxy
+# Service Roles (converted to string for INI compatibility)
+host_roles=external_proxy,media_proxy,summaly_proxy
 service_priority=high
 
 # Security Tags
@@ -175,10 +166,8 @@ egress_route=playit
 playit_enabled=true
 playit_secret="{{ vault_playit_secret }}"
 
-# Service Roles
-host_roles:
-  - game_hosting
-  - minecraft_server
+# Service Roles (converted to string for INI compatibility)
+host_roles=game_hosting,minecraft_server
 service_priority=low
 
 # Security Tags
@@ -192,7 +181,7 @@ basic_security_only=true
 # --- Development Environment ---
 [development:vars]
 # 開発環境用の設定オーバーライド
-environment=development
+deploy_environment=development
 debug_mode=true
 security_level=low
 modsecurity_audit_only=true
@@ -200,7 +189,7 @@ modsecurity_audit_only=true
 # --- Production Environment ---
 [production:vars]
 # 本番環境用の厳格な設定
-environment=production
+deploy_environment=production
 debug_mode=false
 security_level=maximum
 modsecurity_blocking_mode=true
