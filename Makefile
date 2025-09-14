@@ -90,11 +90,20 @@ install:
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
 	uv tool install ansible; \
 	uv tool install ansible-lint
-	@echo "📦 Installing Molecule with pipx..."
-	@command -v pipx >/dev/null || (echo "Installing pipx..." && python3 -m pip install --user pipx)
-	@export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
-	pipx install molecule; \
-	pipx inject molecule molecule-plugins[docker]
+	if [ -f /etc/gentoo-release ]; then \
+		echo "Gentoo detected - auto-unmask & emerge molecule"; \
+		if ! command -v sudo >/dev/null; then echo "sudo is required on Gentoo"; exit 1; fi; \
+		sudo sh -c 'mkdir -p /etc/portage/package.accept_keywords && \
+			( grep -qxF "app-admin/ansible-molecule ~amd64" /etc/portage/package.accept_keywords/ansible-molecule 2>/dev/null || \
+			  echo "app-admin/ansible-molecule ~amd64" >> /etc/portage/package.accept_keywords/ansible-molecule )'; \
+		sudo emerge -av app-admin/ansible-molecule; \
+	else \
+		echo "📦 Installing Molecule with pipx..."; \
+		command -v pipx >/dev/null || (echo "Installing pipx..." && python3 -m pip install --user pipx); \
+		export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
+		pipx install --include-deps molecule; \
+		pipx inject molecule "molecule-plugins[docker]"; \
+	fi
 	@echo "📦 Installing Collections..."
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
 	ansible-galaxy collection install -r requirements.yml; \
@@ -107,70 +116,119 @@ install:
 
 # Create inventory from template with environment variable substitution
 inventory:
-	@echo "📋 Creating $(TARGET) inventory from template..."
-	@INV_PATH="$(INV)"; \
-	TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example"; \
-	if [ ! -f "$$TEMPLATE_PATH" ]; then \
-		echo "❌ Template not found: $$TEMPLATE_PATH"; \
-		exit 1; \
-	fi; \
-	if [ -f "$$INV_PATH" ]; then \
-		echo "⚠️  Inventory already exists. Creating backup..."; \
-		cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; \
-	fi; \
-	echo "📄 Processing template with Tailscale IPs..."; \
-	cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
-	CURRENT_HOST=$$(hostname); \
-	CURRENT_USER=$$(whoami); \
-	DOMAIN="yami.ski"; \
-	NETWORK="100.64.0.0/10"; \
-	BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); \
-	CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); \
-	LINODE_IP=$$(tailscale ip -4 linode-prox 2>/dev/null); \
-	JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); \
-	RASPBERRY_IP=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
-	if [ -z "$$BALTHASAR_IP" ] || [ -z "$$CASPAR_IP" ] || [ -z "$$LINODE_IP" ]; then \
-		echo "❌ Failed to resolve required Tailscale IPs. Check 'tailscale status'"; \
-		exit 1; \
-	fi; \
-	if [ "$(TARGET)" = "servers" ] && [ -z "$$RASPBERRY_IP" ]; then \
-		echo "❌ raspberrypi not found in Tailscale"; \
-		exit 1; \
-	fi; \
-	if [ "$(TARGET)" = "appliances" ] && [ -z "$$JOSEPH_IP" ]; then \
-		echo "❌ joseph not found in Tailscale"; \
-		exit 1; \
-	fi; \
-	sed -i.bak \
-		-e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" \
-		-e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" \
-		-e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" \
-		-e "s|BALTHASAR_IP_PLACEHOLDER|$$BALTHASAR_IP|g" \
-		-e "s|CASPAR_IP_PLACEHOLDER|$$CASPAR_IP|g" \
-		-e "s|LINODE_IP_PLACEHOLDER|$$LINODE_IP|g" \
-		-e "s|JOSEPH_IP_PLACEHOLDER|$$JOSEPH_IP|g" \
-		-e "s|RASPBERRY_IP_PLACEHOLDER|$$RASPBERRY_IP|g" \
-		-e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" \
-		"$$INV_PATH"; \
-	rm "$$INV_PATH.bak" 2>/dev/null || true; \
-	echo "✅ $(TARGET) inventory created from template at $$INV_PATH"; \
-	echo ""; \
-	echo "🔧 Customization completed:"; \
-	echo "   - Domain: $$DOMAIN"; \
-	echo "   - User: $$CURRENT_USER (auto-detected)"; \
-	echo "   - Network: $$NETWORK"; \
-	if [ "$(TARGET)" = "servers" ]; then \
-		echo "   - Balthasar IP: $$BALTHASAR_IP (tailscale)"; \
-		echo "   - Caspar IP: $$CASPAR_IP (tailscale)"; \
-		echo "   - Linode IP: $$LINODE_IP (tailscale)"; \
-		echo "   - Raspberry IP: $$RASPBERRY_IP (tailscale)"; \
+	@if [ "$(TYPE)" = "local" ]; then \
+		echo "📋 Creating self-provisioning inventory for current host..."; \
+		INV_LOCAL="$(DEPLOY_DIR)/inventory.local"; \
+		TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example.local"; \
+		if [ ! -f "$$TEMPLATE_PATH" ]; then \
+			echo "❌ Local template not found: $$TEMPLATE_PATH"; \
+			exit 1; \
+		fi; \
+		if [ -f "$$INV_LOCAL" ]; then \
+			echo "⚠️  Local inventory already exists. Creating backup..."; \
+			cp "$$INV_LOCAL" "$(BACKUP_DIR)/local-inventory-$(TIMESTAMP).bak"; \
+		fi; \
+		CURRENT_HOST=$$(hostname); \
+		CURRENT_USER=$$(whoami); \
+		HOST_IP=$$(hostname -I | awk '{print $$1}' 2>/dev/null || echo "127.0.0.1"); \
+		DOMAIN="$${DOMAIN:-yami.ski}"; \
+		NETWORK="$${INTERNAL_NETWORK:-192.168.0.0/24}"; \
+		HOST_ROLE="$${HOST_ROLE:-monitoring}"; \
+		echo "🖥️  Detected system information:"; \
+		echo "   - Hostname: $$CURRENT_HOST"; \
+		echo "   - User: $$CURRENT_USER"; \
+		echo "   - IP: $$HOST_IP"; \
+		echo "   - Role: $$HOST_ROLE"; \
+		echo "   - Domain: $$DOMAIN"; \
+		echo "📄 Processing local template..."; \
+		cp "$$TEMPLATE_PATH" "$$INV_LOCAL"; \
+		sed -i.bak \
+			-e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" \
+			-e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" \
+			-e "s|HOST_IP_PLACEHOLDER|$$HOST_IP|g" \
+			-e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" \
+			-e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" \
+			-e "s|HOST_ROLE_PLACEHOLDER|$$HOST_ROLE|g" \
+			-e "s|TIMESTAMP_PLACEHOLDER|$$(date)|g" \
+			-e "s|GENERATED_DATE_PLACEHOLDER|$$(date -Iseconds)|g" \
+			"$$INV_LOCAL"; \
+		rm "$$INV_LOCAL.bak" 2>/dev/null || true; \
+		echo "✅ Local inventory created at $$INV_LOCAL"; \
+		echo ""; \
+		echo "🚀 Usage examples:"; \
+		echo "   make run PLAYBOOK=common -i $$INV_LOCAL LIMIT=localhost"; \
+		echo "   make check PLAYBOOK=security -i $$INV_LOCAL LIMIT=localhost"; \
+		echo ""; \
+		echo "💡 Customize with environment variables:"; \
+		echo "   DOMAIN=example.com HOST_ROLE=monitoring make inventory TYPE=local"; \
+		echo "   INTERNAL_NETWORK=10.0.0.0/8 make inventory TYPE=local"; \
 	else \
-		echo "   - Joseph IP: $$JOSEPH_IP (tailscale)"; \
-	fi; \
-	echo ""; \
-	echo "💡 Next Steps:"; \
-	echo "   - Create and encrypt group_vars/vault.yml with vault_* variables"; \
-	echo "   - Run: ansible-vault encrypt $(DEPLOY_DIR)/group_vars/vault.yml"
+		echo "📋 Creating $(TARGET) inventory from template..."; \
+		INV_PATH="$(INV)"; \
+		TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example"; \
+		if [ ! -f "$$TEMPLATE_PATH" ]; then \
+			echo "❌ Template not found: $$TEMPLATE_PATH"; \
+			exit 1; \
+		fi; \
+		if [ -f "$$INV_PATH" ]; then \
+			echo "⚠️  Inventory already exists. Creating backup..."; \
+			cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; \
+		fi; \
+		echo "📄 Processing template with Tailscale IPs..."; \
+		cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
+		CURRENT_HOST=$$(hostname); \
+		CURRENT_USER=$$(whoami); \
+		DOMAIN="yami.ski"; \
+		NETWORK="100.64.0.0/10"; \
+		BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); \
+		CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); \
+		LINODE_IP=$$(tailscale ip -4 linode-prox 2>/dev/null); \
+		JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); \
+		RASPBERRY_IP=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
+		if [ -z "$$BALTHASAR_IP" ] || [ -z "$$CASPAR_IP" ] || [ -z "$$LINODE_IP" ]; then \
+			echo "❌ Failed to resolve required Tailscale IPs. Check 'tailscale status'"; \
+			exit 1; \
+		fi; \
+		if [ "$(TARGET)" = "servers" ] && [ -z "$$RASPBERRY_IP" ]; then \
+			echo "❌ raspberrypi not found in Tailscale"; \
+			exit 1; \
+		fi; \
+		if [ "$(TARGET)" = "appliances" ] && [ -z "$$JOSEPH_IP" ]; then \
+			echo "❌ joseph not found in Tailscale"; \
+			exit 1; \
+		fi; \
+		sed -i.bak \
+			-e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" \
+			-e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" \
+			-e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" \
+			-e "s|BALTHASAR_IP_PLACEHOLDER|$$BALTHASAR_IP|g" \
+			-e "s|CASPAR_IP_PLACEHOLDER|$$CASPAR_IP|g" \
+			-e "s|LINODE_IP_PLACEHOLDER|$$LINODE_IP|g" \
+			-e "s|JOSEPH_IP_PLACEHOLDER|$$JOSEPH_IP|g" \
+			-e "s|RASPBERRY_IP_PLACEHOLDER|$$RASPBERRY_IP|g" \
+			-e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" \
+			"$$INV_PATH"; \
+		rm "$$INV_PATH.bak" 2>/dev/null || true; \
+		echo "✅ $(TARGET) inventory created from template at $$INV_PATH"; \
+		echo ""; \
+		echo "🔧 Customization completed:"; \
+		echo "   - Domain: $$DOMAIN"; \
+		echo "   - User: $$CURRENT_USER (auto-detected)"; \
+		echo "   - Network: $$NETWORK"; \
+		if [ "$(TARGET)" = "servers" ]; then \
+			echo "   - Balthasar IP: $$BALTHASAR_IP (tailscale)"; \
+			echo "   - Caspar IP: $$CASPAR_IP (tailscale)"; \
+			echo "   - Linode IP: $$LINODE_IP (tailscale)"; \
+			echo "   - Raspberry IP: $$RASPBERRY_IP (tailscale)"; \
+		else \
+			echo "   - Joseph IP: $$JOSEPH_IP (tailscale)"; \
+		fi; \
+		echo ""; \
+		echo "💡 Next Steps:"; \
+		echo "   - Create and encrypt group_vars/vault.yml with vault_* variables"; \
+		echo "   - Run: ansible-vault encrypt $(DEPLOY_DIR)/group_vars/vault.yml"; \
+		echo "   - For self-provisioning: make inventory TYPE=local"; \
+	fi
 
 # List available playbooks
 list:
@@ -311,6 +369,7 @@ help:
 	@echo "📊 Operations:"
 	@echo "  status                                  # comprehensive infrastructure status"
 	@echo "  inventory [TARGET=servers|appliances]  # create inventory"
+	@echo "  inventory TYPE=local [TARGET=servers]   # create local self-provisioning inventory"
 	@echo "  backup [TARGET=servers|appliances]     # backup inventory"
 	@echo "  logs                                    # recent logs"
 	@echo ""
