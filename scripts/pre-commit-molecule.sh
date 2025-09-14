@@ -35,7 +35,7 @@ fi
 export PATH="$HOME/.local/share/pipx/venvs/molecule/bin:$HOME/.local/bin:$PATH"
 # Resolve repository root to avoid '.' resolving inside role directories
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-export ANSIBLE_COLLECTIONS_PATH="$REPO_ROOT:$HOME/.ansible/collections:/usr/share/ansible/collections"
+export ANSIBLE_COLLECTIONS_PATHS="$REPO_ROOT:$HOME/.ansible/collections:/usr/share/ansible/collections"
 
 # Track overall success
 OVERALL_SUCCESS=true

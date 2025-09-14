@@ -61,7 +61,7 @@ run:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make run PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>] [TAGS=<tags>]" && exit 1)
 	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
 	@echo "🚀 Running $(COLLECTION): $(PLAYBOOK)"
-	@export ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)"; \
+	@export ANSIBLE_COLLECTIONS_PATHS="$(ANSIBLE_PATHS)"; \
 	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
 	"$(SHIM_DIR)/ansible-playbook" -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
@@ -72,7 +72,7 @@ check:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make check PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
 	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
 	@echo "🔍 Checking $(COLLECTION): $(PLAYBOOK)"
-	@export ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)"; \
+	@export ANSIBLE_COLLECTIONS_PATHS="$(ANSIBLE_PATHS)"; \
 	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
 	"$(SHIM_DIR)/ansible-playbook" -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
@@ -205,7 +205,7 @@ test:
 	case "$$MODE_EFF" in syntax) SUBCMD="syntax";; converge) SUBCMD="converge";; cleanup) SUBCMD="cleanup"; EXTRA="destroy || true";; test) SUBCMD="test";; *) echo "❌ Invalid MODE. Use: syntax, converge, cleanup, or test"; exit 1;; esac; \
 	if ! command -v docker >/dev/null 2>&1; then echo "❌ Docker not found. Install & start docker."; exit 1; fi; \
 	if ! docker info >/dev/null 2>&1; then echo "❌ Docker daemon is not running."; exit 1; fi; \
-	export ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)"; \
+	export ANSIBLE_COLLECTIONS_PATSS="$(ANSIBLE_PATHS)"; \
 	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
 	if [ -n "$(ROLE)" ]; then \
 		ROLE_EFF="$(ROLE)"; [ "$$ROLE_EFF" = "modsecurity" ] && ROLE_EFF="modsecurity-nginx"; \
