@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: import-test-instance
-    image: quay.io/ansible/molecule-ubuntu:20.04
+    image: ghcr.io/ansible-community/molecule-ubuntu:22.04
     pre_build_image: true
     privileged: true
     volumes:
