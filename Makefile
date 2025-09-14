@@ -142,19 +142,19 @@ install:
 inventory:
 	@if [ "$(TYPE)" = "local" ]; then \
 		echo "📋 Creating self-provisioning inventory for current host..."; \
-		INV_LOCAL="$(DEPLOY_DIR)/inventory.local"; \
+		INV_PATH="$(INV)"; \
 		TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example.local"; \
 		if [ ! -f "$$TEMPLATE_PATH" ]; then \
 			echo "❌ Local template not found: $$TEMPLATE_PATH"; \
 			exit 1; \
 		fi; \
-		if [ -f "$$INV_LOCAL" ]; then \
-			echo "⚠️  Local inventory already exists. Creating backup..."; \
-			cp "$$INV_LOCAL" "$(BACKUP_DIR)/local-inventory-$(TIMESTAMP).bak"; \
+		if [ -f "$$INV_PATH" ]; then \
+			echo "⚠️  Inventory already exists. Creating backup..."; \
+			cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-local-$(TIMESTAMP).bak"; \
 		fi; \
 		CURRENT_HOST=$$(hostname); \
 		CURRENT_USER=$$(whoami); \
-		HOST_IP=$$(hostname -I | awk '{print $$1}' 2>/dev/null || echo "127.0.0.1"); \
+		HOST_IP=$$(ip route get 1.1.1.1 | awk '{print $$7; exit}' 2>/dev/null || hostname -i 2>/dev/null | awk '{print $$1}' || echo "127.0.0.1"); \
 		DOMAIN="$${DOMAIN:-yami.ski}"; \
 		NETWORK="$${INTERNAL_NETWORK:-192.168.0.0/24}"; \
 		HOST_ROLE="$${HOST_ROLE:-monitoring}"; \
@@ -165,7 +165,7 @@ inventory:
 		echo "   - Role: $$HOST_ROLE"; \
 		echo "   - Domain: $$DOMAIN"; \
 		echo "📄 Processing local template..."; \
-		cp "$$TEMPLATE_PATH" "$$INV_LOCAL"; \
+		cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
 		sed -i.bak \
 			-e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" \
 			-e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" \
@@ -175,13 +175,13 @@ inventory:
 			-e "s|HOST_ROLE_PLACEHOLDER|$$HOST_ROLE|g" \
 			-e "s|TIMESTAMP_PLACEHOLDER|$$(date)|g" \
 			-e "s|GENERATED_DATE_PLACEHOLDER|$$(date -Iseconds)|g" \
-			"$$INV_LOCAL"; \
-		rm "$$INV_LOCAL.bak" 2>/dev/null || true; \
-		echo "✅ Local inventory created at $$INV_LOCAL"; \
+			"$$INV_PATH"; \
+		rm "$$INV_PATH.bak" 2>/dev/null || true; \
+		echo "✅ Local inventory created at $$INV_PATH"; \
 		echo ""; \
 		echo "🚀 Usage examples:"; \
-		echo "   make run PLAYBOOK=common -i $$INV_LOCAL LIMIT=localhost"; \
-		echo "   make check PLAYBOOK=security -i $$INV_LOCAL LIMIT=localhost"; \
+		echo "   make run PLAYBOOK=common LIMIT=localhost"; \
+		echo "   make check PLAYBOOK=security LIMIT=localhost"; \
 		echo ""; \
 		echo "💡 Customize with environment variables:"; \
 		echo "   DOMAIN=example.com HOST_ROLE=monitoring make inventory TYPE=local"; \
