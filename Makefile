@@ -106,13 +106,23 @@ install:
 	fi
 	@echo "📦 Installing Collections..."
 	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	ansible-galaxy collection install -r requirements.yml; \
-	$$HOME/.local/share/pipx/venvs/molecule/bin/ansible-galaxy collection install community.docker --force
+	if [ -f /etc/gentoo-release ]; then \
+		echo "Gentoo detected - using system ansible-galaxy"; \
+		ansible-galaxy collection install -r requirements.yml; \
+		ansible-galaxy collection install community.docker --force; \
+	else \
+		ansible-galaxy collection install -r requirements.yml; \
+		$$HOME/.local/share/pipx/venvs/molecule/bin/ansible-galaxy collection install community.docker --force; \
+	fi
 	@echo "✅ Ansible, Molecule and Collections installed"
 	@echo "🔍 Verifying installation:"
 	@export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
 	ansible-galaxy collection list | grep yamisskey || echo "⚠️  yamisskey Collections not found"; \
-	molecule --version && echo "✅ Molecule installed" || echo "⚠️  Molecule installation failed"
+	if [ -f /etc/gentoo-release ]; then \
+		molecule --version && echo "✅ Molecule installed (Gentoo system)" || echo "⚠️  Molecule not found - install with: sudo emerge -av app-admin/ansible-molecule"; \
+	else \
+		molecule --version && echo "✅ Molecule installed" || echo "⚠️  Molecule installation failed"; \
+	fi
 
 # Create inventory from template with environment variable substitution
 inventory:
