@@ -1,6 +1,6 @@
 # Ansible / Galaxy local caches
 .ansible/
-.galaxy/
+.vendor/
 
 # Ansible inventories (created by make inventory)
 deploy/servers/inventory
