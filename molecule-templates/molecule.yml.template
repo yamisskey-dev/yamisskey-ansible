@@ -36,8 +36,6 @@ provisioner:
       stdout_callback: ansible.builtin.default
       deprecation_warnings: False
       remote_tmp: /tmp/ansible
-    callback_default:
-      result_format: yaml
   inventory:
     host_vars:
       ${ROLE_NAME}-test-instance:
