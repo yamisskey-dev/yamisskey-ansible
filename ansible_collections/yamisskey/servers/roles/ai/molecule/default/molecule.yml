@@ -24,6 +24,7 @@ platforms:
       - NET_ADMIN
     tmpfs:
       - /run
+      - /tmp
 provisioner:
   name: ansible
   connection_options:
