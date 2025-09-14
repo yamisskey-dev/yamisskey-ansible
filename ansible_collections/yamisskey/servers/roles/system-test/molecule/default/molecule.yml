@@ -26,8 +26,6 @@ provisioner:
       callbacks_enabled: profile_tasks,timer
       stdout_callback: ansible.builtin.default
       remote_tmp: /tmp/ansible
-    callback_default:
-      result_format: yaml
   inventory:
     host_vars:
       system-test-test-instance:

@@ -28,8 +28,7 @@ provisioner:
     ansible_connection: community.docker.docker
   config_options:
     defaults:
-      callbacks_enabled: profile_tasks,timer,yaml
-      stdout_callback: yaml
+      callbacks_enabled: profile_tasks,timer
       deprecation_warnings: False
       remote_tmp: /tmp/ansible
   inventory:
