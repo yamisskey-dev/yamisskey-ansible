@@ -55,6 +55,8 @@ provisioner:
         modsecurity_nginx_ports:
           - "8080:80"
           - "8443:443"
+  playbooks:
+    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:

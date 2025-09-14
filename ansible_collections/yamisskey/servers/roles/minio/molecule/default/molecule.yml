@@ -43,6 +43,8 @@ provisioner:
         ansible_hostname: "test-host"
         ansible_date_time:
           epoch: "1234567890"
+  playbooks:
+    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:

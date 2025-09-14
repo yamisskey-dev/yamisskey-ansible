@@ -29,6 +29,8 @@ provisioner:
       outline-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+  playbooks:
+    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:

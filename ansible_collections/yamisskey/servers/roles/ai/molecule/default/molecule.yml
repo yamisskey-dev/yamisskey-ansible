@@ -41,6 +41,8 @@ provisioner:
       ai-test-instance:
         ansible_user: "root"
         ansible_connection: community.docker.docker
+  playbooks:
+    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:

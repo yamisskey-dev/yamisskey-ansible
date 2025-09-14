@@ -21,6 +21,8 @@ platforms:
 provisioner:
   name: ansible
   config_options:
+  env:
+    ANSIBLE_REMOTE_TEMP: tmp/ansible
     defaults:
       callbacks_enabled: profile_tasks,timer
       remote_tmp: /tmp/ansible
@@ -29,6 +31,8 @@ provisioner:
       apps-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+  playbooks:
+    prepare: prepare.yml
 verifier:
   name: ansible
 scenario:

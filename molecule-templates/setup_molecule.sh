@@ -1,80 +1,66 @@
 #!/bin/bash
-
-# Molecule setup script for yamisskey ansible collections
-# This script adds molecule testing to all roles that don't already have it
-
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+FORCE=0
+[[ "${1-}" == "--force" ]] && FORCE=1
 
-# Function to setup molecule for a role
-setup_molecule_for_role() {
-    local role_path="$1"
-    local role_name="$2" 
-    local collection_name="$3"
-    
-    echo "Setting up Molecule for role: $role_name"
-    
-    # Create molecule directory structure
-    mkdir -p "$role_path/molecule/default"
-    
-    # Generate molecule.yml
-    sed "s/\${ROLE_NAME}/$role_name/g" "$SCRIPT_DIR/molecule.yml.template" > "$role_path/molecule/default/molecule.yml"
-    
-    # Generate converge.yml
-    sed -e "s/\${ROLE_NAME}/$role_name/g" -e "s/\${COLLECTION_NAME}/$collection_name/g" "$SCRIPT_DIR/converge.yml.template" > "$role_path/molecule/default/converge.yml"
-    
-    # Generate verify.yml
-    sed -e "s/\${ROLE_NAME}/$role_name/g" -e "s/\${COLLECTION_NAME}/$collection_name/g" "$SCRIPT_DIR/verify.yml.template" > "$role_path/molecule/default/verify.yml"
-
-    # Generate requirements.yml (collections)
-    cp "$SCRIPT_DIR/requirements.yml.template" "$role_path/molecule/default/requirements.yml"
-    
-    echo "✅ Molecule setup completed for $role_name"
+make_if_missing() {
+  local src="$1" dst="$2" desc="$3" role_name="$4" collection_name="$5"
+  if [[ -f "$dst" && $FORCE -eq 0 ]]; then
+    echo "⏭️  $desc exists: $dst"
+    return
+  fi
+  mkdir -p "$(dirname "$dst")"
+  sed -e "s/\${ROLE_NAME}/$role_name/g" \
+      -e "s/\${COLLECTION_NAME}/$collection_name/g" \
+      "$src" > "$dst"
+  echo "✅ Generated $desc: $dst"
 }
 
-# Process appliances collection
-echo "Processing yamisskey.appliances collection..."
-APPLIANCES_ROLES_DIR="$PROJECT_ROOT/ansible_collections/yamisskey/appliances/roles"
+setup_molecule_for_role() {
+  local role_path="$1" role_name="$2" collection_name="$3"
 
-if [ -d "$APPLIANCES_ROLES_DIR" ]; then
-    for role_dir in "$APPLIANCES_ROLES_DIR"/*; do
-        if [ -d "$role_dir" ] && [ "$(basename "$role_dir")" != "README.md" ]; then
-            role_name="$(basename "$role_dir")"
-            
-            # Skip if molecule already exists
-            if [ ! -d "$role_dir/molecule" ]; then
-                setup_molecule_for_role "$role_dir" "$role_name" "yamisskey.appliances"
-            else
-                echo "⏭️  Skipping $role_name (molecule already exists)"
-            fi
-        fi
-    done
-fi
+  echo "🔧 Role: $role_name"
 
-# Process servers collection
-echo "Processing yamisskey.servers collection..."
-SERVERS_ROLES_DIR="$PROJECT_ROOT/ansible_collections/yamisskey/servers/roles"
+  # molecule.yml
+  make_if_missing "$SCRIPT_DIR/molecule.yml.template" \
+    "$role_path/molecule/default/molecule.yml" "molecule.yml" "$role_name" "$collection_name"
 
-if [ -d "$SERVERS_ROLES_DIR" ]; then
-    for role_dir in "$SERVERS_ROLES_DIR"/*; do
-        if [ -d "$role_dir" ] && [ "$(basename "$role_dir")" != "README.md" ]; then
-            role_name="$(basename "$role_dir")"
-            
-            # Skip if molecule already exists
-            if [ ! -d "$role_dir/molecule" ]; then
-                setup_molecule_for_role "$role_dir" "$role_name" "yamisskey.servers"
-            else
-                echo "⏭️  Skipping $role_name (molecule already exists)"
-            fi
-        fi
-    done
-fi
+  # prepare.yml
+  make_if_missing "$SCRIPT_DIR/prepare.yml.template" \
+    "$role_path/molecule/default/prepare.yml" "prepare.yml" "$role_name" "$collection_name"
 
-echo "🎉 Molecule setup completed for all roles!"
-echo ""
-echo "Next steps:"
-echo "1. Customize the molecule configurations for specific roles as needed"
-echo "2. Run 'molecule test' in each role directory to verify the setup"
-echo "3. Update converge.yml and verify.yml with role-specific tests"
+  # converge.yml
+  make_if_missing "$SCRIPT_DIR/converge.yml.template" \
+    "$role_path/molecule/default/converge.yml" "converge.yml" "$role_name" "$collection_name"
+
+  # verify.yml
+  make_if_missing "$SCRIPT_DIR/verify.yml.template" \
+    "$role_path/molecule/default/verify.yml" "verify.yml" "$role_name" "$collection_name"
+
+  # requirements.yml
+  if [[ -f "$SCRIPT_DIR/requirements.yml.template" ]]; then
+    if [[ ! -f "$role_path/molecule/default/requirements.yml" || $FORCE -eq 1 ]]; then
+      cp "$SCRIPT_DIR/requirements.yml.template" "$role_path/molecule/default/requirements.yml"
+      echo "✅ Copied requirements.yml"
+    else
+      echo "⏭️  requirements.yml exists"
+    fi
+  fi
+}
+
+echo "Processing yamisskey.appliances..."
+for d in "$PROJECT_ROOT/ansible_collections/yamisskey/appliances/roles"/*; do
+  [[ -d "$d" && "$(basename "$d")" != "README.md" ]] && \
+    setup_molecule_for_role "$d" "$(basename "$d")" "yamisskey.appliances"
+done
+
+echo "Processing yamisskey.servers..."
+for d in "$PROJECT_ROOT/ansible_collections/yamisskey/servers/roles"/*; do
+  [[ -d "$d" && "$(basename "$d")" != "README.md" ]] && \
+    setup_molecule_for_role "$d" "$(basename "$d")" "yamisskey.servers"
+done
+
+echo "🎉 Done. Use --force to overwrite existing files if needed."

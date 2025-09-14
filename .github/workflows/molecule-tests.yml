@@ -109,11 +109,11 @@ jobs:
           molecule test
         env:
           ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
-          ANSIBLE_REMOTE_TEMP: /tmp/ansible-remote
+          ANSIBLE_REMOTE_TEMP: /tmp/ansible
           MOLECULE_EPHEMERAL_DIRECTORY: ${{ runner.temp }}/molecule
           MOLECULE_STATE_DIRECTORY: ${{ runner.temp }}/molecule-state
           XDG_CACHE_HOME: ${{ runner.temp }}/.cache
           ANSIBLE_GALAXY_CACHE_DIR: ${{ runner.temp }}/galaxy-cache
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
+          ANSIBLE_COLLECTIONS_PATHS: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
 

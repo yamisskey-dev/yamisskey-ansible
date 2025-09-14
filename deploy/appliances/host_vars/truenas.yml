@@ -6,7 +6,7 @@ ansible_connection: ssh
 
 # シンプル化: TrueNAS = Docker Compose確定
 minio_platform: "truenas"  # シンプルな識別子
-minio_secrets_file: '/tmp/minio-secrets.yml'
+minio_secrets_file: '/var/tmp/minio-secrets.yml'
 
 # TrueNAS Scale 25.04 設定 (Cloudflare Tunnel統合)
 truenas_minio_domain: "drive.yami.ski"
