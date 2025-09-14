@@ -1,5 +1,5 @@
 .PHONY: help install inventory run check list logs backup deploy test
- .PHONY: build publish sanity
+.PHONY: build publish sanity
 
 ## Configuration - Modern Collections Architecture
 # Namespace + collections root
@@ -34,14 +34,19 @@ COLLS := servers appliances
 VERSION ?= 1.0.0
 
 # Core variables
+UV_BIN ?= $(HOME)/.local/bin
+export PATH := $(UV_BIN):$(PATH)
+
 ANSIBLE_CMD := ansible-playbook
 TIMESTAMP := $(shell date +%Y%m%dT%H%M%S)
-PATH_WITH_ANSIBLE := $$HOME/.local/share/pipx/venvs/molecule/bin:$$HOME/.local/bin:$$PATH
 # Resolve repository root once to an absolute path
 REPO_ROOT := $(abspath .)
 COLLECTIONS_PATH := $(REPO_ROOT)
 # Absolute path for ansible.cfg (if present)
 CONFIG_ABS := $(abspath $(CONFIG))
+
+# Unified Molecule launcher via uvx (no global install; includes docker plugin)
+MOLECULE := uvx --from "molecule-plugins[docker]" molecule
 
 # Ensure directories exist
 $(shell mkdir -p $(LOG_DIR) $(BACKUP_DIR))
@@ -53,8 +58,7 @@ run:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make run PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>] [TAGS=<tags>]" && exit 1)
 	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
 	@echo "🚀 Running $(COLLECTION): $(PLAYBOOK)"
-	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
+	@export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
 	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
 	$(ANSIBLE_CMD) -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
@@ -66,8 +70,7 @@ check:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make check PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
 	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
 	@echo "🔍 Checking $(COLLECTION): $(PLAYBOOK)"
-	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
+	@export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
 	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
 	$(ANSIBLE_CMD) -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
@@ -83,60 +86,26 @@ deploy:
 
 # === Setup & Discovery ===
 
-# Install Ansible and Collections
+# Install Ansible toolchain (uv only) and Galaxy collections
 install:
-	@echo "📦 Installing Ansible via uv..."
+	@echo "📦 Installing Ansible toolchain via uv..."
 	@command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
-	@export PATH="$(PATH_WITH_ANSIBLE)"; \
+	@export PATH="$(UV_BIN):$$PATH"; \
 	uv tool install ansible; \
 	uv tool install ansible-lint
-	if [ -f /etc/gentoo-release ]; then \
-		echo "Gentoo detected - auto-unmask & emerge molecule"; \
-		if ! command -v sudo >/dev/null; then echo "sudo is required on Gentoo"; exit 1; fi; \
-		sudo sh -c 'mkdir -p /etc/portage/package.accept_keywords && \
-			( grep -qxF "app-admin/ansible-molecule ~amd64" /etc/portage/package.accept_keywords/ansible-molecule 2>/dev/null || \
-			  echo "app-admin/ansible-molecule ~amd64" >> /etc/portage/package.accept_keywords/ansible-molecule )'; \
-		sudo emerge -av app-admin/ansible-molecule; \
-	else \
-		echo "📦 Installing Molecule with pipx..."; \
-		command -v pipx >/dev/null || (echo "Installing pipx..." && python3 -m pip install --user pipx); \
-		export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
-		pipx install --include-deps molecule; \
-		pipx inject molecule "molecule-plugins[docker]"; \
-	fi
-	@echo "📦 Installing Collections..."
-	@export PATH="$(PATH_WITH_ANSIBLE)"; \
-	if [ -f /etc/gentoo-release ]; then \
-		echo "Gentoo detected - using system ansible-galaxy"; \
-		ansible-galaxy collection install -r requirements-dev.yml; \
-		echo "📂 Setting up local yamisskey collections..."; \
-		mkdir -p $$HOME/.ansible/collections/ansible_collections/yamisskey; \
-		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers" ]; then \
-			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/servers" "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers"; \
-		fi; \
-		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances" ]; then \
-			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/appliances" "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances"; \
-		fi; \
-	else \
-		ansible-galaxy collection install -r requirements-dev.yml; \
-		echo "📂 Setting up local yamisskey collections..."; \
-		mkdir -p $$HOME/.ansible/collections/ansible_collections/yamisskey; \
-		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers" ]; then \
-			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/servers" "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers"; \
-		fi; \
-		if [ ! -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances" ]; then \
-			ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/appliances" "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances"; \
-		fi; \
-	fi
-	@echo "✅ Ansible, Molecule and Collections installed"
+	@echo "📦 Installing Galaxy collections (requirements-dev.yml)..."
+	@ansible-galaxy collection install -r requirements-dev.yml
+	@echo "📂 Linking local yamisskey collections..."
+	@mkdir -p $$HOME/.ansible/collections/ansible_collections/yamisskey
+	@[ -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers" ] || ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/servers"   "$$HOME/.ansible/collections/ansible_collections/yamisskey/servers"
+	@[ -L "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances" ] || ln -sf "$(REPO_ROOT)/ansible_collections/yamisskey/appliances" "$$HOME/.ansible/collections/ansible_collections/yamisskey/appliances"
+	@echo "✅ Ansible and Collections installed via uv"
 	@echo "🔍 Verifying installation:"
-	@export PATH="$(PATH_WITH_ANSIBLE):$$HOME/.local/bin"; \
-	ansible-galaxy collection list | grep yamisskey || echo "⚠️  yamisskey Collections not found"; \
-	if [ -f /etc/gentoo-release ]; then \
-		molecule --version && echo "✅ Molecule installed (Gentoo system)" || echo "⚠️  Molecule not found - install with: sudo emerge -av app-admin/ansible-molecule"; \
-	else \
-		molecule --version && echo "✅ Molecule installed" || echo "⚠️  Molecule installation failed"; \
-	fi
+	@ansible --version | head -n1 || true
+	@ansible-lint --version || true
+	@ansible-galaxy collection list | grep yamisskey || echo "⚠️ yamisskey Collections not found"
+	@echo "🧪 Molecule runtime (uvx) check:"
+	@$(MOLECULE) --version && echo "✅ Molecule available via uvx" || echo "⚠️ Molecule check failed (ensure Docker is available)"
 
 # Create inventory from template with environment variable substitution
 inventory:
@@ -329,7 +298,7 @@ backup:
 
 # === Testing ===
 
-# Unified Molecule wrapper with same abstraction as other targets
+# Unified Molecule wrapper (uvx-based)
 # Variables:
 #   ROLE=<role-name>     # e.g., modsecurity-nginx, minio, misskey
 #   MODE=<mode>          # one of: test (default), syntax, converge, cleanup
@@ -345,7 +314,6 @@ test:
 	  test)     SUBCMD="test";; \
 	  *) echo "❌ Invalid MODE. Use: syntax, converge, cleanup, or test"; exit 1;; \
 	esac; \
-	export PATH="$(PATH_WITH_ANSIBLE)"; \
 	export ANSIBLE_COLLECTIONS_PATH="$$HOME/.ansible/collections:$(COLLECTIONS_PATH)"; \
 	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
 	if [ -n "$(ROLE)" ]; then \
@@ -354,29 +322,29 @@ test:
 		ROLE_DIR="$$ROLES_DIR/$$ROLE_EFF"; \
 		if [ ! -d "$$ROLE_DIR" ]; then echo "❌ Role not found: $(ROLE) in $$ROLES_DIR"; exit 1; fi; \
 		if [ ! -f "$$ROLE_DIR/molecule/default/molecule.yml" ]; then echo "❌ Molecule scenario missing for role: $(ROLE)"; exit 1; fi; \
-		echo "🧪 $(COLLECTION) • $(ROLE) • molecule $$SUBCMD"; \
-		(cd "$$ROLE_DIR" && molecule $$SUBCMD); \
-		if [ -n "$$EXTRA" ]; then (cd "$$ROLE_DIR" && molecule $$EXTRA); fi; \
+		echo "🧪 $(COLLECTION) • $(ROLE) • molecule $$SUBCMD (uvx runtime)"; \
+		(cd "$$ROLE_DIR" && $(MOLECULE) $$SUBCMD); \
+		if [ -n "$$EXTRA" ]; then (cd "$$ROLE_DIR" && $(MOLECULE) $$EXTRA); fi; \
 	else \
 		ROLES=$$(find "$$ROLES_DIR" -mindepth 1 -maxdepth 1 -type d -exec test -f {}/molecule/default/molecule.yml \; -print 2>/dev/null | sort); \
 		if [ -z "$$ROLES" ]; then echo "⚠️  No roles with Molecule found under $$ROLES_DIR"; exit 0; fi; \
 		COUNT=$$(echo "$$ROLES" | wc -w | tr -d ' '); \
-		echo "🧪 $(COLLECTION) • $$COUNT roles • molecule $$SUBCMD"; \
+		echo "🧪 $(COLLECTION) • $$COUNT roles • molecule $$SUBCMD (uvx runtime)"; \
 		for r in $$ROLES; do \
 			role_name=$$(basename "$$r"); \
 			echo "📋 Testing $$role_name..."; \
-			(cd "$$r" && molecule $$SUBCMD); \
-			if [ -n "$$EXTRA" ]; then (cd "$$r" && molecule $$EXTRA); fi; \
+			(cd "$$r" && $(MOLECULE) $$SUBCMD); \
+			if [ -n "$$EXTRA" ]; then (cd "$$r" && $(MOLECULE) $$EXTRA); fi; \
 		done; \
 	fi
 
 # === Help ===
 help:
-	@echo "🚀 Unified Ansible Wrapper"
-	@echo "=========================="
+	@echo "🚀 Unified Ansible Wrapper (uv-only)"
+	@echo "===================================="
 	@echo ""
 	@echo "📋 Quick Start:"
-	@echo "  make install                    # Install Ansible"
+	@echo "  make install                    # Install Ansible (uv) + Galaxy collections"
 	@echo "  make inventory [TARGET=servers] # Create inventory"
 	@echo "  make run PLAYBOOK=common        # Run playbook"
 	@echo ""
@@ -392,12 +360,12 @@ help:
 	@echo ""
 	@echo "📊 Operations:"
 	@echo "  status                                  # comprehensive infrastructure status"
-	@echo "  inventory [TARGET=servers|appliances]  # create inventory"
+	@echo "  inventory [TARGET=servers|appliances]   # create inventory"
 	@echo "  inventory TYPE=local [TARGET=servers]   # create local self-provisioning inventory"
-	@echo "  backup [TARGET=servers|appliances]     # backup inventory"
+	@echo "  backup [TARGET=servers|appliances]      # backup inventory"
 	@echo "  logs                                    # recent logs"
 	@echo ""
-	@echo "🧪 Testing:"
+	@echo "🧪 Testing (uvx runtime – no global install):"
 	@echo "  test                                    # run Molecule for all roles (auto-discover)"
 	@echo "  test ROLE=<name>                        # run Molecule for a specific role"
 	@echo "  test MODE=syntax                        # quick syntax checks"
@@ -406,7 +374,7 @@ help:
 	@echo "  test ROLE=minio MODE=syntax             # syntax check for specific role"
 	@echo ""
 	@echo "💡 Examples (Collections):"
-	@echo "  make install                                      # Install Ansible + Collections"
+	@echo "  make install                                      # Install Ansible + Collections via uv"
 	@echo "  make run PLAYBOOK=common                          # yamisskey.servers"
 	@echo "  make run PLAYBOOK=setup TARGET=appliances        # yamisskey.appliances"
 	@echo "  make check PLAYBOOK=security LIMIT=local         # dry-run with Collections"
