@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: borgbackup-test-instance
-    image: ghcr.io/ansible-community/molecule-ubuntu:22.04
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
     pre_build_image: true
     privileged: true
     volumes:
