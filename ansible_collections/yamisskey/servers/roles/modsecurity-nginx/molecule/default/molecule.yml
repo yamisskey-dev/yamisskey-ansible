@@ -12,6 +12,7 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     tmpfs:
       - /run
+      - /tmp
     capabilities:
       - SYS_ADMIN
     command: /lib/systemd/systemd
