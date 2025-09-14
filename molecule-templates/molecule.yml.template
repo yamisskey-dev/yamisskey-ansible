@@ -33,11 +33,11 @@ provisioner:
       callbacks_enabled: profile_tasks,timer
       stdout_callback: ansible.builtin.default
       deprecation_warnings: False
-      remote_tmp: /var/tmp/ansible
+      remote_tmp: tmp/ansible
   env:
-    ANSIBLE_REMOTE_TEMP: /var/tmp/ansible
+    ANSIBLE_REMOTE_TEMP: /tmp/ansible
   connection_options:
-    ansible_remote_tmp: /var/tmp/ansible 
+    ansible_remote_tmp: /tmp/ansible
   inventory:
     host_vars:
       ${ROLE_NAME}-test-instance:

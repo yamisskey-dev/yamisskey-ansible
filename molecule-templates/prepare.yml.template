@@ -2,8 +2,8 @@
   hosts: all
   gather_facts: false
   tasks:
-    - name: Ensure /var/tmp/ansible exists with sticky bit
+    - name: Ensure tmp/ansible exists with sticky bit
       ansible.builtin.file:
-        path: /var/tmp/ansible
+        path: /tmp/ansible
         state: directory
         mode: "1777"
