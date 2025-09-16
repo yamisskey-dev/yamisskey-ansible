@@ -233,6 +233,12 @@ jobs:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
         run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/.vendor/collections"
+          mkdir -p .vendor/collections
+          rm -rf ansible_collections
+          ln -s "$GITHUB_WORKSPACE/ansible_collections" ansible_collections
+
           set +e
           molecule --version
           ansible --version || true
