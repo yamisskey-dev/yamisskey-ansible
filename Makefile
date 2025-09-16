@@ -205,7 +205,7 @@ test:
 	case "$$MODE_EFF" in syntax) SUBCMD="syntax";; converge) SUBCMD="converge";; cleanup) SUBCMD="cleanup"; EXTRA="destroy || true";; test) SUBCMD="test";; *) echo "❌ Invalid MODE. Use: syntax, converge, cleanup, or test"; exit 1;; esac; \
 	if ! command -v docker >/dev/null 2>&1; then echo "❌ Docker not found. Install & start docker."; exit 1; fi; \
 	if ! docker info >/dev/null 2>&1; then echo "❌ Docker daemon is not running."; exit 1; fi; \
-	export ANSIBLE_COLLECTIONS_PATSS="$(ANSIBLE_PATHS)"; \
+	export ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)"; \
 	if [ -f "$(CONFIG)" ]; then export ANSIBLE_CONFIG="$(CONFIG)"; fi; \
 	if [ -n "$(ROLE)" ]; then \
 		ROLE_EFF="$(ROLE)"; [ "$$ROLE_EFF" = "modsecurity" ] && ROLE_EFF="modsecurity-nginx"; \

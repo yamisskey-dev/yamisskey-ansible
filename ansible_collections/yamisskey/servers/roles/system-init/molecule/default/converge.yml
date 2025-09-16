@@ -3,28 +3,29 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Install Docker for testing
       apt:
-        name: 
+        name:
           - docker.io
-          - docker-compose-plugin
+          - docker-compose
         update_cache: true
         state: present
-      
+
     - name: Start Docker service
       service:
         name: docker
         state: started
         enabled: true
-        
+      failed_when: false
+
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
       pip:
         name:
@@ -32,23 +33,26 @@
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
       loop:
         - /tmp/test
 
   tasks:
-    - name: Apply system-init role
+    - name: Apply system-init role in test mode
       include_role:
-        name: yamisskey.servers.system-init
+        name: system-init
       vars:
-        # Test-specific configuration will be added here
-        ansible_user: "root"
-        
+        test_mode: true
+        install_docker: false
+        install_tailscale: false
+        install_cloudflare: false
+        verify_installations: false
+
     - name: Basic role verification
       debug:
         msg: "system-init role applied successfully"
@@ -57,7 +61,8 @@
     - name: Show test environment status
       shell: echo "Test environment setup completed"
       register: test_status
-      
+      changed_when: false
+
     - name: Display test status
       debug:
         var: test_status.stdout

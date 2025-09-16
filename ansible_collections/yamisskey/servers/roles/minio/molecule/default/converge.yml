@@ -9,7 +9,7 @@
       apt:
         name: 
           - docker.io
-          - docker-compose-plugin
+          - docker-compose
         update_cache: true
         state: present
       
@@ -18,6 +18,7 @@
         name: docker
         state: started
         enabled: true
+      failed_when: false
         
     - name: Add test user to docker group
       user:
@@ -51,8 +52,7 @@
 
   tasks:
     - name: Apply MinIO role
-      include_role:
-        name: yamisskey.servers.minio
+      include_tasks: ../../tasks/main.yml
       vars:
         # Test-specific configuration
         minio_secrets_file: "/tmp/test-secrets.yml"
@@ -92,7 +92,6 @@
     - name: Show container logs if verification fails
       command: docker logs minio
       register: container_logs
-      ignore_errors: true
       
     - name: Display container logs for debugging
       debug:

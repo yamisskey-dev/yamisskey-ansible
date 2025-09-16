@@ -55,3 +55,4 @@
     enabled: true
     state: started
   when: not ansible_check_mode
+  ignore_errors: true

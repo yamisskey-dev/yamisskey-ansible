@@ -116,4 +116,3 @@ jobs:
           ANSIBLE_GALAXY_CACHE_DIR: ${{ runner.temp }}/galaxy-cache
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
-

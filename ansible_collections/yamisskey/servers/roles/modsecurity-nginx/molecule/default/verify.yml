@@ -52,7 +52,6 @@
         method: GET
         status_code: [403, 406]
       register: sql_injection_test
-      ignore_errors: true
       
     - name: Verify SQL injection blocked (when in blocking mode)
       assert:
@@ -67,7 +66,6 @@
         method: GET
         status_code: [200, 404, 403, 429]
       register: rate_limit_test
-      ignore_errors: true
       loop: "{{ range(0, 15) | list }}"  # Send 15 requests quickly
       loop_control:
         pause: 0.1
@@ -83,7 +81,6 @@
         body: {}
         status_code: [200, 404, 502]  # Backend may not exist
       register: api_exclusion_test
-      ignore_errors: true
       
     - name: Verify API exclusion works
       assert:
@@ -102,7 +99,6 @@
           Host: "{{ test_domain }}"
         status_code: [101, 200, 404, 502]  # Various acceptable responses
       register: websocket_test
-      ignore_errors: true
       
     - name: Test blocked user agent detection
       uri:
@@ -112,7 +108,6 @@
           User-Agent: "sqlmap/1.0"
         status_code: [403, 406]
       register: blocked_ua_test
-      ignore_errors: true
       when: modsecurity_rule_engine != "DetectionOnly"
       
     - name: Verify blocked user agent handling
@@ -191,7 +186,6 @@
           text: "{{ 'A' * 1000 }}"  # Large but legitimate content
         status_code: [200, 400, 404, 413, 502]  # Various acceptable responses
       register: large_request_test
-      ignore_errors: true
       
     - name: Verify large legitimate request handling
       assert:

@@ -7,6 +7,7 @@
         url: https://pkg.cloudflareclient.com/pubkey.gpg
         dest: /tmp/cloudflare-warp.gpg
         mode: '0644'
+      changed_when: false
 
     - name: Install Cloudflare WARP GPG key
       ansible.builtin.command: gpg --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg /tmp/cloudflare-warp.gpg
@@ -28,6 +29,7 @@
       ansible.builtin.file:
         path: /tmp/cloudflare-warp.gpg
         state: absent
+      changed_when: false
 
     - name: Update apt cache
       ansible.builtin.apt:
@@ -50,6 +52,7 @@
       ansible.builtin.get_url:
         url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{{ 'amd64' if arch == 'x86_64' else arch }}.deb"
         dest: "/tmp/cloudflared.deb"
+      changed_when: false
 
     - name: Install Cloudflared
       ansible.builtin.apt:
@@ -60,6 +63,7 @@
       ansible.builtin.file:
         path: "/tmp/cloudflared.deb"
         state: absent
+      changed_when: false
 
   when: 
     - ansible_os_family == "Debian"

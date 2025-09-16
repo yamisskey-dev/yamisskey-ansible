@@ -30,6 +30,12 @@
           - python3-passlib
         state: present
       
+    - name: Create test directory for verification
+      file:
+        path: /tmp/test
+        state: directory
+        mode: '0755'
+      
     - name: Verify installed packages
       debug:
         msg: "Successfully installed common packages for testing"

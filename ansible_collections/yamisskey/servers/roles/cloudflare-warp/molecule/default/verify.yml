@@ -4,31 +4,44 @@
   gather_facts: false
   
   tasks:
-    - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
-      become: true
-      
-    - name: Verify role execution completed without errors
+    - name: Check mock warp-cli exists
       stat:
-        path: /tmp/test
-      register: test_dir_check
-      
-    - name: Assert test directory exists
+        path: /usr/local/bin/warp-cli
+      register: warp_cli_stat
+
+    - name: Assert warp-cli present
       assert:
         that:
-          - test_dir_check.stat.exists
-          - test_dir_check.stat.isdir
-        fail_msg: "Test directory was not created"
-        success_msg: "Test directory created successfully"
+          - warp_cli_stat.stat.exists
+          - warp_cli_stat.stat.isreg
+        fail_msg: "mock warp-cli not found"
+        success_msg: "mock warp-cli present"
+
+    - name: Check mock systemd service file exists
+      stat:
+        path: /etc/systemd/system/warp-svc.service
+      register: warp_svc_stat
+
+    - name: Assert service unit file present
+      assert:
+        that:
+          - warp_svc_stat.stat.exists
+          - warp_svc_stat.stat.isreg
+        fail_msg: "mock warp-svc.service not found"
+        success_msg: "mock warp-svc.service present"
+
+    - name: Run mock warp-cli help (non-fatal)
+      command: /usr/local/bin/warp-cli
+      register: warp_cli_help
+      changed_when: false
+      failed_when: false
 
     - name: Display test summary
       debug:
         msg: |
           cloudflare-warp Role Verification Summary:
           ====================================
-          ✅ Test Environment: Ready
+          ✅ Mock Artifacts: Present
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
           

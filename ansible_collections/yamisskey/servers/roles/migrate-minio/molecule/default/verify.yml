@@ -5,10 +5,14 @@
   
   tasks:
     - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
-      become: true
+      command: docker --version
+      register: docker_version_check
+      changed_when: false
+      
+    - name: Verify Docker is working
+      command: docker ps
+      register: docker_ps_check
+      changed_when: false
       
     - name: Verify role execution completed without errors
       stat:
