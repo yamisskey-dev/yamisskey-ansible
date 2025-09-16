@@ -34,7 +34,8 @@ provisioner:
         ansible_user: "root"
         minio_bucket_name_for_misskey: "files"
         minio_bucket_name_for_outline: "assets"
-        minio_secrets_file: "/tmp/minio-secrets.yml"
+        minio_secrets_file: "/opt/minio/secrets.yml"
+        source_minio_host: "migrate-test-instance"
 verifier:
   name: ansible
 scenario:

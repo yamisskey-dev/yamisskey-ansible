@@ -45,7 +45,7 @@
   tasks:
     - name: Apply migrate-minio role
       include_role:
-        name: migrate-minio
+        name: yamisskey.servers.migrate_minio
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

@@ -65,6 +65,9 @@ restart_services_on_change: true
 crowdsec_config_dir: "/etc/crowdsec"
 crowdsec_bouncer_name: "crowdsec-firewall-bouncer"
 
+# Service management toggles
+security_manage_fail2ban_service: true
+
 # systemd-resolved configuration
 systemd_resolved_dns: "127.0.0.1"
 systemd_resolved_fallback_dns: "1.1.1.1"

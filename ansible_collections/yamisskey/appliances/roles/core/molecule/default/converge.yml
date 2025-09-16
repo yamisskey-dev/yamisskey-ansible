@@ -2,9 +2,16 @@
 - name: Converge core role
   hosts: all
   become: true
-  gather_facts: true
+  gather_facts: false
   
   pre_tasks:
+    - name: Ensure remote Ansible temporary directory exists
+      raw: mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp
+      changed_when: false
+
+    - name: Gather facts
+      setup:
+
     - name: Install Docker for testing
       apt:
         name: 

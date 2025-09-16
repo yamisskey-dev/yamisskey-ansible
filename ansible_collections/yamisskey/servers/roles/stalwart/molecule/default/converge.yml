@@ -56,7 +56,7 @@
   tasks:
     - name: Apply stalwart role
       include_role:
-        name: stalwart
+        name: yamisskey.servers.stalwart
         
     - name: Basic role verification
       debug:
