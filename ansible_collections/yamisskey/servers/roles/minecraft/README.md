@@ -19,8 +19,7 @@
 
 ### 自動最適化
 - **x86_64/amd64**: 4GB RAM, 最大20プレイヤー, 描画距離10
-- **ARM64/ARM32** (Raspberry Pi 5, 8GB): 4GB RAM, 最大20プレイヤー, 描画距離10
-  - **同居サービス考慮**: Minio + BorgBackup との共存（Misskey本体は別サーバー）
+- **ARM64/ARM32** (Raspberry Pi 5, 8GB): 4GB RAM, 最大20プレイヤー, 
 
 ## 特徴
 
@@ -175,7 +174,6 @@ minecraft_view_distance: 10
 ```
 システム予約:        ~1GB
 Minio:               ~1GB
-BorgBackup:          ~512MB
 Minecraft:           4GB
 その他/バッファ:      ~1.5GB
 ```

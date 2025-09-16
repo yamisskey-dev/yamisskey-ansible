@@ -47,7 +47,6 @@ ansible-galaxy collection install -r requirements.yml
 - **`misskey`** - Misskey social media platform
 - **`misskey-proxy`** - Reverse proxy configuration for Misskey
 - **`monitoring`** - Prometheus and Grafana monitoring stack
-- **`borgbackup`** - Encrypted backup solution with deduplication
 
 ## 🚀 Usage Examples
 
@@ -75,7 +74,6 @@ ansible-galaxy collection install -r requirements.yml
     - yamisskey.servers.minio
     - yamisskey.servers.misskey
     - yamisskey.servers.monitoring
-    - yamisskey.servers.borgbackup
 ```
 
 ### Using Collection Playbooks
@@ -133,7 +131,6 @@ proxy1.example.com
 - Fail2ban intrusion detection system
 - System audit logging with `auditd`
 - AppArmor security profiles
-- Encrypted backups with BorgBackup
 
 ## 📊 Monitoring & Observability
 
@@ -145,7 +142,6 @@ proxy1.example.com
 
 ## 🔄 Backup Strategy
 
-- **BorgBackup**: Deduplicated, encrypted backups
 - **Automated scheduling**: Configurable backup intervals
 - **Remote storage**: Support for various backup destinations
 - **Compression**: Efficient storage utilization
