@@ -26,10 +26,6 @@
       tags: [monitoring, observability]
       when: "'monitoring' in group_names or enable_monitoring | default(true) | bool"
       
-    - role: yamisskey.servers.borgbackup
-      tags: [backup, recovery]
-      when: "enable_backup | default(true) | bool"
-      
   post_tasks:
     - name: Display comprehensive deployment summary
       debug:
@@ -41,7 +37,6 @@
           - ✅ MinIO object storage backend
           - ✅ Misskey social media platform
           - ✅ Prometheus monitoring stack
-          - ✅ BorgBackup automated backups
           
           🌐 Service Endpoints:
           - Misskey: https://{{ ansible_fqdn }}
