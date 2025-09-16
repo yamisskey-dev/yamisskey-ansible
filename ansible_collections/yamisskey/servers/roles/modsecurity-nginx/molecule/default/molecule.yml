@@ -30,6 +30,7 @@ provisioner:
     host_vars:
       modsecurity-test-instance:
         # ModSecurity test variables
+        ansible_user: "root"
         modsecurity_enabled: true
         modsecurity_paranoia_level: 1
         modsecurity_anomaly_inbound: 5

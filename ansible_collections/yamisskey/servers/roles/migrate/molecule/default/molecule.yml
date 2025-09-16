@@ -32,6 +32,9 @@ provisioner:
       migrate-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+        minio_bucket_name_for_misskey: "files"
+        minio_bucket_name_for_outline: "assets"
+        minio_secrets_file: "/tmp/minio-secrets.yml"
 verifier:
   name: ansible
 scenario:

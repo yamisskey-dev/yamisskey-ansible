@@ -10,6 +10,9 @@
         name: 
           - docker.io
           - docker-compose
+          - curl
+          - wget
+          - unzip
         update_cache: true
         state: present
       

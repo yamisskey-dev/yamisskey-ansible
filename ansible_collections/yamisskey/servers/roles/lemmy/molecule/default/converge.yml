@@ -5,6 +5,22 @@
   gather_facts: true
   
   pre_tasks:
+    - name: Ensure test secrets exist on control host
+      delegate_to: localhost
+      run_once: true
+      block:
+        - name: Create parent directory for secrets
+          file:
+            path: "{{ lemmy_secrets_file | dirname }}"
+            state: directory
+            mode: '0755'
+        - name: Write deterministic test secrets
+          copy:
+            dest: "{{ lemmy_secrets_file }}"
+            mode: '0600'
+            content: |
+              postgres_password: molecule-test-password
+
     - name: Install Docker for testing
       apt:
         name: 

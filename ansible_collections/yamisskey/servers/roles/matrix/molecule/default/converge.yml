@@ -5,6 +5,29 @@
   gather_facts: true
   
   pre_tasks:
+    - name: Ensure test secrets exist on controller
+      delegate_to: localhost
+      run_once: true
+      block:
+        - name: Create parent directory for secrets
+          file:
+            path: "{{ synapse_secrets_file | dirname }}"
+            state: directory
+            mode: '0755'
+        - name: Write deterministic Synapse secrets
+          copy:
+            dest: "{{ synapse_secrets_file }}"
+            mode: '0600'
+            content: |
+              postgresql:
+                user: synapse
+                password: synapse-pass
+                database: synapse
+                host: localhost
+              registration_shared_secret: reg-secret
+              macaroon_secret_key: macaroon-secret
+              form_secret: form-secret
+
     - name: Install Docker for testing
       apt:
         name: 

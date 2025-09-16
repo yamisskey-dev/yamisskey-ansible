@@ -32,6 +32,11 @@ provisioner:
       searxng-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+        domain: "example.com"
+        searxng_dir: "/opt/test-searxng"
+        searxng_env_file: "/opt/test-searxng/.env"
+        searxng_settings_file: "/opt/test-searxng/searxng/settings.yml"
+        searxng_repo: "/tmp/mock-searxng-repo"
 verifier:
   name: ansible
 scenario:

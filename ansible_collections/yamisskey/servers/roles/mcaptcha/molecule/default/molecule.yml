@@ -32,6 +32,7 @@ provisioner:
       mcaptcha-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+        domain: "example.com"
 verifier:
   name: ansible
 scenario:

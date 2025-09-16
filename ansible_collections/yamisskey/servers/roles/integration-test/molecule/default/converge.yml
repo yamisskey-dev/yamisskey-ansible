@@ -45,7 +45,7 @@
   tasks:
     - name: Apply integration-test role
       include_role:
-        name: yamisskey.servers.integration-test
+        name: integration-test
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

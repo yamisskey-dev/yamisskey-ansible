@@ -45,7 +45,7 @@
   tasks:
     - name: Apply neo-quesdon role
       include_role:
-        name: yamisskey.servers.neo-quesdon
+        name: neo-quesdon
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

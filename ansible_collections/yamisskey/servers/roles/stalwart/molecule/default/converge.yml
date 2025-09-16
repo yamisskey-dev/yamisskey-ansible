@@ -41,13 +41,22 @@
         mode: '0755'
       loop:
         - /tmp/test
+        - "{{ stalwart_dir }}"
+        - "{{ stalwart_dir }}/data"
+        - "{{ stalwart_dir }}/etc"
+
+    - name: Seed test secrets file
+      copy:
+        dest: "{{ stalwart_secrets_file }}"
+        mode: '0600'
+        content: |
+          admin_user: admin
+          admin_password: test-password
 
   tasks:
     - name: Apply stalwart role
-      include_tasks: ../../tasks/main.yml
-      vars:
-        # Test-specific configuration will be added here
-        ansible_user: "root"
+      include_role:
+        name: stalwart
         
     - name: Basic role verification
       debug:
