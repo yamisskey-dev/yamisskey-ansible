@@ -108,39 +108,55 @@ jobs:
             exit 0
           fi
 
-          # 1) 変更のあったロール
+          STATUS=.cache/molecule-status/test-index.json
+          ALL=${{ steps.scan.outputs.pairs }}
+          if [ -z "$ALL" ] || [ "$ALL" = "[]" ]; then
+            echo "final_matrix=[]" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 変更のあったロール
           CHANGED_JSON=${CHANGED:-[]}
 
-          # インデックスJSONを安全に読み込む（無ければ {}）
-          if [ -s "$STATUS" ]; then
+          # ✅ インデックスJSONをバリデーションして安全に読み込み
+          if [ -s "$STATUS" ] && jq -e . "$STATUS" >/dev/null 2>&1; then
             STATUS_JSON="$(cat "$STATUS")"
           else
+            echo "(!) STATUS index missing or invalid; fallback to {}"
             STATUS_JSON='{}'
           fi
 
-          # 「未テスト or 前回失敗」を抽出
-          UNTESTED_OR_FAILED=$(
-            jq -c --argjson idx "$STATUS_JSON" '
-              . as $all
-              | [ .[] 
-                  | select( 
-                      (( $idx[(.collection + "/" + .role)] // {status:"untested"} ).status) != "pass"
-                    )
-                ]
-            ' <<<"$ALL"
-          )
+          # ✅ jq -n で無入力から変数注入（ファイル内容に依存しない）
+          UNTESTED_OR_FAILED="$(
+            jq -c -n \
+              --argjson all "$ALL" \
+              --argjson idx "$STATUS_JSON" \
+              '
+              # all: [{collection,role}, ...]
+              # idx: { "collection/role": {status:"pass"|"fail"|...}, ... }
+              [ $all[]
+                | select( (( $idx[(.collection + "/" + .role)] // {status:"untested"}).status) != "pass" )
+              ]
+              '
+          )"
 
-          # 合流してuniq
-          FINAL=$(
+          # 合流して uniq
+          FINAL="$(
             jq -c -s '
               add | unique_by(.collection + "/" + .role)
             ' <(echo "$CHANGED_JSON") <(echo "$UNTESTED_OR_FAILED")
-          )
+          )"
 
-          COUNT=$(jq 'length' <<<"$FINAL")
+          COUNT="$(jq 'length' <<<"$FINAL")"
           echo "final_matrix=$FINAL" >> "$GITHUB_OUTPUT"
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Matrix count: $COUNT"
+          echo "---- DEBUG matrix inputs ----"
+          printf 'ALL=%s\n' "$ALL" | head -c 1000; echo
+          printf 'CHANGED_JSON=%s\n' "${CHANGED_JSON:-[]}" | head -c 1000; echo
+          printf 'STATUS_JSON=%s\n' "$STATUS_JSON" | head -c 1000; echo
+          echo "-----------------------------"
       
       - name: Expose cache key prefix
         id: cache_key
