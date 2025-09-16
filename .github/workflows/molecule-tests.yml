@@ -100,7 +100,7 @@ jobs:
                    "${{ runner.temp }}/molecule-state" \
                    "${{ runner.temp }}/.cache" \
                    "${{ runner.temp }}/galaxy-cache"
-          mkdir -p "$GITHUB_WORKSPACE/.vendor/collections"
+          mkdir -p "$GITHUB_WORKSPACE/.vendor/collections" ./.vendor/collections
           pwd && ls -la
           which ansible-galaxy || true
           ansible-galaxy --version || true
