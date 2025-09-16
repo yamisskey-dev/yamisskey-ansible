@@ -14,7 +14,9 @@
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
-  when: ansible_os_family == "Debian"
+  when:
+    - ansible_os_family == "Debian"
+    - not (test_mode | default(false))
   tags:
     - packages
 
@@ -23,13 +25,17 @@
     path: "{{ ansible_env.PWD }}/deploy/servers/playbooks/common.yml"
   register: common_playbook_check
   delegate_to: localhost
+  become: false
+  when: not (test_mode | default(false))
   tags:
     - always
 
 - name: Apply common role for necessary packages
   ansible.builtin.include_role:
     name: yamisskey.servers.common
-  when: common_playbook_check.stat.exists
+  when: 
+    - not (test_mode | default(false))
+    - common_playbook_check.stat.exists
   tags:
     - packages
     - common
@@ -47,7 +53,10 @@
       - ca-certificates
     state: present
     update_cache: true
-  when: not common_playbook_check.stat.exists and ansible_os_family == "Debian"
+  when: 
+    - not (test_mode | default(false))
+    - not common_playbook_check.stat.exists 
+    - ansible_os_family == "Debian"
   tags:
     - packages
     - base

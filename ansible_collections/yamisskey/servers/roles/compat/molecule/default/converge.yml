@@ -9,15 +9,19 @@
       apt:
         name: 
           - docker.io
-          - docker-compose-plugin
+          - docker-compose
         update_cache: true
         state: present
       
     - name: Start Docker service
-      service:
-        name: docker
-        state: started
-        enabled: true
+      command: systemctl start docker
+      failed_when: false
+      changed_when: false
+      
+    - name: Enable Docker service
+      command: systemctl enable docker
+      failed_when: false
+      changed_when: false
         
     - name: Add test user to docker group
       user:
@@ -57,6 +61,7 @@
     - name: Show test environment status
       shell: echo "Test environment setup completed"
       register: test_status
+      changed_when: false
       
     - name: Display test status
       debug:

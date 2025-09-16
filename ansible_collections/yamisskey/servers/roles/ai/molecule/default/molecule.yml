@@ -5,44 +5,32 @@ driver:
   name: docker
 platforms:
   - name: ai-test-instance
-    image: ubuntu:20.04
-    dockerfile: |
-      FROM ubuntu:20.04
-      ENV DEBIAN_FRONTEND=noninteractive
-      RUN apt-get update && apt-get install -y \
-          python3 python3-pip sudo systemd \
-          && apt-get clean \
-          && rm -rf /var/lib/apt/lists/* \
-          && useradd -m -s /bin/bash ansible \
-          && echo 'ansible:ansible' | chpasswd \
-          && usermod -aG sudo ansible \
-          && echo 'ansible ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-      CMD ["/bin/bash"]
-    command: /bin/bash -c "while true; do sleep 1000; done"
-    privileged: false
-    capabilities:
-      - NET_ADMIN
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     tmpfs:
       - /run
+    capabilities:
+      - SYS_ADMIN
+    command: bash -c "mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
+    networks:
+      - name: molecule-test-network
 provisioner:
   name: ansible
-  connection_options:
-    ansible_connection: community.docker.docker
-  env:
-    ANSIBLE_COLLECTIONS_PATH: "${MOLECULE_PROJECT_DIRECTORY}/../../../../..:${HOME}/.ansible/collections:/usr/share/ansible/collections"
   config_options:
     defaults:
       callbacks_enabled: profile_tasks,timer
-      stdout_callback: ansible.builtin.default
-      deprecation_warnings: False
-      remote_tmp: /tmp/ansible
+      remote_tmp: /tmp/.ansible-tmp
+      roles_path: ../../../
   env:
-    ANSIBLE_REMOTE_TMP: /tmp/ansible
+    ANSIBLE_REMOTE_TMP: /tmp/.ansible-tmp
   inventory:
     host_vars:
       ai-test-instance:
         ansible_user: "root"
-        ansible_connection: community.docker.docker
 verifier:
   name: ansible
 scenario:

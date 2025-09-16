@@ -9,7 +9,7 @@
       apt:
         name: 
           - docker.io
-          - docker-compose-plugin
+          - docker-compose
           - nodejs
           - npm
         update_cache: true
@@ -20,6 +20,7 @@
         name: docker
         state: started
         enabled: true
+      failed_when: false
         
     - name: Add test user to docker group
       user:

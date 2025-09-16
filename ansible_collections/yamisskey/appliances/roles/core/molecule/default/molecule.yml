@@ -21,8 +21,6 @@ platforms:
 provisioner:
   name: ansible
   config_options:
-  env:
-    ANSIBLE_REMOTE_TEMP: /tmp/ansible
     defaults:
       callbacks_enabled: profile_tasks,timer
       remote_tmp: /tmp/ansible

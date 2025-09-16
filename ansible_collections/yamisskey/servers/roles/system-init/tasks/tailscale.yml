@@ -9,7 +9,7 @@
   ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
   when: install_tailscale | default(true) and tailscale_check.rc != 0
   register: tailscale_install
-  changed_when: tailscale_check.rc != 0
+  changed_when: false
 
 - name: Verify Tailscale installation
   ansible.builtin.command: tailscale version

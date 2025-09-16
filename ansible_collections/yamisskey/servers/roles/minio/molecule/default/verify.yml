@@ -125,7 +125,6 @@
         /usr/local/bin/mc alias list | grep testminio || echo "Alias not found"
       register: mc_alias_test
       become: true
-      ignore_errors: true
       changed_when: false
       
     - name: Verify external network was created

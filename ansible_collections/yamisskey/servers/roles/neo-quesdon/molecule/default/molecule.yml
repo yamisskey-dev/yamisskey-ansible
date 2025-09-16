@@ -15,7 +15,7 @@ platforms:
       - /run
     capabilities:
       - SYS_ADMIN
-    command: bash -c "mkdir -p /tmp/ansible && chmod 1777 /tmp/ansible && exec /lib/systemd/systemd"
+    command: bash -c "mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
     networks:
       - name: molecule-test-network
 provisioner:
@@ -23,9 +23,10 @@ provisioner:
   config_options:
     defaults:
       callbacks_enabled: profile_tasks,timer
-      remote_tmp: /tmp/ansible
+      remote_tmp: /tmp/.ansible-tmp
+      roles_path: ../../../
   env:
-    ANSIBLE_REMOTE_TMP: /tmp/ansible
+    ANSIBLE_REMOTE_TMP: /tmp/.ansible-tmp
   inventory:
     host_vars:
       neo-quesdon-test-instance:

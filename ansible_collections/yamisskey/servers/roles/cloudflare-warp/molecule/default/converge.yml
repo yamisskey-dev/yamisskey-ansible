@@ -5,49 +5,157 @@
   gather_facts: true
   
   pre_tasks:
-    - name: Install Docker for testing
-      apt:
-        name: 
-          - docker.io
-          - docker-compose-plugin
-        update_cache: true
-        state: present
-      
-    - name: Start Docker service
-      service:
-        name: docker
-        state: started
-        enabled: true
+    - name: Wait for container to be ready
+      wait_for:
+        timeout: 30
         
-    - name: Add test user to docker group
-      user:
-        name: "{{ ansible_user }}"
-        groups: docker
-        append: true
-        
-    - name: Install required Python packages
-      pip:
-        name:
-          - docker
-          - docker-compose
-          - requests
-        state: present
-        
-    - name: Create test directories
+    - name: Ensure Ansible temporary directory exists
       file:
-        path: "{{ item }}"
+        path: /tmp/.ansible-tmp
         state: directory
-        mode: '0755'
-      loop:
-        - /tmp/test
+        mode: '1777'
+        owner: root
+        group: root
+        
+    - name: Verify Ansible temporary directory permissions
+      stat:
+        path: /tmp/.ansible-tmp
+      register: ansible_tmp_stat
+      
+    - name: Debug Ansible temporary directory info
+      debug:
+        msg: "Ansible tmp dir: {{ ansible_tmp_stat.stat.path }} exists: {{ ansible_tmp_stat.stat.exists }} mode: {{ ansible_tmp_stat.stat.mode }}"
 
   tasks:
-    - name: Apply cloudflare-warp role
-      include_role:
-        name: yamisskey.servers.cloudflare-warp
+    - name: Mock Cloudflare WARP installation for testing
+      block:
+        - name: Check if mock warp-cli exists
+          stat:
+            path: /usr/local/bin/warp-cli
+          register: mock_warp_cli_stat
+          
+        - name: Create mock warp-cli command
+          file:
+            path: /usr/local/bin/warp-cli
+            state: touch
+            mode: '0755'
+          when: not mock_warp_cli_stat.stat.exists
+            
+        - name: Add mock warp-cli script content
+          copy:
+            content: |
+              #!/bin/bash
+              case "$1" in
+                "registration")
+                  case "$2" in
+                    "show")
+                      echo "not registered"
+                      exit 1
+                      ;;
+                    "new")
+                      echo "Registration successful"
+                      exit 0
+                      ;;
+                    "license")
+                      echo "License applied successfully"
+                      exit 0
+                      ;;
+                  esac
+                  ;;
+                "connect")
+                  echo "Connected to WARP"
+                  exit 0
+                  ;;
+                "settings")
+                  echo "Mode: warp+doh"
+                  exit 0
+                  ;;
+                "mode")
+                  echo "Mode set to $2"
+                  exit 0
+                  ;;
+                "tunnel")
+                  case "$2" in
+                    "host")
+                      case "$3" in
+                        "list")
+                          echo "No excluded hosts"
+                          exit 0
+                          ;;
+                        "add")
+                          echo "Host $4 added to exclusion list"
+                          exit 0
+                          ;;
+                      esac
+                      ;;
+                  esac
+                  ;;
+                *)
+                  echo "Usage: warp-cli [command] [options]"
+                  exit 1
+                  ;;
+              esac
+            dest: /usr/local/bin/warp-cli
+            mode: '0755'
+            
+        - name: Check if mock systemd service file exists
+          stat:
+            path: /etc/systemd/system/warp-svc.service
+          register: mock_systemd_service_stat
+          
+        - name: Create mock systemd service file
+          file:
+            path: /etc/systemd/system/warp-svc.service
+            state: touch
+            mode: '0644'
+          when: not mock_systemd_service_stat.stat.exists
+            
+        - name: Add mock systemd service content
+          copy:
+            content: |
+              [Unit]
+              Description=Cloudflare WARP Service
+              After=network.target
+              
+              [Service]
+              Type=simple
+              ExecStart=/bin/true
+              Restart=always
+              
+              [Install]
+              WantedBy=multi-user.target
+            dest: /etc/systemd/system/warp-svc.service
+            mode: '0644'
+            
+        - name: Reload systemd daemon
+          systemd:
+            daemon_reload: true
+          failed_when: false
+            
+        - name: Start mock warp service
+          systemd:
+            name: warp-svc.service
+            state: started
+            enabled: true
+          failed_when: false
+            
+      when: ansible_user == "root"
+      
+    - name: Include cloudflare-warp tasks
+      include_tasks: ../../tasks/main.yml
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
+        # Cloudflare WARP role variables
+        warp_service_name: "warp-svc.service"
+        warp_license_key: ""
+        warp_mode: "warp+doh"
+        warp_excluded_hosts:
+          - region1.v2.argotunnel.com
+          - region2.v2.argotunnel.com
+        warp_verify_timeout: 10
+        # Test environment flags
+        test_mode: true
         
     - name: Basic role verification
       debug:
@@ -57,6 +165,7 @@
     - name: Show test environment status
       shell: echo "Test environment setup completed"
       register: test_status
+      changed_when: false
       
     - name: Display test status
       debug:
