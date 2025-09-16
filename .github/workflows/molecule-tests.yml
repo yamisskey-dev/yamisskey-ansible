@@ -17,39 +17,31 @@ env:
   ANSIBLE_FORCE_COLOR: '1'
 
 jobs:
-  # Job to detect which roles have been changed
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
       changed-roles: ${{ steps.changes.outputs.roles }}
       matrix: ${{ steps.changes.outputs.matrix }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
       - name: Detect changed roles
         id: changes
+        shell: bash
         run: |
-          # Get list of changed files
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
           else
             CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }})
           fi
-          
-          # Extract unique collection/role pairs from changed files
-          # Path pattern: ansible_collections/<ns>/<collection>/roles/<role>/...
+
           PAIRS=$(echo "$CHANGED_FILES" \
-            | awk -F/ '/^ansible_collections\/[^^/]+\/[^^/]+\/roles\// {print $3 "/" $5}' \
+            | awk -F/ '/^ansible_collections\/[^/]+\/[^/]+\/roles\// {print $3 "/" $5}' \
             | sort -u || true)
 
-          # Prepare outputs
           if [ -n "$PAIRS" ]; then
-            # Space-separated role list (kept for quick checks)
             CHANGED_ROLES=$(printf '%s\n' "$PAIRS" | awk -F/ '{print $2}' | sort -u | tr '\n' ' ')
-            # Compact JSON array for matrix include
             MATRIX_JSON=$(printf '%s\n' "$PAIRS" | awk -F/ '{print "{\"collection\":\""$1"\",\"role\":\""$2"\"}"}' | jq -s -c '.')
             echo "roles=$CHANGED_ROLES" >> "$GITHUB_OUTPUT"
             echo "matrix=$MATRIX_JSON" >> "$GITHUB_OUTPUT"
@@ -58,21 +50,101 @@ jobs:
             echo "matrix=[]" >> "$GITHUB_OUTPUT"
           fi
 
-  # Full Molecule test for changed roles
-  molecule-test:
+  # 変更分＋（未テスト or 前回失敗）を合流して最終マトリクスを作る
+  build-matrix:
+    runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.changed-roles != ''
+    outputs:
+      final-matrix: ${{ steps.make_matrix.outputs.final_matrix }}
+      count: ${{ steps.make_matrix.outputs.count }}
+      cache-key-prefix: ${{ steps.cache_key.outputs.prefix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 前回までのテスト結果インデックスをキャッシュから復元
+      - name: Restore status cache
+        id: restore_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/molecule-status/test-index.json
+          key: molecule-status-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            molecule-status-${{ github.ref_name }}-
+
+      - name: Ensure status index exists
+        run: |
+          mkdir -p .cache/molecule-status
+          if [ ! -s .cache/molecule-status/test-index.json ]; then
+            echo '{}' > .cache/molecule-status/test-index.json
+          fi
+          jq '.' .cache/molecule-status/test-index.json
+
+      - name: Scan all roles with molecule scenarios
+        id: scan
+        shell: bash
+        run: |
+          # yamisskey/<collection>/roles/<role>/molecule/*
+          ALL=$(find ansible_collections/yamisskey -type d -path '*/roles/*/molecule' \
+              | awk -F/ '{print $(NF-3) "/" $(NF-1)}' \
+              | sort -u)
+          if [ -z "$ALL" ]; then
+            echo "pairs=[]" >> "$GITHUB_OUTPUT"
+          else
+            MATRIX=$(printf '%s\n' "$ALL" | awk -F/ '{print "{\"collection\":\""$1"\",\"role\":\""$2"\"}"}' | jq -s -c '.')
+            echo "pairs=$MATRIX" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build final matrix (changed + untested/failed)
+        id: make_matrix
+        shell: bash
+        env:
+          CHANGED: ${{ needs.detect-changes.outputs.matrix }}
+        run: |
+          STATUS=.cache/molecule-status/test-index.json
+          ALL=${{ steps.scan.outputs.pairs }}
+          if [ -z "$ALL" ] || [ "$ALL" = "[]" ]; then
+            echo "final_matrix=[]" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 1) 変更のあったロール
+          CHANGED_JSON=${CHANGED:-[]}
+
+          # 2) 未テスト or 前回失敗のロール（indexに無い or status != pass）
+          UNTESTED_OR_FAILED=$(jq -c --argfile idx "$STATUS" '
+            . as $all
+            | ($idx // {}) as $idx
+            | [ .[] | select( ($idx[("\(.collection)/\(.role)")] // {status:"untested"}).status != "pass" ) ]
+          ' <<<"$ALL")
+
+          # 合流してuniq
+          FINAL=$(jq -c -s '
+            add
+            | unique_by(.collection + "/" + .role)
+          ' <(echo "$CHANGED_JSON") <(echo "$UNTESTED_OR_FAILED"))
+
+          COUNT=$(jq 'length' <<<"$FINAL")
+          echo "final_matrix=$FINAL" >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Matrix count: $COUNT"
+      
+      - name: Expose cache key prefix
+        id: cache_key
+        run: echo "prefix=molecule-status-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+  molecule-test:
+    needs: build-matrix
+    if: ${{ needs.build-matrix.outputs.count != '0' }}
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
       fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.build-matrix.outputs.final-matrix) }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
@@ -91,23 +163,10 @@ jobs:
         run: |
           ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
-      - name: Run Molecule test
+      - name: Run Molecule test (capture status)
+        id: run
         working-directory: ansible_collections/yamisskey/${{ matrix.collection }}/roles/${{ matrix.role }}
-        run: |
-          set -euo pipefail
-          mkdir -p "${{ runner.temp }}/ansible-local" \
-                   "${{ runner.temp }}/molecule" \
-                   "${{ runner.temp }}/molecule-state" \
-                   "${{ runner.temp }}/.cache" \
-                   "${{ runner.temp }}/galaxy-cache"
-          mkdir -p "$GITHUB_WORKSPACE/.vendor/collections" ./.vendor/collections
-          pwd && ls -la
-          which ansible-galaxy || true
-          ansible-galaxy --version || true
-          ansible-galaxy collection list || true
-          molecule --version
-          ansible --version || true
-          molecule test
+        shell: bash
         env:
           ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
           ANSIBLE_REMOTE_TEMP: /tmp/ansible
@@ -117,3 +176,87 @@ jobs:
           ANSIBLE_GALAXY_CACHE_DIR: ${{ runner.temp }}/galaxy-cache
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
+        run: |
+          set +e
+          molecule --version
+          ansible --version || true
+          molecule test
+          EXIT_CODE=$?
+          set -e
+
+          mkdir -p "$GITHUB_WORKSPACE/.tmp-status"
+          STATUS_FILE="$GITHUB_WORKSPACE/.tmp-status/${{ matrix.collection }}__${{ matrix.role }}.json"
+          if [ $EXIT_CODE -eq 0 ]; then
+            STATUS="pass"
+          else
+            STATUS="fail"
+          fi
+          jq -n --arg c "${{ matrix.collection }}" --arg r "${{ matrix.role }}" --arg s "$STATUS" \
+               --arg t "$(date -u +%FT%TZ)" \
+               '{collection:$c, role:$r, status:$s, timestamp:$t}' > "$STATUS_FILE"
+          echo "wrote $STATUS_FILE"
+
+          # 再スローして job の成功/失敗は正しく反映
+          exit $EXIT_CODE
+
+      - name: Upload role status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: molecule-status-${{ matrix.collection }}-${{ matrix.role }}
+          path: .tmp-status/*.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # すべてのロール結果を取り込み、インデックスJSONを更新→キャッシュ保存
+  update-status-cache:
+    needs: [build-matrix, molecule-test]
+    if: ${{ needs.build-matrix.outputs.count != '0' && always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore previous status cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/molecule-status/test-index.json
+          key: molecule-status-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            molecule-status-${{ github.ref_name }}-
+
+      - name: Ensure status index exists
+        run: |
+          mkdir -p .cache/molecule-status
+          if [ ! -s .cache/molecule-status/test-index.json ]; then
+            echo '{}' > .cache/molecule-status/test-index.json
+          fi
+
+      - name: Download all role status artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: molecule-status-*
+          merge-multiple: true
+          path: .tmp-status-merged
+
+      - name: Merge statuses into index
+        shell: bash
+        run: |
+          INDEX=.cache/molecule-status/test-index.json
+          for f in .tmp-status-merged/*.json; do
+            [ -e "$f" ] || continue
+            c=$(jq -r '.collection' "$f")
+            r=$(jq -r '.role' "$f")
+            k="${c}/${r}"
+            tmp=$(mktemp)
+            jq --arg k "$k" --slurpfile rec "$f" '
+              .[$k] = ($rec[0])
+            ' "$INDEX" > "$tmp" && mv "$tmp" "$INDEX"
+          done
+          echo "Final index:"
+          jq '.' "$INDEX"
+
+      - name: Save updated status cache
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/molecule-status/test-index.json
+          key: molecule-status-${{ github.ref_name }}-${{ github.run_id }}
