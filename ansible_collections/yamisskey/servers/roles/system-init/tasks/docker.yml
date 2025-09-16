@@ -55,4 +55,5 @@
     enabled: true
     state: started
   when: not ansible_check_mode
-  ignore_errors: true
+  register: docker_service
+  failed_when: false
