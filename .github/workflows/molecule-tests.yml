@@ -111,18 +111,31 @@ jobs:
           # 1) 変更のあったロール
           CHANGED_JSON=${CHANGED:-[]}
 
-          # 2) 未テスト or 前回失敗のロール（indexに無い or status != pass）
-          UNTESTED_OR_FAILED=$(jq -c --argfile idx "$STATUS" '
-            . as $all
-            | ($idx // {}) as $idx
-            | [ .[] | select( ($idx[("\(.collection)/\(.role)")] // {status:"untested"}).status != "pass" ) ]
-          ' <<<"$ALL")
+          # インデックスJSONを安全に読み込む（無ければ {}）
+          if [ -s "$STATUS" ]; then
+            STATUS_JSON="$(cat "$STATUS")"
+          else
+            STATUS_JSON='{}'
+          fi
+
+          # 「未テスト or 前回失敗」を抽出
+          UNTESTED_OR_FAILED=$(
+            jq -c --argjson idx "$STATUS_JSON" '
+              . as $all
+              | [ .[] 
+                  | select( 
+                      (( $idx[(.collection + "/" + .role)] // {status:"untested"} ).status) != "pass"
+                    )
+                ]
+            ' <<<"$ALL"
+          )
 
           # 合流してuniq
-          FINAL=$(jq -c -s '
-            add
-            | unique_by(.collection + "/" + .role)
-          ' <(echo "$CHANGED_JSON") <(echo "$UNTESTED_OR_FAILED"))
+          FINAL=$(
+            jq -c -s '
+              add | unique_by(.collection + "/" + .role)
+            ' <(echo "$CHANGED_JSON") <(echo "$UNTESTED_OR_FAILED")
+          )
 
           COUNT=$(jq 'length' <<<"$FINAL")
           echo "final_matrix=$FINAL" >> "$GITHUB_OUTPUT"
