@@ -42,10 +42,70 @@
       loop:
         - /tmp/test
 
+    - name: Prepare mock SearXNG repository
+      block:
+        - name: Ensure repository structure exists
+          file:
+            path: "{{ searxng_repo }}/{{ item }}"
+            state: directory
+            mode: '0755'
+          loop:
+            - ""
+            - "searxng"
+
+        - name: Create mock docker-compose file
+          copy:
+            dest: "{{ searxng_repo }}/docker-compose.yaml"
+            mode: '0644'
+            content: |
+              version: "3.8"
+              services:
+                web:
+                  image: nginx:alpine
+                  ports:
+                    - "8080:80"
+                  networks:
+                    - external_network
+              networks:
+                external_network:
+                  external: true
+
+        - name: Create mock settings file
+          copy:
+            dest: "{{ searxng_repo }}/searxng/settings.yml"
+            mode: '0644'
+            content: |
+              secret_key: ultrasecretkey
+
+        - name: Initialise git repository for mock SearXNG
+          command: git init "{{ searxng_repo }}"
+          args:
+            creates: "{{ searxng_repo }}/.git"
+
+        - name: Ensure main branch exists
+          command: git -C "{{ searxng_repo }}" checkout -b main
+          args:
+            creates: "{{ searxng_repo }}/.git/refs/heads/main"
+
+        - name: Stage repository contents
+          command: git -C "{{ searxng_repo }}" add -A
+
+        - name: Commit mock repository contents
+          command: git -C "{{ searxng_repo }}" -c user.name="molecule" -c user.email="molecule@example.com" commit -m "Initial"
+          register: searxng_git_commit
+          changed_when: searxng_git_commit.rc == 0
+          failed_when: >-
+            searxng_git_commit.rc not in [0, 1]
+            or (
+              searxng_git_commit.rc == 1
+              and ('nothing to commit' not in (searxng_git_commit.stdout | lower))
+              and ('nothing to commit' not in (searxng_git_commit.stderr | lower))
+            )
+
   tasks:
     - name: Apply searxng role
       include_role:
-        name: yamisskey.servers.searxng
+        name: searxng
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

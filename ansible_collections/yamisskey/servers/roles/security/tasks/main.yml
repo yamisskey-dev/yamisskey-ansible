@@ -17,6 +17,16 @@
   when: install_tailscale | default(false)
   become: true
 
+- name: Check if tailscale CLI is available
+  ansible.builtin.command: command -v tailscale
+  register: tailscale_cli_check
+  changed_when: false
+  failed_when: false
+
+- name: Set tailscale availability fact
+  ansible.builtin.set_fact:
+    tailscale_cli_available: "{{ tailscale_cli_check.rc == 0 }}"
+
 - name: Ensure syslog user exists
   ansible.builtin.user:
     name: syslog
@@ -166,14 +176,18 @@
   ansible.builtin.command: tailscale status
   register: tailscale_status
   changed_when: false
+  when: tailscale_cli_available | default(false)
 
 - name: Check if Tailscale needs to be started
   ansible.builtin.set_fact:
     tailscale_needs_start: "{{ tailscale_status.stdout is not regex('.*100\\..*') }}"
+  when: tailscale_cli_available | default(false)
 
 - name: Start Tailscale only if not already connected
   ansible.builtin.command: tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
-  when: tailscale_needs_start | bool
+  when:
+    - tailscale_cli_available | default(false)
+    - tailscale_needs_start | default(false) | bool
   register: tailscale_start
 
 - name: Retrieve and parse Tailscale IP addresses
@@ -201,6 +215,7 @@
       changed_when: false
       when: tailscale_ips is defined
   become: true
+  when: tailscale_cli_available | default(false)
 
 - name: Configure SSH settings
   ansible.builtin.lineinfile:

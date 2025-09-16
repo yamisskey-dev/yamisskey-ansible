@@ -32,6 +32,13 @@ provisioner:
       vikunja-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+        domain: "example.com"
+        vikunja_secrets_file: "/tmp/vikunja-secrets.yml"
+        db_root_password: "test-root-password"
+        db_user: "vikunja"
+        db_password: "vikunja-pass"
+        mailer_password: "mailer-pass"
+        jwt_secret: "test-jwt-secret"
 verifier:
   name: ansible
 scenario:

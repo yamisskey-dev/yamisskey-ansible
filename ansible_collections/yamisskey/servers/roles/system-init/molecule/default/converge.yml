@@ -44,8 +44,7 @@
 
   tasks:
     - name: Apply system-init role in test mode
-      include_role:
-        name: system-init
+      include_tasks: ../../tasks/main.yml
       vars:
         test_mode: true
         install_docker: false

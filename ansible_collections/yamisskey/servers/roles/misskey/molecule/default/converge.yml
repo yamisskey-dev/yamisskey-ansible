@@ -89,6 +89,7 @@
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         mode: '0644'
+        remote_src: true
       loop:
         - src: "/tmp/mock-docker-compose.yml.j2"
           dest: "/opt/test-misskey/docker-compose.yml"
@@ -107,7 +108,7 @@
 
     - name: Apply Misskey role (with minimal configuration)
       include_role:
-        name: yamisskey.servers.misskey
+        name: misskey
       vars:
         # Test-specific configuration
         misskey_dir: "/opt/test-misskey"
