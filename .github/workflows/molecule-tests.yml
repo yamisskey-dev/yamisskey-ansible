@@ -116,10 +116,20 @@ jobs:
             exit 0
           fi
 
+          STATUS=.cache/molecule-status/test-index.json
+          ALL=${{ steps.scan.outputs.pairs }}
+
+          # 早期リターン
+          if [ -z "$ALL" ] || [ "$ALL" = "[]" ]; then
+            echo "final_matrix=[]" >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # 変更のあったロール
           CHANGED_JSON=${CHANGED:-[]}
 
-          # ✅ インデックスJSONをバリデーションして安全に読み込み
+          # STATUS をバリデーション（壊れてたら {} に）
           if [ -s "$STATUS" ] && jq -e . "$STATUS" >/dev/null 2>&1; then
             STATUS_JSON="$(cat "$STATUS")"
           else
@@ -127,17 +137,23 @@ jobs:
             STATUS_JSON='{}'
           fi
 
-          # ✅ jq -n で無入力から変数注入（ファイル内容に依存しない）
+          # ✨ ここがキモ：ファイル経由で jq に渡す（シェル展開しない）
+          ALL_FILE="$(mktemp)"
+          IDX_FILE="$(mktemp)"
+          printf '%s' "$ALL" > "$ALL_FILE"
+          printf '%s' "$STATUS_JSON" > "$IDX_FILE"
+
+          # 未テスト or 前回失敗を抽出
           UNTESTED_OR_FAILED="$(
             jq -c -n \
-              --argjson all "$ALL" \
-              --argjson idx "$STATUS_JSON" \
+              --rawfile all "$ALL_FILE" \
+              --rawfile idx "$IDX_FILE" \
               '
-              # all: [{collection,role}, ...]
-              # idx: { "collection/role": {status:"pass"|"fail"|...}, ... }
-              [ $all[]
-                | select( (( $idx[(.collection + "/" + .role)] // {status:"untested"}).status) != "pass" )
-              ]
+              ($all|fromjson) as $all
+              | ($idx|fromjson) as $idx
+              | [ $all[]
+                  | select( (( $idx[.collection + "/" + .role] // {status:"untested"}).status) != "pass" )
+                ]
               '
           )"
 
@@ -152,12 +168,11 @@ jobs:
           echo "final_matrix=$FINAL" >> "$GITHUB_OUTPUT"
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Matrix count: $COUNT"
-          echo "---- DEBUG matrix inputs ----"
-          printf 'ALL=%s\n' "$ALL" | head -c 1000; echo
-          printf 'CHANGED_JSON=%s\n' "${CHANGED_JSON:-[]}" | head -c 1000; echo
-          printf 'STATUS_JSON=%s\n' "$STATUS_JSON" | head -c 1000; echo
-          echo "-----------------------------"
-      
+          echo "---- DEBUG ----"
+          jq -e . "$ALL_FILE" >/dev/null || { echo "ALL invalid JSON"; head -c 400 "$ALL_FILE"; echo; }
+          jq -e . "$IDX_FILE" >/dev/null || { echo "IDX invalid JSON"; head -c 400 "$IDX_FILE"; echo; }
+          echo "--------------"
+
       - name: Expose cache key prefix
         id: cache_key
         run: echo "prefix=molecule-status-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
