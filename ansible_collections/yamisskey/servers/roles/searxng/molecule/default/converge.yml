@@ -105,7 +105,7 @@
   tasks:
     - name: Apply searxng role
       include_role:
-        name: searxng
+        name: yamisskey.servers.searxng
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

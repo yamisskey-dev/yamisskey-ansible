@@ -6,7 +6,6 @@
   
   pre_tasks:
     - name: Ensure test secrets exist on controller
-      delegate_to: localhost
       when: inventory_hostname == (ansible_play_hosts_all | first)
       block:
         - name: Create parent directory for secrets

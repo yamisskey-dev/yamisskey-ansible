@@ -5,8 +5,14 @@
   gather_facts: true
   
   pre_tasks:
+    - name: Ensure MinIO secrets directory exists
+      when: inventory_hostname == (ansible_play_hosts_all | first)
+      file:
+        path: "{{ minio_secrets_file | dirname }}"
+        state: directory
+        mode: '0755'
+
     - name: Ensure MinIO secrets exist for testing
-      delegate_to: localhost
       when: inventory_hostname == (ansible_play_hosts_all | first)
       copy:
         dest: "{{ minio_secrets_file }}"

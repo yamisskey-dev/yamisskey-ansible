@@ -271,16 +271,19 @@
     enabled: true
     state: started
   become: true
+  when: security_manage_fail2ban_service | default(true)
 
 - name: Check fail2ban status for sshd
   ansible.builtin.command: fail2ban-client status sshd
   register: result
   failed_when: "'sshd' not in result.stdout"
   become: true
+  when: security_manage_fail2ban_service | default(true)
 
 - name: Debug fail2ban status
   ansible.builtin.debug:
     msg: '{{ result.stdout }}'
+  when: security_manage_fail2ban_service | default(true)
 
 - name: Install and Configure CrowdSec with Firewall Bouncer
   become: true

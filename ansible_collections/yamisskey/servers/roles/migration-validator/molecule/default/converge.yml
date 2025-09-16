@@ -45,7 +45,7 @@
   tasks:
     - name: Apply migration-validator role
       include_role:
-        name: migration-validator
+        name: yamisskey.servers.migration_validator
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

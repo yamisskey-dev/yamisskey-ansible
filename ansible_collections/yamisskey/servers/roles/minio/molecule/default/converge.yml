@@ -52,7 +52,8 @@
 
   tasks:
     - name: Apply MinIO role
-      include_tasks: ../../tasks/main.yml
+      include_role:
+        name: yamisskey.servers.minio
       vars:
         # Test-specific configuration
         minio_secrets_file: "/tmp/test-secrets.yml"

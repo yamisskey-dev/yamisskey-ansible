@@ -45,6 +45,23 @@
       loop:
         - /tmp/test
 
+    - name: Provide placeholder Misskey assets
+      block:
+        - name: Ensure misskey assets directory exists
+          file:
+            path: "/home/{{ ansible_user }}/misskey-assets"
+            state: directory
+            owner: "{{ ansible_user }}"
+            group: "{{ ansible_user }}"
+            mode: '0755'
+        - name: Create placeholder wallpaper asset
+          copy:
+            dest: "/home/{{ ansible_user }}/misskey-assets/wallpaper.jpg"
+            content: ""  # minimal placeholder file for tests
+            owner: "{{ ansible_user }}"
+            group: "{{ ansible_user }}"
+            mode: '0644'
+
   tasks:
     - name: Apply jitsi role
       include_role:
@@ -52,6 +69,7 @@
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
+        jitsi_server_name: "jitsi.test.example"
         
     - name: Basic role verification
       debug:
