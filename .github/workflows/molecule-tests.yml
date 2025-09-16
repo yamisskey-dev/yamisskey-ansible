@@ -125,7 +125,12 @@ jobs:
           fi
 
           STATUS=.cache/molecule-status/test-index.json
-          ALL=${{ steps.scan.outputs.pairs }}
+
+          # ✅ JSONを壊さないポイント：式展開は必ずシングルクォートで囲む
+          ALL='${{ steps.scan.outputs.pairs }}'
+          CHANGED_JSON='${{ needs.detect-changes.outputs.matrix }}'
+          # 空なら [] にフォールバック
+          [ -n "$CHANGED_JSON" ] || CHANGED_JSON='[]'
 
           # 早期リターン
           if [ -z "$ALL" ] || [ "$ALL" = "[]" ]; then
@@ -133,9 +138,6 @@ jobs:
             echo "count=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
-          # 変更のあったロール
-          CHANGED_JSON=${CHANGED:-[]}
 
           # STATUS をバリデーション（壊れてたら {} に）
           if [ -s "$STATUS" ] && jq -e . "$STATUS" >/dev/null 2>&1; then
@@ -145,7 +147,7 @@ jobs:
             STATUS_JSON='{}'
           fi
 
-          # ✨ ここがキモ：ファイル経由で jq に渡す（シェル展開しない）
+          # ファイル経由で渡すとさらに安全
           ALL_FILE="$(mktemp)"; IDX_FILE="$(mktemp)"
           printf '%s' "$ALL" > "$ALL_FILE"
           printf '%s' "$STATUS_JSON" > "$IDX_FILE"
@@ -171,7 +173,7 @@ jobs:
           FINAL="$(
             jq -c -s '
               add | unique_by(.collection + "/" + .role)
-            ' <(echo "$CHANGED_JSON") <(echo "$UNTESTED_OR_FAILED")
+            ' <(printf '%s' "$CHANGED_JSON") <(printf '%s' "$UNTESTED_OR_FAILED")
           )"
 
           COUNT="$(jq 'length' <<<"$FINAL")"
