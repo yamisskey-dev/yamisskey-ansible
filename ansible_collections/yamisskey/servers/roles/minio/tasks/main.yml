@@ -67,14 +67,18 @@
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
   changed_when: false
   become: true
-  when: ansible_env.MOLECULE_SCENARIO_NAME is undefined
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false  # UFW command may fail if ufw is not installed or configured
 
 - name: Wait for MinIO port to be ready
   wait_for:
     host: localhost
     port: "{{ host_services[inventory_hostname].minio_api }}"
-    timeout: 60
+    delay: 5
+    sleep: 3
+    timeout: 180
 
 - name: Check if Minio Client exists
   stat:

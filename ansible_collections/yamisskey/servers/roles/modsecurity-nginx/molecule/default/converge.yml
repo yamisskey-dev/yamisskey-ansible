@@ -76,7 +76,9 @@
       wait_for:
         path: /var/run/docker.sock
         state: present
-        timeout: 30
+        delay: 5
+        sleep: 3
+        timeout: 120
 
     - name: Add test user to docker group
       user:
