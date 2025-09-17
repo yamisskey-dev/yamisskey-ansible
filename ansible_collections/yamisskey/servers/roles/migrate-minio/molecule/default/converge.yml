@@ -14,7 +14,6 @@
       register: apt_update_result
       failed_when: false
 
-
     - name: Install Docker for testing
       apt:
         name:
@@ -24,7 +23,6 @@
         update_cache: false
       when: apt_update_result is not failed
       
-
     - name: Install Docker for testing (fallback without cache update)
       apt:
         name:
@@ -67,7 +65,7 @@
   tasks:
     - name: Apply migrate-minio role
       include_role:
-あ        name: yamisskey.servers.migrate-minio
+        name: yamisskey.servers.migrate-minio
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
