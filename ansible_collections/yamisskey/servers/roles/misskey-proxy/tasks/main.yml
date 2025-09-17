@@ -69,7 +69,7 @@
     name: media-proxy-rs-server
     image: 'ghcr.io/yamisskey/media-proxy-rs:main'
     ports:
-      - '{{ host_services.linode_prox.media_proxy_rs }}:{{ host_services.linode_prox.media_proxy_rs }}'
+      - '{{ host_services[inventory_hostname].media_proxy_rs | default(default_proxy_ports.media_proxy_rs) }}:{{ host_services[inventory_hostname].media_proxy_rs | default(default_proxy_ports.media_proxy_rs) }}'
     state: started
     restart_policy: always
     detach: true
@@ -80,7 +80,7 @@
     name: proxy
     image: nginx
     ports:
-      - '{{ host_services.linode_prox.nginx }}:{{ host_services.linode_prox.nginx }}'
+      - '{{ host_services[inventory_hostname].nginx | default(default_proxy_ports.nginx) }}:{{ host_services[inventory_hostname].nginx | default(default_proxy_ports.nginx) }}'
     state: started
     restart_policy: always
     detach: true
