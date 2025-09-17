@@ -14,23 +14,53 @@
       register: apt_update_result
       failed_when: false
 
+    - name: Create keyrings directory for Docker
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: apt_update_result is not failed
+
+    - name: Add Docker GPG key
+      get_url:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+      when: apt_update_result is not failed
+
+    - name: Set Docker GPG key permissions
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: 'a+r'
+      when: apt_update_result is not failed
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+        filename: docker
+        state: present
+      when: apt_update_result is not failed
+
     - name: Install Docker for testing
       apt:
         name:
-          - docker.io
-          - docker-compose
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
           - curl
           - wget
           - unzip
         state: present
-        update_cache: false
+        update_cache: true
       when: apt_update_result is not failed
       
-    - name: Install Docker for testing (fallback without cache update)
+    - name: Install Docker for testing (fallback - use system packages)
       apt:
         name:
           - docker.io
-          - docker-compose
+          - docker-compose-plugin
           - curl
           - wget
           - unzip
