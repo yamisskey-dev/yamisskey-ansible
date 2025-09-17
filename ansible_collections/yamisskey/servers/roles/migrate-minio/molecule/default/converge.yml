@@ -14,7 +14,6 @@
       register: apt_update_result
       failed_when: false
 
-
     - name: Install Docker for testing
       apt:
         name:
@@ -24,7 +23,6 @@
         update_cache: false
       when: apt_update_result is not failed
       
-
     - name: Install Docker for testing (fallback without cache update)
       apt:
         name:
