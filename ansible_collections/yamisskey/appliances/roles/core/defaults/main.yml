@@ -1,0 +1,40 @@
+---
+# TrueNAS Core role default variables
+
+# TrueNAS pool configuration
+truenas_pool_name: "pool"
+
+# Dataset configuration
+truenas_datasets: []
+# Example:
+# truenas_datasets:
+#   - name: "apps/minio"
+#     compression: "lz4"
+#     atime: false
+#     recordsize: "1M"
+#     acl: "POSIX"
+#     uid: 0
+#     gid: 0
+#     mode: "0755"
+
+# User and group configuration
+truenas_groups: []
+# Example:
+# truenas_groups:
+#   - name: "apps"
+#     gid: 1800
+
+truenas_users: []
+# Example:
+# truenas_users:
+#   - name: "minio"
+#     uid: 1801
+#     gid: 1800
+#     home: "/nonexistent"
+#     description: "MinIO Service Account"
+
+# Backup configuration
+truenas_backup_path: "/mnt/pool/backup"
+
+# Test environment overrides
+test_environment: false

@@ -131,7 +131,7 @@
         esac
         EOF
         chmod +x /usr/local/bin/mc
-      changed_when: true
+      changed_when: false
       
     - name: Create mock secrets file
       copy:
@@ -188,7 +188,7 @@
         time.sleep(1)  # Give servers time to start
         " &
         sleep 2
-      changed_when: true
+      changed_when: false
       
     - name: Test migrate-minio role with minimal functionality
       debug:
