@@ -107,6 +107,7 @@
     owner: root
     group: root
     mode: '0644'
+    remote_src: true
 
 - name: Create plugin.head.html if it does not exist
   file:

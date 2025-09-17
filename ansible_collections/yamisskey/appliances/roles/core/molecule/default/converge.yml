@@ -5,6 +5,10 @@
   gather_facts: false
   
   pre_tasks:
+    - name: Wait for instance to become reachable
+      wait_for_connection:
+        timeout: 30
+
     - name: Ensure remote Ansible temporary directory exists
       raw: mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp
       changed_when: false

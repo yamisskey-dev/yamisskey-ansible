@@ -8,6 +8,7 @@
     - ufw
     - fail2ban
     - lynis
+    - curl
   become: true
 
 - name: Ensure tailscale is installed (optional)
@@ -287,13 +288,22 @@
 
 - name: Install and Configure CrowdSec with Firewall Bouncer
   become: true
+  when:
+    - security_install_crowdsec | default(true)
+    - not (ansible_virtualization_type is defined and ansible_virtualization_type == "docker")
   block:
-    - name: Add CrowdSec repository and install CrowdSec
+    - name: Add CrowdSec repository
       ansible.builtin.shell: |
         curl -s https://install.crowdsec.net | sudo sh
-        apt install -y crowdsec
+      register: crowdsec_repo_install
+      changed_when: true
+
+    - name: Install CrowdSec package
+      ansible.builtin.apt:
+        name: crowdsec
+        state: present
+        update_cache: yes
       register: crowdsec_install
-      changed_when: "'CrowdSec installed' not in crowdsec_install.stdout"
 
     - name: Install firewall bouncer
       ansible.builtin.apt:

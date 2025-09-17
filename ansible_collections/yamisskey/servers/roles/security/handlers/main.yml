@@ -57,3 +57,10 @@
     name: docker
     state: restarted
   become: true
+
+- name: Restart clamav-daemon
+  systemd:
+    name: clamav-daemon
+    state: restarted
+    enabled: true
+  become: true
