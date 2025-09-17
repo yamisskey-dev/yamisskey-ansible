@@ -91,24 +91,44 @@
       changed_when: false
       failed_when: false
 
-    - name: Remove Docker lock files if they exist (but not active socket)
-      file:
+    - name: Check Docker lock files when daemon is not running
+      stat:
         path: "{{ item }}"
-        state: absent
       loop:
         - /var/run/docker.pid
         - /var/lib/docker/network/files/local-kv.db.lock
-      ignore_errors: true
+      register: docker_lock_files_state
       when: docker_daemon_check.rc != 0
+
+    - name: Remove Docker lock files if they exist (but not active socket)
+      file:
+        path: "{{ item.stat.path }}"
+        state: absent
+      loop: "{{ docker_lock_files_state.results | default([]) }}"
+      when:
+        - docker_daemon_check.rc != 0
+        - item.stat.exists
+      loop_control:
+        label: "{{ item.stat.path }}"
+
+    - name: Check Docker lock files when daemon is running
+      stat:
+        path: "{{ item }}"
+      loop:
+        - /var/lib/docker/network/files/local-kv.db.lock
+      register: docker_running_lock_files_state
+      when: docker_daemon_check.rc == 0
 
     - name: Clean only specific lock files when Docker is running
       file:
-        path: "{{ item }}"
+        path: "{{ item.stat.path }}"
         state: absent
-      loop:
-        - /var/lib/docker/network/files/local-kv.db.lock
-      ignore_errors: true
-      when: docker_daemon_check.rc == 0
+      loop: "{{ docker_running_lock_files_state.results | default([]) }}"
+      when:
+        - docker_daemon_check.rc == 0
+        - item.stat.exists
+      loop_control:
+        label: "{{ item.stat.path }}"
 
     - name: Ensure Docker service is stopped before restart
       service:
