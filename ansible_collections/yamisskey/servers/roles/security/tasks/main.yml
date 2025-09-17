@@ -472,6 +472,18 @@
     - name: Install dnscrypt-proxy
       ansible.builtin.package:
         name: dnscrypt-proxy
+      register: dnscrypt_install_result
+
+    - name: Verify dnscrypt-proxy installation
+      ansible.builtin.command:
+        cmd: which dnscrypt-proxy
+      register: dnscrypt_which_result
+      failed_when: false
+      changed_when: false
+
+    - name: Debug dnscrypt-proxy installation
+      debug:
+        msg: "dnscrypt-proxy installation: {{ dnscrypt_install_result.changed }}, found at: {{ dnscrypt_which_result.stdout }}"
 
     - name: Ensure dnscrypt-proxy configuration directory exists
       ansible.builtin.file:
@@ -491,7 +503,9 @@
         name: dnscrypt-proxy
         state: started
         enabled: true
-  become: true
+      when: dnscrypt_which_result.rc == 0
+become: true
+when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
 - name: Configure systemd-resolved to use dnscrypt-proxy
   block:
@@ -527,6 +541,7 @@
         mode: '0644'
       notify: Restart Docker
   become: true
+  when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
 - name: Verify DNS configuration
   block:

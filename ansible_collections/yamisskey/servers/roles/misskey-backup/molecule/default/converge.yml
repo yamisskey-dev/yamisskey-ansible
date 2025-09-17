@@ -97,7 +97,7 @@
   tasks:
     - name: Apply misskey-backup role
       include_role:
-        name: misskey-backup
+        name: yamisskey.servers.misskey_backup
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
