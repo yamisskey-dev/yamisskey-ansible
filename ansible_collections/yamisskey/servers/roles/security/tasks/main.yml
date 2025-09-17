@@ -504,8 +504,8 @@
         state: started
         enabled: true
       when: dnscrypt_which_result.rc == 0
-become: true
-when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
+  become: true
+  when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
 - name: Configure systemd-resolved to use dnscrypt-proxy
   block:
