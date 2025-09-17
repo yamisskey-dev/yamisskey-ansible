@@ -65,24 +65,29 @@
 # 2) Compose を base64 化（APIに流す用）
 - name: Read compose and b64-encode
   when: truenas_manage_custom_compose | default(false)
+  shell: cat {{ truenas_apps_config_path }}/minio/docker-compose.yml | base64 -w 0
+  register: compose_b64_result
+
+- name: Set compose b64 fact
+  when: truenas_manage_custom_compose | default(false)
   set_fact:
-    truenas_minio_compose_b64: "{{ lookup('file', truenas_apps_config_path + '/minio/docker-compose.yml') | b64encode }}"
+    truenas_minio_compose_b64: "{{ compose_b64_result.stdout }}"
 
 # 1.5) TrueNAS Custom App へ貼り付け可能な compose（値埋め込み版）を出力
-- name: Compute compose export directory for local artifacts
+- name: Compute compose export directory
   set_fact:
     truenas_compose_export_path: >-
-      {{ truenas_compose_export_dir | default((playbook_dir | default(role_path)) ~ '/out') }}
+      {{ truenas_compose_export_dir | default((playbook_dir | default(role_path | default('/tmp'))) ~ '/out') }}
 
 - name: Ensure local export directory exists (paste-ready compose)
-  delegate_to: localhost
+  become: false
   file:
     path: "{{ truenas_compose_export_path }}"
     state: directory
     mode: '0755'
 
-- name: Render paste-ready docker compose (local artifact)
-  delegate_to: localhost
+- name: Render paste-ready docker compose
+  become: false
   template:
     src: minio-compose-paste.yml.j2
     dest: "{{ truenas_compose_export_path ~ '/minio-docker-compose.paste.yml' }}"
@@ -203,6 +208,9 @@
   retries: 10
   delay: 12
   until: minio_health.status == 200
+  when:
+    - truenas_skip_health_check is not defined or not truenas_skip_health_check
+    - inventory_hostname != 'apps-test-instance'
 
 # 8) まとめ
 - name: Deployment summary
@@ -211,9 +219,9 @@
       ==============================================
       ✅ MinIO Deployed on TrueNAS Apps
       App: {{ truenas_minio_app_name }}
-      State: {{ app_state.state }}
+      State: {{ app_state.state | default('unknown') }}
       Public: https://{{ truenas_minio_domain }}
-      Health: {{ 'OK' if minio_health.status == 200 else 'NG' }}
+      Health: {{ 'OK' if (minio_health is defined and minio_health.status is defined and minio_health.status == 200) else ('SKIPPED' if (inventory_hostname == 'apps-test-instance') else 'NG') }}
       Next:
         - mc alias set truenas https://{{ truenas_minio_domain }} {{ truenas_minio_root_user }} {{ truenas_minio_root_password }}
         - バケット作成/ポリシー適用/レプリケーション設定

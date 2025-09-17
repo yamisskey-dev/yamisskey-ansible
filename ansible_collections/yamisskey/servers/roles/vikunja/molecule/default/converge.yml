@@ -95,7 +95,6 @@
         - /tmp/test
 
     - name: Seed controller secrets file for lookup
-      delegate_to: localhost
       copy:
         dest: "/tmp/vikunja-secrets.yml"
         mode: '0600'

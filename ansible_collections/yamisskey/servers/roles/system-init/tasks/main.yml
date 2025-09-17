@@ -24,7 +24,6 @@
   ansible.builtin.stat:
     path: "{{ ansible_env.PWD }}/deploy/servers/playbooks/common.yml"
   register: common_playbook_check
-  delegate_to: localhost
   become: false
   when: not (test_mode | default(false))
   tags:
