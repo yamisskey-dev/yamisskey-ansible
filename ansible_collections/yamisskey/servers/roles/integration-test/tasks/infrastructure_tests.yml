@@ -9,6 +9,12 @@
   failed_when: false
   tags: ['infra', 'docker']
 
+- name: Debug Docker service status
+  debug:
+    var: docker_status
+  when: docker_status is defined
+  tags: ['infra', 'debug']
+
 - name: Test available disk space
   shell: df -h / | tail -1 | awk '{print $5}' | sed 's/%//'
   register: disk_usage
@@ -49,9 +55,21 @@
 - name: Set infrastructure test results
   set_fact:
     infrastructure_results:
-      docker_status: "{{ 'pass' if docker_status.status.ActiveState == 'active' else 'fail' }}"
-      disk_usage: "{{ 'pass' if disk_usage.stdout | int < performance_thresholds.disk_usage_percent else 'fail' }}"
-      memory_usage: "{{ 'pass' if memory_usage.stdout | float < performance_thresholds.memory_usage_mb else 'fail' }}"
+      docker_status: "{{ 'pass' if docker_status.status is defined and docker_status.status.ActiveState == 'active' else 'fail' }}"
+      disk_usage: "{{ 'pass' if disk_usage.stdout | int < 90 else 'fail' }}"
+      memory_usage: "{{ 'pass' if memory_usage.stdout | float < 90 else 'fail' }}"
       network_connectivity: "{{ 'pass' if network_test.results | selectattr('failed', 'equalto', false) | list | length > 0 else 'fail' }}"
       port_accessibility: "{{ 'pass' if port_test.results | selectattr('failed', 'equalto', false) | list | length >= 2 else 'fail' }}"
+  when: docker_status.status is defined and docker_status.status.ActiveState is defined
+  tags: ['infra', 'results']
+
+- name: Set default infrastructure test results
+  set_fact:
+    infrastructure_results:
+      docker_status: "fail"
+      disk_usage: "{{ 'pass' if disk_usage.stdout | int < 90 else 'fail' }}"
+      memory_usage: "{{ 'pass' if memory_usage.stdout | float < 90 else 'fail' }}"
+      network_connectivity: "{{ 'pass' if network_test.results | selectattr('failed', 'equalto', false) | list | length > 0 else 'fail' }}"
+      port_accessibility: "{{ 'pass' if port_test.results | selectattr('failed', 'equalto', false) | list | length >= 2 else 'fail' }}"
+  when: docker_status.status is not defined or docker_status.status.ActiveState is not defined
   tags: ['infra', 'results']

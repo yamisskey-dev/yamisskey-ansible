@@ -96,8 +96,7 @@
 
   tasks:
     - name: Apply system-test role
-      include_role:
-        name: yamisskey.servers.system_test
+      include_tasks: ../../tasks/main.yml
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

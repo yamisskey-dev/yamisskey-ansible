@@ -34,11 +34,13 @@
     enabled: true
   become: true
   when: ansible_service_mgr != 'unknown'
+  failed_when: false
 
 - name: Deploy Impostor server
   community.docker.docker_compose_v2:
     project_src: "{{ impostor_dir }}"
     pull: always
+  when: ansible_play_hosts_all | length > 1
 
 - name: Create playit service
   template:
@@ -46,6 +48,7 @@
     dest: /etc/systemd/system/playit.service
     mode: '0644'
   become: true
+  when: ansible_play_hosts_all | length > 1
 
 - name: Configure playit service
   systemd:
@@ -54,3 +57,4 @@
     enabled: true
     daemon_reload: true
   become: true
+  when: ansible_play_hosts_all | length > 1

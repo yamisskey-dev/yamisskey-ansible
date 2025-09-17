@@ -5,13 +5,11 @@
       stat:
         path: "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate"
       register: migrate_role_check
-      delegate_to: localhost
 
     - name: Check migrate tasks file
       stat:
         path: "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate/tasks/main.yml"
       register: migrate_tasks_check
-      delegate_to: localhost
 
     - name: Set migrate role test result
       set_fact:
@@ -36,7 +34,6 @@
           echo "async:0,poll:0"
         fi
       register: progress_features
-      delegate_to: localhost
       changed_when: false
 
     - name: Parse progress monitoring results

@@ -94,6 +94,26 @@
       loop:
         - /tmp/test
 
+    - name: Ensure test secrets exist on control host
+      when: inventory_hostname == (ansible_play_hosts_all | first)
+      block:
+        - name: Create parent directory for secrets
+          file:
+            path: "{{ zitadel_secrets_file | dirname }}"
+            state: directory
+            mode: '0755'
+        - name: Write deterministic test secrets
+          copy:
+            dest: "{{ zitadel_secrets_file }}"
+            mode: '0600'
+            content: |
+              masterkey: "test-masterkey-1234567890abcdef"
+              postgresql:
+                user: "zitadel"
+                password: "test-postgres-password"
+                database: "zitadel"
+                host: "db"
+
   tasks:
     - name: Apply zitadel role
       include_role:
@@ -101,6 +121,7 @@
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
+        domain: "test.local"
         
     - name: Basic role verification
       debug:

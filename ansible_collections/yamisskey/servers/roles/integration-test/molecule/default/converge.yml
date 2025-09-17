@@ -96,11 +96,21 @@
 
   tasks:
     - name: Apply integration-test role
-      include_role:
-        name: yamisskey.servers.integration_test
+      include_tasks: ../../tasks/main.yml
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
+        integration_test_categories:
+          infrastructure: true
+          application: true
+          service: true
+          performance: true
+          security: true
+        infrastructure_results: {}
+        application_results: {}
+        service_results: {}
+        performance_results: {}
+        security_results: {}
         
     - name: Basic role verification
       debug:
