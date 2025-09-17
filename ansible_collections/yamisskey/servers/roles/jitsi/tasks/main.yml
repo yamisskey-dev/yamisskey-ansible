@@ -63,6 +63,7 @@
     path: '/var/www/jitsi/.env'
     regexp: '^#?PUBLIC_URL=.*$'
     line: 'PUBLIC_URL=https://{{ jitsi_server_name }}'
+  when: jitsi_server_name is defined
 
 - name: Update .env file with HTTP_PORT
   lineinfile:
@@ -123,6 +124,6 @@
     line: '<link rel="stylesheet" href="css/custom.css?v=1">'
 
 - name: Start Jitsi Meet with Docker Compose
-  command: docker-compose up -d
-  args:
-    chdir: /var/www/jitsi
+  community.docker.docker_compose_v2:
+    project_src: /var/www/jitsi
+    state: present
