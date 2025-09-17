@@ -48,6 +48,7 @@
     - name: Load secrets from file
       set_fact:
         existing_secrets: "{{ lookup('file', zitadel_secrets_file) | from_yaml }}"
+      ignore_errors: true
 
     - name: Set existing secrets as facts
       set_fact:
@@ -56,6 +57,7 @@
         postgresql_password: "{{ existing_secrets.postgresql.password }}"
         postgresql_database: "{{ existing_secrets.postgresql.database }}"
         postgresql_host: "{{ existing_secrets.postgresql.host }}"
+      when: existing_secrets is defined and existing_secrets is not none
   when: zitadel_secrets_file_stat.stat.exists
 
 # 新しい秘密情報をファイルに保存
@@ -77,6 +79,7 @@
     src: zitadel_docker-compose.yml.j2
     dest: "{{ zitadel_dir }}/docker-compose.yml"
     mode: '0644'
+  when: masterkey is defined
 
 - name: Set correct permissions for Zitadel directories
   file:
@@ -94,3 +97,5 @@
   community.docker.docker_compose_v2:
     project_src: "{{ zitadel_dir }}"
     pull: always
+    state: present
+  when: masterkey is defined

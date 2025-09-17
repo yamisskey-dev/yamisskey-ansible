@@ -57,7 +57,7 @@ services:
       - "22023:22023/udp"  # UDPゲームトラフィック用（直接公開）
       - "22023:22023/tcp"  # TCP直接公開（Windowsクライアント用）
     volumes:
-      - ./config.json:/app/config.json
+      - {{ impostor_dir }}/data/config.json:/app/config.json
     environment:
       - VIRTUAL_HOST={{ impostor_server_name }}
       - VIRTUAL_PORT=22023

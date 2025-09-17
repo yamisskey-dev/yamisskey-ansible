@@ -5,7 +5,6 @@
       stat:
         path: "{{ ansible_env.PWD }}/deploy/servers/inventory"
       register: inventory_check
-      delegate_to: localhost
 
     - name: Set inventory test result
       set_fact:
@@ -80,7 +79,13 @@
 
     - name: Set Docker test result
       set_fact:
-        docker_test: "{{ '✅ Running' if docker_service.status.ActiveState == 'active' else '⚠️ Not running' }}"
+        docker_test: "{{ '✅ Running' if docker_service.status is defined and docker_service.status.ActiveState == 'active' else '⚠️ Not running' }}"
+      when: docker_service.status is defined and docker_service.status.ActiveState is defined
+
+    - name: Set default Docker test result
+      set_fact:
+        docker_test: "⚠️ Not running"
+      when: docker_service.status is not defined or docker_service.status.ActiveState is not defined
 
     - name: Display Docker test
       debug:
