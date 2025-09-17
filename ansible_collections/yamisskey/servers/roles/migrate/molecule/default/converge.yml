@@ -24,6 +24,7 @@
             misskey_s3_access_key: test-access
             misskey_s3_secret_key: test-secret
             kms_master_key: test-kms
+      changed_when: false
 
     - name: Update apt cache safely
       apt:
@@ -151,7 +152,7 @@
         esac
         EOF
         chmod +x /usr/local/bin/mc
-      changed_when: true
+      changed_when: false
       
     - name: Create mock source secrets on source host
       copy:
@@ -161,6 +162,7 @@
             root_password: "sourcepass"
         dest: "/opt/minio/secrets.yml"
         mode: '0600'
+      changed_when: false
       
     - name: Mock HTTP health checks for migrate role
       shell: |
@@ -190,7 +192,7 @@
         time.sleep(1)  # Give servers time to start
         " &
         sleep 2
-      changed_when: true
+      changed_when: false
       
     - name: Test migrate role with mocked dependencies
       debug:
