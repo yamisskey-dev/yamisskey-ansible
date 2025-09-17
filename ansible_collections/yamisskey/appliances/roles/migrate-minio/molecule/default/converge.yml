@@ -102,14 +102,12 @@
 
     - name: Remove Docker lock files if they exist (but not active socket)
       file:
-        path: "{{ item.stat.path }}"
+        path: "{{ item.item }}"
         state: absent
       loop: "{{ docker_lock_files_state.results | default([]) }}"
       when:
         - docker_daemon_check.rc != 0
         - item.stat.exists
-      loop_control:
-        label: "{{ item.stat.path }}"
 
     - name: Check Docker lock files when daemon is running
       stat:
@@ -121,14 +119,12 @@
 
     - name: Clean only specific lock files when Docker is running
       file:
-        path: "{{ item.stat.path }}"
+        path: "{{ item.item }}"
         state: absent
       loop: "{{ docker_running_lock_files_state.results | default([]) }}"
       when:
         - docker_daemon_check.rc == 0
         - item.stat.exists
-      loop_control:
-        label: "{{ item.stat.path }}"
 
     - name: Ensure Docker service is stopped before restart
       service:
