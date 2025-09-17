@@ -68,6 +68,7 @@ crowdsec_bouncer_name: "crowdsec-firewall-bouncer"
 # Service management toggles
 security_manage_fail2ban_service: true
 security_install_crowdsec: true
+security_manage_clamav: true
 
 # systemd-resolved configuration
 systemd_resolved_dns: "127.0.0.1"

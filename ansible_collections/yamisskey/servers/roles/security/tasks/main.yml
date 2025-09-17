@@ -441,6 +441,9 @@
         hour: '19'    # UTC 19:00 = JST 04:00
         job: "/usr/bin/timeout 1h45m /usr/bin/nice -n 19 /usr/bin/clamdscan -m --fdpass --config-file=/etc/clamav/clamd.conf -l /var/log/clamav/clamav-$(date +\\%Y\\%m\\%d).log /"
       become: true
+  when:
+    - security_manage_clamav | default(true)
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
 - name: Configure sysctl settings only if needed
   block:

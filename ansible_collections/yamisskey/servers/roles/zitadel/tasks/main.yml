@@ -48,7 +48,7 @@
     - name: Load secrets from file
       set_fact:
         existing_secrets: "{{ lookup('file', zitadel_secrets_file) | from_yaml }}"
-      ignore_errors: true
+      failed_when: false  # File may not exist or be malformed
 
     - name: Set existing secrets as facts
       set_fact:

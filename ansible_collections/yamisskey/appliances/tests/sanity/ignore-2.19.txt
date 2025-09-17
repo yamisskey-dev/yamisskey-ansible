@@ -1,0 +1,4 @@
+# ansible-test sanity ignore file for Ansible 2.19
+# Format: <path> <test>[:<code>] [# reason]
+
+files/midclt-mock.py shebang # Molecule copies this script as an executable midclt mock
