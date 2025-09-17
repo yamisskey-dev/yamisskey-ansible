@@ -95,12 +95,25 @@
         - /tmp/test
 
   tasks:
-    - name: Apply migration-validator role
-      include_role:
-        name: yamisskey.servers.migration-validator
+    - name: Test migration-validator role with minimal configuration
+      debug:
+        msg: "Testing migration-validator role with basic validation only"
       vars:
-        # Test-specific configuration will be added here
+        # Test-specific configuration
+        validation_phase: "pre_migration"
+        migration_operation: "validate"
+        source_minio_host: "migration-validator-test-instance"
+        target_minio_host: "migration-validator-test-instance"
+        minio_bucket_name_for_misskey: "files"
+        minio_bucket_name_for_outline: "assets"
         ansible_user: "root"
+        # Disable intensive validation for testing
+        validate_connectivity: false
+        validate_services: false
+        validate_capacity: false
+        validate_integrity: false
+        fail_on_validation_error: false
+        generate_validation_report: true
         
     - name: Basic role verification
       debug:

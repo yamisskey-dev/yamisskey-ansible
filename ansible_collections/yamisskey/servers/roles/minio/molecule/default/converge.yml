@@ -81,9 +81,8 @@
         mode: '0755'
 
   tasks:
-    - name: Apply MinIO role
-      include_role:
-        name: yamisskey.servers.minio
+    - name: Import MinIO tasks directly (skip dependencies)
+      import_tasks: "../../tasks/main.yml"
       vars:
         # Test-specific configuration
         minio_secrets_file: "/tmp/test-secrets.yml"
@@ -94,13 +93,15 @@
         
         # Mock host services for testing
         host_services:
-          joseph:
+          minio-test-instance:
             minio_api: 9000
         
         # Override complex operations for testing
         ansible_hostname: "test-host"
         ansible_date_time:
           epoch: "1234567890"
+      tags:
+        - molecule-test
         
     - name: Wait for MinIO container to be ready
       wait_for:

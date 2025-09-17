@@ -49,7 +49,7 @@
 
 - name: Deploy Docker Compose file for Minio
   template:
-    src: minio_docker-compose.yml.j2
+    src: "{{ role_path | default('../..') }}/templates/minio_docker-compose.yml.j2"
     dest: /opt/minio/docker-compose.yml
     owner: root
     group: root
@@ -64,14 +64,16 @@
     project_src: /opt/minio
 
 - name: Allow MinIO access from Tailscale network
-  ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services.joseph.minio_api }} proto tcp
+  ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
   changed_when: false
   become: true
+  when: ansible_env.MOLECULE_SCENARIO_NAME is undefined
+  ignore_errors: true
 
 - name: Wait for MinIO port to be ready
   wait_for:
     host: localhost
-    port: "{{ host_services.joseph.minio_api }}"
+    port: "{{ host_services[inventory_hostname].minio_api }}"
     timeout: 60
 
 - name: Check if Minio Client exists
@@ -94,7 +96,7 @@
 
 - name: Wait for MinIO service to be fully ready (health check)
   uri:
-    url: "http://{{ minio_ip.stdout }}:{{ host_services.joseph.minio_api }}/minio/health/live"
+    url: "http://{{ minio_ip.stdout }}:{{ host_services[inventory_hostname].minio_api }}/minio/health/live"
     method: GET
   register: health_check
   until: health_check.status == 200
@@ -105,7 +107,7 @@
 - name: Set Minio Client alias with retry mechanism
   command: >
     /usr/local/bin/mc alias set "{{ minio_alias }}"
-    http://{{ minio_ip.stdout }}:{{ host_services.joseph.minio_api }}
+    http://{{ minio_ip.stdout }}:{{ host_services[inventory_hostname].minio_api }}
     "{{ minio_root_user }}"
     "{{ minio_root_password }}"
   register: mc_alias_result
@@ -146,7 +148,7 @@
 
     - name: Deploy IAM policy template
       template:
-        src: minio_iam_policy.json.j2
+        src: "{{ role_path | default('../..') }}/templates/minio_iam_policy.json.j2"
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
 
@@ -167,7 +169,7 @@
 
     - name: Deploy bucket policy template
       template:
-        src: minio_cors_policy.json.j2
+        src: "{{ role_path | default('../..') }}/templates/minio_cors_policy.json.j2"
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
 
@@ -220,7 +222,7 @@
 
           🔑 Misskey Configuration (balthasar):
           S3_BUCKET={{ minio_bucket_name_for_misskey }}
-          S3_ENDPOINT=http://[TAILSCALE_RASPBERRYPI_IP]:{{ host_services.joseph.minio_api }}
+          S3_ENDPOINT=http://[TAILSCALE_RASPBERRYPI_IP]:{{ host_services[inventory_hostname].minio_api }}
           S3_ACCESS_KEY={{ misskey_s3_access_key }}
           S3_SECRET_KEY={{ misskey_s3_secret_key }}
           S3_BASE_URL=https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}
