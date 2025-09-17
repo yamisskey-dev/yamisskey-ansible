@@ -106,6 +106,30 @@
           service: true
           performance: true
           security: true
+        application_tests:
+          misskey_api: false
+          minio_health: false
+          web_interface: false
+          database_connectivity: false
+        infrastructure_tests:
+          docker_health: true
+          disk_space: true
+          memory_available: true
+          network_connectivity: true
+          service_ports: true
+        service_tests:
+          container_status: false
+          log_availability: false
+          backup_integrity: false
+          configuration_validity: false
+        performance_tests:
+          response_time: false
+          resource_usage: false
+        security_tests:
+          ssl_certificates: false
+          open_ports_scan: false
+          file_permissions: false
+          user_privileges: false
         infrastructure_results: {}
         application_results: {}
         service_results: {}

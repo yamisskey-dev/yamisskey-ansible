@@ -63,6 +63,10 @@
   community.docker.docker_compose_v2:
     project_src: /opt/minio
 
+- name: Determine if MinIO runtime checks should run
+  set_fact:
+    minio_runtime_checks_enabled: "{{ (ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']) | bool }}"
+
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
   changed_when: false
@@ -79,24 +83,29 @@
     delay: 5
     sleep: 3
     timeout: 180
+  when: (minio_runtime_checks_enabled | default(true)) | bool
 
 - name: Check if Minio Client exists
   stat:
     path: /usr/local/bin/mc
   register: mc_check
+  when: (minio_runtime_checks_enabled | default(true)) | bool
 
 - name: Download Minio Client (architecture-aware)
   get_url:
     url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
     dest: /usr/local/bin/mc
     mode: '0755'
-  when: not mc_check.stat.exists
+  when:
+    - (minio_runtime_checks_enabled | default(true)) | bool
+    - not mc_check.stat.exists
 
 - name: Get MinIO container IP
   command: docker inspect -f "{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}" minio
   register: minio_ip
   changed_when: false
   failed_when: minio_ip.rc != 0
+  when: (minio_runtime_checks_enabled | default(true)) | bool
 
 - name: Wait for MinIO service to be fully ready (health check)
   uri:
@@ -107,6 +116,7 @@
   retries: 12
   delay: 5
   ignore_errors: true
+  when: (minio_runtime_checks_enabled | default(true)) | bool
 
 - name: Set Minio Client alias with retry mechanism
   command: >
@@ -119,6 +129,7 @@
   retries: 5
   delay: 3
   changed_when: mc_alias_result.rc == 0
+  when: (minio_runtime_checks_enabled | default(true)) | bool
 
 - name: Create and configure secure buckets
   block:
@@ -238,6 +249,7 @@
           AWS_S3_UPLOAD_BUCKET_URL=https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_outline }}
 
           🔐 Save to secrets.yml for persistence:
+  when: (minio_runtime_checks_enabled | default(true)) | bool
           minio:
             kms_master_key: "{{ minio_kms_master_key }}"
 

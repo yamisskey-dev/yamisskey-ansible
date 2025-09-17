@@ -73,6 +73,11 @@
     owner: '{{ ansible_user }}'
     group: '{{ ansible_user }}'
 
+- name: Ensure external Docker network exists
+  community.docker.docker_network:
+    name: external_network
+    state: present
+
 # サービスの起動
 - name: Start mCaptcha services
   community.docker.docker_compose_v2:
