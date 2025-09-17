@@ -36,30 +36,9 @@
   when: ansible_service_mgr != 'unknown'
 
 - name: Deploy Impostor server
-  block:
-    - name: Launch Impostor with docker compose v2
-      community.docker.docker_compose_v2:
-        project_src: "{{ impostor_dir }}"
-        pull: always
-      register: compose_v2_result
-      ignore_errors: true
-
-    - name: Launch Impostor with legacy docker-compose
-      community.docker.docker_compose:
-        project_src: "{{ impostor_dir }}"
-        pulled: true
-        restarted: true
-      register: compose_v1_result
-      when: compose_v2_result is failed
-
-    - name: Validate docker compose run
-      ansible.builtin.assert:
-        that:
-          - (compose_v2_result is defined and compose_v2_result is not failed) or
-            (compose_v1_result is defined and compose_v1_result is not failed)
-        fail_msg: >-
-          Failed to start Impostor services with both docker compose v2 plugin and
-          the legacy docker-compose binary.
+  community.docker.docker_compose_v2:
+    project_src: "{{ impostor_dir }}"
+    pull: always
 
 - name: Create playit service
   template:
