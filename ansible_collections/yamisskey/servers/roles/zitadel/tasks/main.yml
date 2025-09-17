@@ -90,27 +90,7 @@
     - "{{ zitadel_dir }}/config"
     - "{{ zitadel_dir }}/logs"
 
-- name: Ensure Docker Compose services are running
-  block:
-    - name: Start services with Docker Compose v2
-      community.docker.docker_compose_v2:
-        project_src: "{{ zitadel_dir }}"
-        pull: always
-      register: zitadel_compose_v2_result
-      ignore_errors: true
-
-    - name: Start services with legacy docker-compose
-      community.docker.docker_compose:
-        project_src: "{{ zitadel_dir }}"
-        restarted: true
-        pulled: true
-      register: zitadel_compose_v1_result
-      when: zitadel_compose_v2_result is failed
-
-    - name: Ensure Docker Compose start succeeded
-      ansible.builtin.assert:
-        that:
-          - (zitadel_compose_v2_result is defined and zitadel_compose_v2_result is not failed) or
-            (zitadel_compose_v1_result is defined and zitadel_compose_v1_result is not failed)
-        fail_msg: >-
-          Failed to start Zitadel services with both docker compose v2 plugin and legacy docker-compose.
+- name: Start Zitadel services with Docker Compose v2
+  community.docker.docker_compose_v2:
+    project_src: "{{ zitadel_dir }}"
+    pull: always

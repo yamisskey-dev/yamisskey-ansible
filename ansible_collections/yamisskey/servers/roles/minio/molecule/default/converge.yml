@@ -10,9 +10,13 @@
         name: 
           - docker.io
           - docker-compose
-        update_cache: true
+        install_recommends: false
+        update_cache: false
         state: present
-      
+      register: docker_install
+      retries: 3
+      delay: 5
+      until: docker_install is succeeded
     - name: Start Docker service
       service:
         name: docker

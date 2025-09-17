@@ -5,6 +5,10 @@
   gather_facts: false
   
   pre_tasks:
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
+
     - name: Ensure remote Ansible temporary directory exists
       raw: mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp
       changed_when: false
@@ -16,9 +20,14 @@
       apt:
         name: 
           - docker.io
-          - docker-compose-plugin
-        update_cache: true
+          - docker-compose
+        install_recommends: false
+        update_cache: false
         state: present
+      register: migrate_minio_docker_install
+      retries: 3
+      delay: 5
+      until: migrate_minio_docker_install is succeeded
       
     - name: Start Docker service
       service:

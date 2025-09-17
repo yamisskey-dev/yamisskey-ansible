@@ -14,6 +14,26 @@
   notify: restart deeplx
 
 - name: Deploy DeepLX container
-  community.docker.docker_compose_v2:
-    project_src: "{{ deeplx_dir }}"
-    pull: always
+  block:
+    - name: Start DeepLX services with docker compose v2
+      community.docker.docker_compose_v2:
+        project_src: "{{ deeplx_dir }}"
+        pull: always
+      register: deeplx_compose_v2_result
+      ignore_errors: true
+
+    - name: Start DeepLX services with legacy docker-compose
+      community.docker.docker_compose:
+        project_src: "{{ deeplx_dir }}"
+        pulled: true
+        restarted: true
+      register: deeplx_compose_v1_result
+      when: deeplx_compose_v2_result is failed
+
+    - name: Ensure DeepLX compose execution succeeded
+      ansible.builtin.assert:
+        that:
+          - (deeplx_compose_v2_result is defined and deeplx_compose_v2_result is not failed) or
+            (deeplx_compose_v1_result is defined and deeplx_compose_v1_result is not failed)
+        fail_msg: >-
+          Failed to start DeepLX services with both docker compose v2 plugin and legacy docker-compose.

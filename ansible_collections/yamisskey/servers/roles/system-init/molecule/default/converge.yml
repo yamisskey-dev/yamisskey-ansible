@@ -5,13 +5,33 @@
   gather_facts: true
 
   pre_tasks:
+    - name: Update apt cache safely
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      retries: 3
+      delay: 10
+      register: apt_update_result
+      failed_when: false
+
     - name: Install Docker for testing
       apt:
         name:
           - docker.io
           - docker-compose
-        update_cache: true
         state: present
+        update_cache: false
+      when: apt_update_result is not failed
+      
+    - name: Install Docker for testing (fallback without cache update)
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+        update_cache: false
+        allow_unauthenticated: true
+      when: apt_update_result is failed
 
     - name: Start Docker service
       service:

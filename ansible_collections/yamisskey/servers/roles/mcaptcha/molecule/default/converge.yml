@@ -5,13 +5,22 @@
   gather_facts: true
   
   pre_tasks:
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
+
     - name: Install Docker for testing
       apt:
         name: 
           - docker.io
-          - docker-compose-plugin
-        update_cache: true
+          - docker-compose
+        install_recommends: false
+        update_cache: false
         state: present
+      register: mcaptcha_docker_install
+      retries: 3
+      delay: 5
+      until: mcaptcha_docker_install is succeeded
       
     - name: Start Docker service
       service:
