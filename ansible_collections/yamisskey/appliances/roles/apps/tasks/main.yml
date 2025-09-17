@@ -69,10 +69,15 @@
     truenas_minio_compose_b64: "{{ lookup('file', truenas_apps_config_path + '/minio/docker-compose.yml') | b64encode }}"
 
 # 1.5) TrueNAS Custom App へ貼り付け可能な compose（値埋め込み版）を出力
+- name: Compute compose export directory for local artifacts
+  set_fact:
+    truenas_compose_export_path: >-
+      {{ truenas_compose_export_dir | default((playbook_dir | default(role_path)) ~ '/out') }}
+
 - name: Ensure local export directory exists (paste-ready compose)
   delegate_to: localhost
   file:
-    path: "{{ truenas_compose_export_dir | default(playbook_dir + '/out') }}"
+    path: "{{ truenas_compose_export_path }}"
     state: directory
     mode: '0755'
 
@@ -80,7 +85,7 @@
   delegate_to: localhost
   template:
     src: minio-compose-paste.yml.j2
-    dest: "{{ (truenas_compose_export_dir | default(playbook_dir + '/out')) + '/minio-docker-compose.paste.yml' }}"
+    dest: "{{ truenas_compose_export_path ~ '/minio-docker-compose.paste.yml' }}"
     mode: '0600'
   no_log: true
 
