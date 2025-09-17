@@ -89,5 +89,5 @@
       - '[]'
       - "{{ cfgfile }}"
   register: cfgsave
-  changed_when: cfgsave.rc == 0
-  when: truenas_backup_path is defined
+  changed_when: false  # Configuration backup doesn't change system state
+  when: truenas_backup_path is defined and not (ansible_check_mode | default(false))
