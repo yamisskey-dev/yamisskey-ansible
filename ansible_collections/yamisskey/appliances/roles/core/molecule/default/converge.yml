@@ -139,7 +139,7 @@
       delay: 5
       until: docker_systemctl_start.rc == 0
       failed_when: false
-      changed_when: docker_systemctl_start.rc != 0
+      changed_when: false
 
     - name: Alternative Docker start using service command
       service:
@@ -163,7 +163,7 @@
         - docker_systemctl_start is failed
         - docker_service_start is failed
       failed_when: false
-      changed_when: docker_manual_start.rc != 0
+      changed_when: false
 
     - name: Wait for Docker socket to be available
       wait_for:
@@ -179,7 +179,7 @@
       delay: 5
       until: docker_verify.rc == 0
       failed_when: false
-      changed_when: docker_verify.rc != 0
+      changed_when: false
 
     - name: Display Docker service status for debugging
       shell: systemctl status docker --no-pager || service docker status
