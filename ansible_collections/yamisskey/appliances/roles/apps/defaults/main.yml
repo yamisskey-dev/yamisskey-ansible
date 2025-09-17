@@ -1,0 +1,29 @@
+---
+# TrueNAS Apps role default variables
+
+# App configuration
+truenas_minio_app_name: "minio"
+truenas_apps_config_path: "/mnt/pool/apps"
+truenas_cloudflared_config_path: "{{ truenas_apps_config_path }}/cloudflared"
+
+# MinIO configuration
+truenas_minio_version: "RELEASE.2024-10-02T17-50-41Z"
+truenas_minio_root_user: "minioadmin"
+truenas_minio_root_password: "minioadmin123"
+truenas_minio_region: "ap-northeast-3"
+truenas_minio_domain: "minio.example.com"
+truenas_minio_kms_key: "my-master-key-32-chars-long-123456"
+truenas_minio_data_path: "/mnt/pool/data/minio"
+
+# Cloudflared configuration
+truenas_cloudflared_version: "latest"
+truenas_tunnel_token: ""
+truenas_tunnel_id: ""
+truenas_tunnel_credentials: ""
+
+# Management flags
+truenas_manage_custom_compose: false
+truenas_update_secrets: true
+
+# Export configuration for local artifacts
+truenas_compose_export_dir: "{{ playbook_dir | default(role_path) }}/out"

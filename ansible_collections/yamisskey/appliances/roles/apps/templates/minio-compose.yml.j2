@@ -17,7 +17,7 @@ services:
       MINIO_KMS_AUTO_ENCRYPTION: "on"
     command: server /data --console-address ":9001"
     volumes:
-      - {{ truenas_minio_data_path }}:/data:rw
+      - {{ truenas_minio_data_path | default('/mnt/pool/data/minio') }}:/data:rw
     networks: [appnet]
     # healthcheck は未設定（必要なら sidecar で）
 
@@ -28,5 +28,5 @@ services:
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     volumes:
-      - {{ truenas_cloudflared_config_path }}:/etc/cloudflared:ro
+      - {{ truenas_cloudflared_config_path | default('/mnt/pool/apps/cloudflared') }}:/etc/cloudflared:ro
     networks: [appnet]

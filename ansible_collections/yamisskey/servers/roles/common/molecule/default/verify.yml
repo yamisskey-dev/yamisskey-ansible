@@ -6,7 +6,6 @@
   tasks:
     # Optional: check host Docker CLI presence (non-fatal)
     - name: Check host Docker CLI (non-fatal)
-      delegate_to: localhost
       changed_when: false
       failed_when: false
       shell: |
