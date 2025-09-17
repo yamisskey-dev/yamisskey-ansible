@@ -1,14 +1,28 @@
 ---
-# Migration configuration defaults
-source_minio_host: "balthasar"
-source_minio_ip: "{{ hostvars[source_minio_host]['ansible_default_ipv4']['address'] }}"
-source_minio_port: "{{ host_services.joseph.minio_api }}"
-target_minio_port: "{{ host_services.joseph.minio_api }}"
-source_minio_alias: "source-minio"
-target_minio_alias: "yaminio"
-migration_temp_dir: "/tmp/minio-migration"
+# migrate-minio role defaults
 
-# Default buckets to migrate
+# Source MinIO configuration
+source_minio_host: "source-server"
+source_minio_ip: "192.168.1.100"
+source_minio_port: 9000
+source_minio_alias: "source"
+
+# Target MinIO configuration
+target_minio_port: 9001
+target_minio_alias: "target"
+
+# Migration configuration
+migration_temp_dir: "/tmp/minio-migration"
+minio_secrets_file: "/opt/minio/secrets.yml"
+
+# Bucket configuration
 buckets_to_migrate:
-  - "{{ minio_bucket_name_for_misskey }}"
-  - "{{ minio_bucket_name_for_outline }}"
+  - "{{ minio_bucket_name_for_misskey | default('files') }}"
+  - "{{ minio_bucket_name_for_outline | default('assets') }}"
+
+# Default bucket names
+minio_bucket_name_for_misskey: "files"
+minio_bucket_name_for_outline: "assets"
+
+# Test environment overrides
+test_environment: false

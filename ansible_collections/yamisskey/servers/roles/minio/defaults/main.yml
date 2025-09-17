@@ -7,8 +7,8 @@ minio_dir: '/opt/minio'
 minio_alias: 'yaminio'
 
 # Network settings
-minio_api_port: "{{ host_services.joseph.minio_api | default(9000) }}"
-minio_console_port: "{{ host_services.joseph.minio_console | default(9001) }}"
+minio_api_port: "{{ host_services[inventory_hostname].minio_api | default(9000) }}"
+minio_console_port: "{{ host_services[inventory_hostname].minio_console | default(9001) }}"
 
 # Default bucket configuration
 minio_bucket_name_for_misskey: 'files'
