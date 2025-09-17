@@ -77,7 +77,7 @@
 - name: Compute compose export directory
   set_fact:
     truenas_compose_export_path: >-
-      {{ truenas_compose_export_dir | default((playbook_dir | default(role_path | default('/tmp'))) ~ '/out') }}
+      {{ truenas_compose_export_dir | default((playbook_dir | default('/tmp')) ~ '/out') }}
 
 - name: Ensure local export directory exists (paste-ready compose)
   become: false

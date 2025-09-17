@@ -4,12 +4,6 @@
   gather_facts: false
   
   tasks:
-    - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
-      become: true
-      
     - name: Verify role execution completed without errors
       stat:
         path: /var/tmp/test
