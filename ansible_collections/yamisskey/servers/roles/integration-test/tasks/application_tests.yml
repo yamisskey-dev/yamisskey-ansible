@@ -75,29 +75,53 @@
   set_fact:
     application_results:
       misskey_api: >-
-        {{ 'pass' if (misskey_api_test.status | default(0)) == 200 
-           else 'fail' if application_tests.misskey_api 
-           else 'skip' }}
+        {% if not application_tests.misskey_api %}
+        skip
+        {% elif misskey_api_test is defined and misskey_api_test.status is defined and misskey_api_test.status == 200 %}
+        pass
+        {% else %}
+        fail
+        {% endif %}
       minio_health: >-
-        {{ 'pass' if (minio_health_test.status | default(0)) == 200 
-           else 'fail' if application_tests.minio_health 
-           else 'skip' }}
+        {% if not application_tests.minio_health %}
+        skip
+        {% elif minio_health_test is defined and minio_health_test.status is defined and minio_health_test.status == 200 %}
+        pass
+        {% else %}
+        fail
+        {% endif %}
       web_interfaces: >-
-        {{ 'pass' if (web_interface_test.results | selectattr('status', 'in', [200, 301, 302]) | list | length) > 0
-           else 'fail' if application_tests.web_interface
-           else 'skip' }}
+        {% if not application_tests.web_interface %}
+        skip
+        {% elif web_interface_test is defined and (web_interface_test.results | default([]) | selectattr('status', 'in', [200, 301, 302]) | list | length) > 0 %}
+        pass
+        {% else %}
+        fail
+        {% endif %}
       database_connectivity: >-
-        {{ 'pass' if database_test.stdout is defined and 'PostgreSQL' in database_test.stdout
-           else 'fail' if application_tests.database_connectivity
-           else 'skip' }}
+        {% if not application_tests.database_connectivity %}
+        skip
+        {% elif database_test is defined and database_test.stdout is defined and 'PostgreSQL' in database_test.stdout %}
+        pass
+        {% else %}
+        fail
+        {% endif %}
       redis_connectivity: >-
-        {{ 'pass' if redis_test.stdout is defined and 'PONG' in redis_test.stdout
-           else 'fail' if application_tests.database_connectivity
-           else 'skip' }}
+        {% if not application_tests.database_connectivity %}
+        skip
+        {% elif redis_test is defined and redis_test.stdout is defined and 'PONG' in redis_test.stdout %}
+        pass
+        {% else %}
+        fail
+        {% endif %}
       file_storage: >-
-        {{ 'pass' if (file_upload_test.status | default(0)) == 200
-           else 'fail' if application_tests.minio_health
-           else 'skip' }}
+        {% if not application_tests.minio_health %}
+        skip
+        {% elif file_upload_test is defined and file_upload_test.status is defined and file_upload_test.status == 200 %}
+        pass
+        {% else %}
+        fail
+        {% endif %}
   tags: ['app', 'results']
 
 - name: Display application test results

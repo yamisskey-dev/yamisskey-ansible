@@ -3,16 +3,22 @@
   hosts: all
   become: true
   gather_facts: true
+  vars:
+    molecule_apt_env:
+      TMPDIR: /var/tmp
   
   pre_tasks:
     - name: Update apt cache safely
       apt:
         update_cache: true
         cache_valid_time: 3600
+        allow_unauthenticated: true
+        force_apt_get: true
       retries: 3
       delay: 10
       register: apt_update_result
       failed_when: false
+      environment: "{{ molecule_apt_env }}"
 
 
     - name: Create keyrings directory for Docker
@@ -27,6 +33,7 @@
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
+      environment: "{{ molecule_apt_env }}"
       when: apt_update_result is not failed
 
     - name: Set Docker GPG key permissions
@@ -40,6 +47,8 @@
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
+        update_cache: false
+      environment: "{{ molecule_apt_env }}"
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
@@ -52,7 +61,10 @@
           - docker-compose-plugin
         state: present
         update_cache: true
+        allow_unauthenticated: true
+        force_apt_get: true
       when: apt_update_result is not failed
+      environment: "{{ molecule_apt_env }}"
       
 
     - name: Install Docker for testing (fallback - use system packages)
@@ -64,6 +76,7 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
+      environment: "{{ molecule_apt_env }}"
       
     - name: Start Docker service
       service:
@@ -71,7 +84,7 @@
         state: started
         enabled: true
       failed_when: false
-
+        
     - name: Wait for Docker daemon socket
       wait_for:
         path: /var/run/docker.sock
@@ -79,6 +92,17 @@
         delay: 5
         sleep: 3
         timeout: 120
+        
+    - name: Verify Docker is running
+      command: docker version
+      register: docker_version
+      failed_when: false
+      changed_when: false
+      
+    - name: Display Docker version for debugging
+      debug:
+        var: docker_version.stdout_lines
+      when: docker_version.rc == 0
 
     - name: Add test user to docker group
       user:
