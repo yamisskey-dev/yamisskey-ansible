@@ -32,14 +32,22 @@
     state: absent
   when: not jitsi_unzipped.stat.exists
 
+- name: Check if Jitsi environment file exists
+  stat:
+    path: /var/www/jitsi/.env
+  register: jitsi_env
+
 - name: Copy env.example to .env
   command: cp env.example .env
   args:
     chdir: /var/www/jitsi
+    creates: /var/www/jitsi/.env
+  when: not jitsi_env.stat.exists
 - name: Set strong passwords in the security section of .env file
   command: ./gen-passwords.sh
   args:
     chdir: /var/www/jitsi
+  when: not jitsi_env.stat.exists
 
 - name: Create required Jitsi configuration directories
   file:
@@ -110,18 +118,14 @@
     mode: '0644'
     remote_src: true
 
-- name: Create plugin.head.html if it does not exist
-  file:
-    path: /usr/share/jitsi-meet/plugin.head.html
-    state: touch
-    owner: root
-    group: root
-    mode: '0644'
-
 - name: Add custom CSS to plugin.head.html
   lineinfile:
     path: /usr/share/jitsi-meet/plugin.head.html
     line: '<link rel="stylesheet" href="css/custom.css?v=1">'
+    create: true
+    owner: root
+    group: root
+    mode: '0644'
 
 - name: Start Jitsi Meet with Docker Compose
   community.docker.docker_compose_v2:

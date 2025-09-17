@@ -13,39 +13,79 @@
     - files
     - db
 
-# 秘密情報をsecrets.ymlから読み込む
-- name: Load Vikunja secrets from secrets.yml
-  set_fact:
-    vikunja_secrets: "{{ lookup('file', vikunja_secrets_file) | from_yaml }}"
-  when: vikunja_secrets_file is exists
+# 秘密情報ファイルの状態管理
+- name: Check if Vikunja secrets file exists
+  stat:
+    path: '{{ vikunja_secrets_file }}'
+  register: vikunja_secrets_stat
 
-# secrets.ymlからJWTシークレットを取得または生成
-- name: Ensure JWT secret exists
+- name: Initialize Vikunja secrets when missing
+  when: not vikunja_secrets_stat.stat.exists
   block:
     - name: Generate JWT secret
       shell: 'cat /dev/urandom | tr -dc "a-zA-Z0-9" | fold -w 64 | head -n 1'
-      register: jwt_secret_output
-      when: vikunja_secrets.jwt_secret is not defined
+      register: vikunja_jwt_secret_output
 
-    - name: Set JWT secret fact
+    - name: Set initial Vikunja secrets
       set_fact:
-        jwt_secret: '{{ vikunja_secrets.jwt_secret if vikunja_secrets.jwt_secret is defined else jwt_secret_output.stdout }}'
-  when: vikunja_secrets_file is exists
+        vikunja_secrets:
+          jwt_secret: '{{ vikunja_jwt_secret_output.stdout }}'
+          db_root_password: '{{ db_root_password | default("vikunja-root-password") }}'
+          db_user: '{{ db_user | default("vikunja") }}'
+          db_password: '{{ db_password | default("vikunja-password") }}'
+          mailer_password: '{{ mailer_password | default("vikunja-mailer-password") }}'
 
-- name: Create secrets.yml if not exists
+    - name: Persist Vikunja secrets file
+      copy:
+        dest: '{{ vikunja_secrets_file }}'
+        content: '{{ vikunja_secrets | to_nice_yaml(indent=2) }}\n'
+        mode: '0600'
+        owner: '{{ ansible_user | default("root") }}'
+        group: '{{ ansible_user | default("root") }}'
+
+- name: Load existing Vikunja secrets from file
+  when: vikunja_secrets is not defined
+  block:
+    - name: Read secrets file content
+      slurp:
+        src: '{{ vikunja_secrets_file }}'
+      register: vikunja_secrets_raw
+
+    - name: Parse secrets file
+      set_fact:
+        vikunja_secrets: '{{ vikunja_secrets_raw.content | b64decode | from_yaml }}'
+
+- name: Ensure Vikunja secrets include default values
+  set_fact:
+    vikunja_secrets: '{{ {
+        "db_root_password": db_root_password | default("vikunja-root-password"),
+        "db_user": db_user | default("vikunja"),
+        "db_password": db_password | default("vikunja-password"),
+        "mailer_password": mailer_password | default("vikunja-mailer-password")
+      } | combine(vikunja_secrets | default({}), recursive=True) }}'
+
+- name: Ensure JWT secret is defined
+  when: vikunja_secrets.jwt_secret is not defined or vikunja_secrets.jwt_secret | length == 0
+  block:
+    - name: Generate JWT secret value
+      shell: 'cat /dev/urandom | tr -dc "a-zA-Z0-9" | fold -w 64 | head -n 1'
+      register: vikunja_jwt_secret_output
+
+    - name: Update Vikunja secrets with generated JWT secret
+      set_fact:
+        vikunja_secrets: '{{ vikunja_secrets | combine({"jwt_secret": vikunja_jwt_secret_output.stdout}, recursive=True) }}'
+
+- name: Persist Vikunja secrets to disk
   copy:
     dest: '{{ vikunja_secrets_file }}'
-    content: |
-      jwt_secret: "{{ jwt_secret }}"
-      db_root_password : "{{ db_root_password }}"
-      db_user: "{{ db_user }}"
-      db_password: "{{ db_password }}"
-      mailer_password: "{{ mailer_password }}"
-  when: vikunja_secrets_file is not exists
+    content: '{{ vikunja_secrets | to_nice_yaml(indent=2) }}\n'
+    mode: '0600'
+    owner: '{{ ansible_user | default("root") }}'
+    group: '{{ ansible_user | default("root") }}'
 
-- name: Load secrets from secrets.yml
+- name: Expose Vikunja secrets as individual facts
   set_fact:
-    vikunja_secrets: "{{ lookup('file', vikunja_secrets_file) | from_yaml }}"
+    jwt_secret: '{{ vikunja_secrets.jwt_secret }}'
 
 # Docker Composeファイルをテンプレートから生成
 - name: Generate docker-compose.yml from template

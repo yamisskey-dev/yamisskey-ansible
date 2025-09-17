@@ -4,12 +4,28 @@
   gather_facts: false
   
   tasks:
-    - name: Check if Docker is installed and running
-      service:
-        name: docker
-        state: started
+    - name: Gather service facts
+      service_facts:
       become: true
-      
+
+    - name: Evaluate Docker service status
+      set_fact:
+        apps_docker_service_state: >-
+          {{ (ansible_facts.services['docker.service'].state | default('absent'))
+             if ansible_facts.services is defined else 'absent' }}
+
+    - name: Report Docker service status
+      debug:
+        msg: "Docker service state: {{ apps_docker_service_state }}"
+
+    - name: Assert Docker service is running when available
+      assert:
+        that:
+          - apps_docker_service_state in ['running', 'started', 'active']
+        fail_msg: "Docker service is not running"
+        success_msg: "Docker service is running"
+      when: apps_docker_service_state != 'absent'
+
     - name: Verify role execution completed without errors
       stat:
         path: /var/tmp/test

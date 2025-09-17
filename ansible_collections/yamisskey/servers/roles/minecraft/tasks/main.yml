@@ -143,6 +143,7 @@
     name: docker
     state: started
     enabled: true
+  when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
 # プラグイン設定の強制上書き（プラグイン初期化後）
 - name: Wait for plugins to initialize

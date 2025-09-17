@@ -3,6 +3,9 @@
   hosts: all
   become: true
   gather_facts: true
+  vars:
+    molecule_apt_env:
+      TMPDIR: /var/tmp
   
   pre_tasks:
     - name: Ensure test secrets exist on control host
@@ -24,10 +27,13 @@
       apt:
         update_cache: true
         cache_valid_time: 3600
+        allow_unauthenticated: true
+        force_apt_get: true
       retries: 3
       delay: 10
       register: apt_update_result
       failed_when: false
+      environment: "{{ molecule_apt_env }}"
 
     - name: Create keyrings directory for Docker
       file:
@@ -41,6 +47,7 @@
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
+      environment: "{{ molecule_apt_env }}"
       when: apt_update_result is not failed
 
     - name: Set Docker GPG key permissions
@@ -54,6 +61,8 @@
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
+        update_cache: false
+      environment: "{{ molecule_apt_env }}"
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
@@ -66,7 +75,10 @@
           - docker-compose-plugin
         state: present
         update_cache: true
+        allow_unauthenticated: true
+        force_apt_get: true
       when: apt_update_result is not failed
+      environment: "{{ molecule_apt_env }}"
       
     - name: Install Docker for testing (fallback - use system packages)
       apt:
@@ -77,6 +89,7 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
+      environment: "{{ molecule_apt_env }}"
       
     - name: Start Docker service
       service:
