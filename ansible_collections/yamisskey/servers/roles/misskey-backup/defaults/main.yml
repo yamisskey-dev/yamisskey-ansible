@@ -1,0 +1,27 @@
+---
+# Backup configuration
+backup_dir: "/opt/backups"
+misskey_backup_secrets_file: "/opt/minio/secrets.yml"
+
+# Repository configuration
+misskey_backup_repo: "https://github.com/yamisskey-dev/yamisskey-backup.git"
+misskey_backup_version: "main"
+
+# Directory structure
+misskey_backup_dir: "/opt/misskey-backup"
+misskey_backup_config_dir: "/opt/misskey-backup/config"
+misskey_backup_src_dir: "/opt/misskey-backup/src"
+misskey_backup_backups_dir: "/opt/misskey-backup/backups"
+
+# Container configuration
+backup_container_name: "backup"
+misskey_backup_container_name: "misskey-backup"
+
+# Default permissions
+backup_user: "{{ ansible_user | default('root') }}"
+backup_group: "{{ ansible_user | default('root') }}"
+backup_mode: "0755"
+
+# Docker compose settings
+backup_compose_pull: true
+backup_compose_build: true

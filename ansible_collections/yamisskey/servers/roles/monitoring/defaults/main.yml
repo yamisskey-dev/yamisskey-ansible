@@ -1,107 +1,57 @@
 ---
-# ========================================
-# Yamisskey Monitoring Role - Default Configuration
-# ========================================
+# Monitoring service configuration
+monitoring_network_name: "monitoring"
 
-# --- Core Monitoring Settings ---
-monitoring_scrape_interval: "15s"
-monitoring_evaluation_interval: "15s"
-monitoring_region: "ap-northeast-1"
+# Node Exporter configuration
+node_exporter_port: 9100
+node_exporter_service: "prometheus-node-exporter"
 
-# --- Alert Manager Configuration ---
-alertmanager_enabled: true
-monitoring_alertmanager_host: "localhost"
-monitoring_alertmanager_port: "9093"
+# Prometheus configuration
+prometheus_port: 9090
+prometheus_service: "prometheus"
+prometheus_config_file: "/etc/prometheus/prometheus.yml"
+prometheus_user: "prometheus"
+prometheus_group: "prometheus"
 
-# --- Rule Files Configuration ---
-monitoring_rules_enabled: true
+# cAdvisor configuration
+cadvisor_port: 8085
+cadvisor_container_name: "cadvisor"
+cadvisor_image: "gcr.io/cadvisor/cadvisor:v0.49.1"
 
-# --- Scrape Interval Configuration ---
-monitoring_node_scrape_interval: "30s"
-monitoring_social_scrape_interval: "30s"
-monitoring_proxy_scrape_interval: "60s"
-monitoring_storage_scrape_interval: "60s"
-monitoring_cadvisor_scrape_interval: "30s"
-monitoring_cloudflared_scrape_interval: "60s"
-monitoring_minio_scrape_interval: "30s"
-monitoring_modsecurity_scrape_interval: "60s"
+# Blackbox Exporter configuration
+blackbox_exporter_port: 9115
+blackbox_exporter_container_name: "blackbox_exporter"
+blackbox_exporter_image: "quay.io/prometheus/blackbox-exporter:latest"
+blackbox_config_dir: "/etc/blackbox_exporter"
 
-# --- ModSecurity Monitoring ---
-modsecurity_monitoring_enabled: false
+# Grafana configuration
+grafana_port: 3000
+grafana_service: "grafana-server"
+grafana_apt_key_url: "https://apt.grafana.com/gpg.key"
+grafana_apt_repo: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main"
 
-# --- External Endpoint Monitoring ---
-monitoring_external_endpoints: []
-# Example:
-# monitoring_external_endpoints:
-#   - "https://example.com"
-#   - "https://api.example.com/health"
+# Default service ports with dynamic host support
+default_monitoring_ports:
+  node_exporter: 9100
+  cadvisor: 8085
+  blackbox_exporter: 9115
+  grafana: 3000
+  prometheus: 9090
 
-# --- Custom Monitoring Jobs ---
-custom_monitoring_jobs: []
-# Example:
-# custom_monitoring_jobs:
-#   - name: "custom-service"
-#     scrape_interval: "30s"
-#     metrics_path: "/metrics"
-#     targets:
-#       - "localhost:8080"
-#     labels:
-#       service: "custom"
-#       environment: "production"
+# Host services with fallback to defaults for dynamic inventory support
+monitoring_services:
+  node_exporter: "{{ host_services[inventory_hostname].node_exporter | default(default_monitoring_ports.node_exporter) }}"
+  cadvisor: "{{ host_services[inventory_hostname].cadvisor | default(default_monitoring_ports.cadvisor) }}"
+  blackbox_exporter: "{{ host_services[inventory_hostname].blackbox_exporter | default(default_monitoring_ports.blackbox_exporter) }}"
+  grafana: "{{ host_services[inventory_hostname].grafana | default(default_monitoring_ports.grafana) }}"
+  prometheus: "{{ host_services[inventory_hostname].prometheus | default(default_monitoring_ports.prometheus) }}"
 
-# --- Performance and Optimization ---
-monitoring_metric_retention_days: 15
-monitoring_high_cardinality_metrics_enabled: false
+# Service health check configuration
+health_check_timeout: 30
+health_check_retries: 3
 
-# --- Service Discovery Settings ---
-monitoring_auto_discovery_enabled: true
-monitoring_service_discovery_refresh: "30s"
-
-# --- Host Service Port Mappings ---
-# These should match the host_services variables from inventory
-default_host_services:
-  joseph:
-    node_exporter: 9100
-    cadvisor: 8085
-  balthasar:
-    node_exporter: 9100
-    cadvisor: 8085
-    cloudflared_metrics: 49312
-  caspar:
-    node_exporter: 9100
-    cadvisor: 8085
-    prometheus: 9090
-    grafana: 3000
-    blackbox_exporter: 9115
-    alertmanager: 9093
-    cloudflared_metrics: 49312
-
-# --- Security and Access ---
-monitoring_secure_metrics: true
-monitoring_basic_auth_enabled: false
-monitoring_tls_enabled: false
-
-# --- Health Check Configuration ---
-monitoring_health_check_enabled: true
-monitoring_health_check_interval: "60s"
-monitoring_health_check_timeout: "10s"
-
-# --- Backup and Retention ---
-monitoring_data_backup_enabled: false
-monitoring_config_backup_enabled: true
-
-# --- Integration Settings ---
-grafana_integration_enabled: true
-grafana_datasource_auto_config: true
-
-# --- Logging Configuration ---
-monitoring_log_level: "info"
-monitoring_debug_enabled: false
-
-# --- Resource Limits ---
-monitoring_memory_limit: "2G"
-monitoring_cpu_limit: "1.0"
-
-# --- High Availability ---
-monitoring_ha_enabled: false
-monitoring_cluster_mode: false
+# Prerequisites packages
+monitoring_prerequisites:
+  - apt-transport-https
+  - software-properties-common
+  - wget
