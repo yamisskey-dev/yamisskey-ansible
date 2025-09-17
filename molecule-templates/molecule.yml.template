@@ -33,7 +33,7 @@ provisioner:
       callbacks_enabled: profile_tasks,timer
       stdout_callback: ansible.builtin.default
       deprecation_warnings: False
-      remote_tmp: tmp/ansible
+      remote_tmp: /tmp/ansible
   env:
     ANSIBLE_REMOTE_TEMP: /tmp/ansible
   connection_options:
