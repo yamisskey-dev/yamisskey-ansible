@@ -554,11 +554,18 @@
 
 - name: Verify DNS configuration
   block:
+    - name: Check if dig command is available
+      ansible.builtin.command: command -v dig
+      register: dig_available
+      changed_when: false
+      failed_when: false
+
     - name: Test DNS resolution with dig
       ansible.builtin.command: dig @127.0.0.1 cloudflare.com
       register: dig_result
       changed_when: false
       failed_when: false
+      when: dig_available.rc == 0
 
     - name: Test DNS resolution with nslookup
       ansible.builtin.command: nslookup cloudflare.com 127.0.0.1
@@ -571,13 +578,14 @@
       register: srv_dig_result
       changed_when: false
       failed_when: false
+      when: dig_available.rc == 0
 
     - name: Display DNS test results
       ansible.builtin.debug:
         msg: |
-          dig result: {{ dig_result.stdout | default('DNS test not available') }}
+          dig result: {{ dig_result.stdout | default('dig command not available') }}
           nslookup result: {{ nslookup_result.stdout | default('DNS test not available') }}
-          SRV dig result: {{ srv_dig_result.stdout | default('DNS test not available') }}
+          SRV dig result: {{ srv_dig_result.stdout | default('dig command not available') }}
   become: true
   when:
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined

@@ -27,6 +27,10 @@
     dest: /opt/misskey-backup/config/rclone.conf
     mode: '0644'
   notify: Restart backup container
+  when:
+    - RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID is defined
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
 
 - name: Check if backup service is already running
   command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" backup

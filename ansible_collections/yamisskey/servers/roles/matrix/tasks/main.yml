@@ -114,12 +114,17 @@
     mode: '0755'
   become: true
 
+- name: Check if homeserver.yaml exists
+  stat:
+    path: /var/www/synapse/synapse-data/homeserver.yaml
+  register: homeserver_config_stat
+
 - name: Generate synapse configuration using docker-compose
   shell: |
     docker compose run --rm synapse generate
   args:
     chdir: /var/www/synapse
-  when: synapse_container.stdout == ""
+  when: not homeserver_config_stat.stat.exists
 
 - name: Use existing registration_shared_secret when available
   set_fact:

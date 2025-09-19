@@ -10,7 +10,7 @@ services:
     ports:
       - "127.0.0.1:1236:8536"
     volumes:
-      - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx_internal.conf:/etc/nginx/conf.d/default.conf:ro
       - ./proxy_params:/etc/nginx/proxy_params:ro
     restart: always
     logging: *default-logging

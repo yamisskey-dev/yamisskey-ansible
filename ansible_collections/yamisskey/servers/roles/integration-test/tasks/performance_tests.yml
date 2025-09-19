@@ -137,13 +137,13 @@
   set_fact:
     performance_results:
       response_time: >-
-        {{ 'pass' if performance_metrics.avg_response_time | int < performance_thresholds.response_time_ms
+        {{ 'pass' if performance_metrics.avg_response_time | int < (performance_thresholds.response_time_ms | default(5000))
            else 'fail' }}
       memory_usage: >-
-        {{ 'pass' if performance_metrics.max_memory_usage | int < performance_thresholds.memory_usage_mb
+        {{ 'pass' if performance_metrics.max_memory_usage | int < (performance_thresholds.memory_usage_mb | default(2048))
            else 'fail' }}
       cpu_usage: >-
-        {{ 'pass' if performance_metrics.max_cpu_usage | float < performance_thresholds.cpu_usage_percent
+        {{ 'pass' if performance_metrics.max_cpu_usage | float < (performance_thresholds.cpu_usage_percent | default(80))
            else 'fail' }}
       disk_performance: >-
         {{ 'pass' if performance_metrics.disk_io_time | int < 5000
@@ -157,7 +157,6 @@
       connection_handling: >-
         {{ 'pass' if 'port_3000_ok' in concurrent_connection_test.stdout or 'port_9000_ok' in concurrent_connection_test.stdout
            else 'fail' }}
-  when: performance_thresholds is defined
   tags: ['perf', 'results']
 
 - name: Display performance test results
@@ -169,11 +168,11 @@
       {% endfor %}
       
       📊 Performance Metrics:
-      - Average response time: {{ performance_metrics.avg_response_time }}ms (threshold: {{ performance_thresholds.response_time_ms }}ms)
-      - Max memory usage: {{ performance_metrics.max_memory_usage }}MB (threshold: {{ performance_thresholds.memory_usage_mb }}MB)
-      - Max CPU usage: {{ performance_metrics.max_cpu_usage }}% (threshold: {{ performance_thresholds.cpu_usage_percent }}%)
+      - Average response time: {{ performance_metrics.avg_response_time }}ms (threshold: {{ performance_thresholds.response_time_ms | default(5000) }}ms)
+      - Max memory usage: {{ performance_metrics.max_memory_usage }}MB (threshold: {{ performance_thresholds.memory_usage_mb | default(2048) }}MB)
+      - Max CPU usage: {{ performance_metrics.max_cpu_usage }}% (threshold: {{ performance_thresholds.cpu_usage_percent | default(80) }}%)
       - Disk I/O time: {{ performance_metrics.disk_io_time }}ms
       - DB query time: {{ performance_metrics.db_query_time }}ms
       - Network latency: {{ performance_metrics.network_latency }}ms
-  when: performance_thresholds is defined and performance_results is defined
+  when: performance_results is defined
   tags: ['perf', 'info']

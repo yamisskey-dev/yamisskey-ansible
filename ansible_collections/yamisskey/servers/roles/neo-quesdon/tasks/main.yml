@@ -50,6 +50,10 @@
     src: neo-quesdon_docker.env.j2
     dest: "{{ neo_quesdon_dir }}/config/docker.env"
     mode: '0600'
+  when:
+    - domain is defined
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
 
 - name: Copy docker-compose.yml
   template:

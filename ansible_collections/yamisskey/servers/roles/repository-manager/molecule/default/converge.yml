@@ -95,7 +95,7 @@
   tasks:
     - name: Apply repository-manager role
       include_role:
-        name: "{{ playbook_dir }}/../../"
+        name: yamisskey.servers.repository-manager
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
