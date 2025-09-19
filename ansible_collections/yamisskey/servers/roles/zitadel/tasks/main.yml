@@ -45,10 +45,20 @@
 # 既存の秘密情報を読み込む
 - name: Load existing secrets
   block:
-    - name: Load secrets from file
-      set_fact:
-        existing_secrets: "{{ lookup('file', zitadel_secrets_file) | from_yaml }}"
+    - name: Read secrets file from managed host
+      ansible.builtin.slurp:
+        src: "{{ zitadel_secrets_file }}"
+      register: zitadel_secrets_file_content
       failed_when: false  # File may not exist or be malformed
+
+    - name: Parse secrets content
+      set_fact:
+        existing_secrets: "{{ zitadel_secrets_file_content.content | b64decode | from_yaml }}"
+      when:
+        - zitadel_secrets_file_content is defined
+        - zitadel_secrets_file_content.failed | default(false) | bool == false
+        - zitadel_secrets_file_content.content is defined
+      failed_when: false
 
     - name: Set existing secrets as facts
       set_fact:

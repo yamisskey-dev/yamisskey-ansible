@@ -110,17 +110,10 @@
             dest: "{{ searxng_repo }}/docker-compose.yaml"
             mode: '0644'
             content: |
-              version: "3.8"
               services:
                 web:
                   image: nginx:alpine
-                  ports:
-                    - "8080:80"
-                  networks:
-                    - external_network
-              networks:
-                external_network:
-                  external: true
+                  command: ["/bin/sh", "-c", "sleep 365d"]
 
         - name: Create mock settings file
           copy:

@@ -37,10 +37,37 @@
     group: "{{ ansible_user }}"
   when: not lemmy_secrets_file_stat.stat.exists
 
+- name: Cache generated secrets for current run
+  set_fact:
+    lemmy_secrets:
+      postgres_password: "{{ postgres_password_output.stdout }}"
+  when:
+    - not lemmy_secrets_file_stat.stat.exists
+    - postgres_password_output is defined
+
 # シークレットのロード
-- name: Include secrets
-  include_vars:
-    file: "{{ lemmy_secrets_file }}"
+- name: Load existing secrets from managed host
+  when: lemmy_secrets is not defined
+  block:
+    - name: Read secrets file content
+      slurp:
+        src: "{{ lemmy_secrets_file }}"
+      register: lemmy_secrets_raw
+      failed_when: false
+
+    - name: Parse secrets file
+      set_fact:
+        lemmy_secrets: "{{ lemmy_secrets_raw.content | b64decode | from_yaml }}"
+      when:
+        - lemmy_secrets_raw is defined
+        - lemmy_secrets_raw.failed | default(false) | bool == false
+        - lemmy_secrets_raw.content is defined
+      failed_when: false
+
+- name: Expose postgres password
+  set_fact:
+    postgres_password: "{{ lemmy_secrets.postgres_password }}"
+  when: lemmy_secrets is defined and lemmy_secrets.postgres_password is defined
 
 # Lemmy設定ファイルの展開
 - name: Deploy Lemmy config.hjson

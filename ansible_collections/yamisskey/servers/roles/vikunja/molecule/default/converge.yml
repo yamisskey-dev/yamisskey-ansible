@@ -107,9 +107,9 @@
 
   tasks:
     - name: Apply vikunja role
-      include_tasks: ../../tasks/main.yml
+      include_role:
+        name: yamisskey.servers.vikunja
       vars:
-        # Test-specific configuration will be added here
         ansible_user: "root"
         vikunja_secrets_file: "/tmp/vikunja-secrets.yml"
         jwt_secret: "test-jwt-secret"
