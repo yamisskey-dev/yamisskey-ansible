@@ -167,7 +167,6 @@
     pull: "{{ 'never' if ansible_env.MOLECULE_SCENARIO_NAME is not defined else 'missing' }}"
     recreate: never
     state: present
-    recheck: true
   failed_when: false
   register: mcaptcha_compose_result
-  changed_when: mcaptcha_compose_result.actions | length > 0
+  changed_when: mcaptcha_compose_result.changed | default(false)

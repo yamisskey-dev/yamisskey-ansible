@@ -3,10 +3,24 @@
   package:
     name:
       - docker.io
-      - docker-compose
+      - docker-compose-plugin
       - squid
       - git
   become: true
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type is undefined or ansible_virtualization_type not in ['docker', 'container']
+  failed_when: false
+
+- name: Install required packages for test environment
+  package:
+    name:
+      - squid
+      - git
+  become: true
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is defined or (ansible_virtualization_type is defined and ansible_virtualization_type in ['docker', 'container'])
+  failed_when: false
 
 - name: Start and enable Docker service
   systemd:

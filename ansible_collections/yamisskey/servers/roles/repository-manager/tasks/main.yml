@@ -18,40 +18,40 @@
 
 - name: Repository directory preparation
   include_tasks: directory_setup.yml
-  when: repo_operation in ['clone', 'update', 'restore']
+  when: (repo_operation | default('clone')) in ['clone', 'update', 'restore']
   tags: ['setup', 'directories']
 
 - name: Repository existence check
   include_tasks: repository_check.yml
-  when: repo_operation in ['clone', 'update', 'backup', 'status']
+  when: (repo_operation | default('clone')) in ['clone', 'update', 'backup', 'status']
   tags: ['check', 'validation']
 
 - name: Clone repositories
   include_tasks: clone_repositories.yml
-  when: repo_operation in ['clone', 'update']
+  when: (repo_operation | default('clone')) in ['clone', 'update']
   tags: ['clone', 'git']
 
 - name: Update repositories
   include_tasks: update_repositories.yml
-  when: repo_operation == 'update'
+  when: (repo_operation | default('clone')) == 'update'
   tags: ['update', 'git']
 
 - name: Backup repositories
   include_tasks: backup_repositories.yml
-  when: repo_operation == 'backup'
+  when: (repo_operation | default('clone')) == 'backup'
   tags: ['backup', 'archive']
 
 - name: Restore repositories
   include_tasks: restore_repositories.yml
-  when: repo_operation == 'restore'
+  when: (repo_operation | default('clone')) == 'restore'
   tags: ['restore', 'recovery']
 
 - name: Repository status check
   include_tasks: status_check.yml
-  when: repo_operation == 'status'
+  when: (repo_operation | default('clone')) == 'status'
   tags: ['status', 'info']
 
 - name: Final verification
   include_tasks: verification.yml
-  when: repo_operation in ['clone', 'update', 'restore']
+  when: (repo_operation | default('clone')) in ['clone', 'update', 'restore']
   tags: ['verify', 'validation']

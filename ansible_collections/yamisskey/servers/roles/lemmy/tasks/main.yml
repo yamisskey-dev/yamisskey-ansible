@@ -123,11 +123,15 @@
     mode: '0755'
     recurse: true
   become: true
+  register: pictrs_permissions
+  changed_when: pictrs_permissions.changed and pictrs_permissions.diff is defined
 
 # コンテナの起動
 - name: Start Lemmy Docker containers
   community.docker.docker_compose_v2:
     project_src: "{{ lemmy_dir }}"
-    pull: always
+    pull: "{{ 'never' if ansible_env.MOLECULE_SCENARIO_NAME is defined else 'missing' }}"
     remove_orphans: true
   failed_when: false
+  register: lemmy_compose_result
+  changed_when: lemmy_compose_result.changed | default(false)

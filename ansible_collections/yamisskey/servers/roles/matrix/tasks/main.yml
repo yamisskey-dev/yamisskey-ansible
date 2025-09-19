@@ -104,6 +104,7 @@
 - name: Check if synapse container is running
   shell: docker ps --filter "name=synapse" --format "{{ '{{.Names}}' }}"
   register: synapse_container
+  changed_when: false
 
 - name: Create synapse-data directory
   file:

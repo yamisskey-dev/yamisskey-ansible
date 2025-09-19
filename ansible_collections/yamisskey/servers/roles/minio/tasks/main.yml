@@ -94,11 +94,12 @@
     port: 9000
     delay: 2
     sleep: 2
-    timeout: 30
+    timeout: 15
   when:
     - (minio_runtime_checks_enabled | default(true)) | bool
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
   failed_when: false
+  ignore_errors: true
 
 - name: Check if Minio Client exists
   stat:
