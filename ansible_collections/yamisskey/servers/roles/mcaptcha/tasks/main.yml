@@ -1,7 +1,7 @@
 # 事前に秘密情報ファイルの存在確認
 - name: Check if mcaptcha secrets file exists
   stat:
-    path: '{{ mcaptcha_dir }}/.config/secrets.yml'
+    path: '{{ mcaptcha_secrets_file }}'
   register: mcaptcha_secrets_file_stat
 
 # PostgreSQLパスワードの生成
@@ -22,12 +22,94 @@
   register: captcha_salt_output
   when: not mcaptcha_secrets_file_stat.stat.exists
 
-# 既存の秘密情報を読み込むか、新規生成した値を設定
-- name: Set secrets facts
+- name: Cache generated secrets for current run
   set_fact:
-    mcaptcha_postgres_password: "{{ (lookup('file', mcaptcha_dir + '/.config/secrets.yml') | from_yaml).postgresql.password if mcaptcha_secrets_file_stat.stat.exists else postgres_password_output.stdout }}"
-    mcaptcha_cookie_secret: "{{ (lookup('file', mcaptcha_dir + '/.config/secrets.yml') | from_yaml).cookie_secret if mcaptcha_secrets_file_stat.stat.exists else cookie_secret_output.stdout }}"
-    mcaptcha_captcha_salt: "{{ (lookup('file', mcaptcha_dir + '/.config/secrets.yml') | from_yaml).captcha_salt if mcaptcha_secrets_file_stat.stat.exists else captcha_salt_output.stdout }}"
+    mcaptcha_generated_secrets:
+      postgres_password: '{{ postgres_password_output.stdout }}'
+      cookie_secret: '{{ cookie_secret_output.stdout }}'
+      captcha_salt: '{{ captcha_salt_output.stdout }}'
+  when:
+    - not mcaptcha_secrets_file_stat.stat.exists
+    - postgres_password_output is defined
+    - cookie_secret_output is defined
+    - captcha_salt_output is defined
+
+- name: Load existing secrets from managed host
+  when: mcaptcha_secrets_file_stat.stat.exists
+  block:
+    - name: Read secrets file
+      slurp:
+        src: '{{ mcaptcha_secrets_file }}'
+      register: mcaptcha_secrets_raw
+      failed_when: false
+
+    - name: Parse existing secrets
+      set_fact:
+        mcaptcha_existing_secrets: '{{ mcaptcha_secrets_raw.content | b64decode | from_yaml }}'
+      when:
+        - mcaptcha_secrets_raw is defined
+        - mcaptcha_secrets_raw.failed | default(false) | bool == false
+        - mcaptcha_secrets_raw.content is defined
+      failed_when: false
+
+- name: Use existing PostgreSQL password when available
+  set_fact:
+    mcaptcha_postgres_password: '{{ mcaptcha_existing_secrets.postgresql.password }}'
+  when:
+    - mcaptcha_existing_secrets is defined
+    - mcaptcha_existing_secrets.postgresql is defined
+    - mcaptcha_existing_secrets.postgresql.password is defined
+
+- name: Use generated PostgreSQL password when secrets were created
+  set_fact:
+    mcaptcha_postgres_password: '{{ mcaptcha_generated_secrets.postgres_password }}'
+  when:
+    - mcaptcha_postgres_password is not defined
+    - mcaptcha_generated_secrets is defined
+    - mcaptcha_generated_secrets.postgres_password is defined
+
+- name: Use existing cookie secret when available
+  set_fact:
+    mcaptcha_cookie_secret: '{{ mcaptcha_existing_secrets.cookie_secret }}'
+  when:
+    - mcaptcha_existing_secrets is defined
+    - mcaptcha_existing_secrets.cookie_secret is defined
+
+- name: Use generated cookie secret when secrets were created
+  set_fact:
+    mcaptcha_cookie_secret: '{{ mcaptcha_generated_secrets.cookie_secret }}'
+  when:
+    - mcaptcha_cookie_secret is not defined
+    - mcaptcha_generated_secrets is defined
+    - mcaptcha_generated_secrets.cookie_secret is defined
+
+- name: Use existing captcha salt when available
+  set_fact:
+    mcaptcha_captcha_salt: '{{ mcaptcha_existing_secrets.captcha_salt }}'
+  when:
+    - mcaptcha_existing_secrets is defined
+    - mcaptcha_existing_secrets.captcha_salt is defined
+
+- name: Use generated captcha salt when secrets were created
+  set_fact:
+    mcaptcha_captcha_salt: '{{ mcaptcha_generated_secrets.captcha_salt }}'
+  when:
+    - mcaptcha_captcha_salt is not defined
+    - mcaptcha_generated_secrets is defined
+    - mcaptcha_generated_secrets.captcha_salt is defined
+
+- name: Ensure mCaptcha secrets are defined
+  assert:
+    that:
+      - mcaptcha_postgres_password is defined
+      - mcaptcha_postgres_password | length > 0
+      - mcaptcha_cookie_secret is defined
+      - mcaptcha_cookie_secret | length > 0
+      - mcaptcha_captcha_salt is defined
+      - mcaptcha_captcha_salt | length > 0
+    fail_msg: >-
+      mCaptcha secrets could not be determined. Ensure '{{ mcaptcha_secrets_file }}' exists
+      or allow the role to generate new secrets.
 
 # 必要なディレクトリの作成
 - name: Create mCaptcha directories
@@ -45,7 +127,7 @@
 # 初回実行時のみ秘密情報をYAMLファイルに保存
 - name: Save secrets to yaml file
   copy:
-    dest: '{{ mcaptcha_dir }}/.config/secrets.yml'
+    dest: '{{ mcaptcha_secrets_file }}'
     content: |
       postgresql:
         user: "{{ mcaptcha_postgres_user }}"

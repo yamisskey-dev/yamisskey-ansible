@@ -1,5 +1,3 @@
-version: '3.3'
-
 x-logging: &default-logging
   driver: "json-file"
   options:
@@ -12,8 +10,8 @@ services:
     ports:
       - "127.0.0.1:1236:8536"
     volumes:
-      - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro,Z
-      - ./proxy_params:/etc/nginx/proxy_params:ro,Z
+      - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy_params:/etc/nginx/proxy_params:ro
     restart: always
     logging: *default-logging
     depends_on:
@@ -57,7 +55,7 @@ services:
       - RUST_BACKTRACE=full
     user: 991:991
     volumes:
-      - ./volumes/pictrs:/mnt:Z
+      - ./volumes/pictrs:/mnt
     restart: always
     logging: *default-logging
 
@@ -70,8 +68,8 @@ services:
       - POSTGRES_DB=lemmy
     shm_size: 1g
     volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data:Z
-      - ./customPostgresql.conf:/etc/postgresql/postgresql.conf:Z
+      - ./volumes/postgres:/var/lib/postgresql/data
+      - ./customPostgresql.conf:/etc/postgresql/postgresql.conf
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     restart: always
     logging: *default-logging

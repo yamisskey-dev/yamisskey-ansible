@@ -35,7 +35,7 @@
           db_password: '{{ db_password | default("vikunja-password") }}'
           mailer_password: '{{ mailer_password | default("vikunja-mailer-password") }}'
 
-    - name: Persist Vikunja secrets file
+    - name: Persist initial Vikunja secrets file
       copy:
         dest: '{{ vikunja_secrets_file }}'
         content: '{{ vikunja_secrets | to_nice_yaml(indent=2) }}\n'
@@ -82,6 +82,7 @@
     mode: '0600'
     owner: '{{ ansible_user | default("root") }}'
     group: '{{ ansible_user | default("root") }}'
+  when: vikunja_jwt_secret_output is defined
 
 - name: Expose Vikunja secrets as individual facts
   set_fact:

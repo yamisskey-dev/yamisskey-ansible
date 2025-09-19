@@ -20,6 +20,13 @@
     path: "{{ synapse_secrets_file | dirname }}"
     state: directory
 
+- name: Initialise PostgreSQL credential defaults
+  set_fact:
+    postgresql_user: "{{ postgresql_user | default(matrix_postgresql_user) }}"
+    postgresql_password: "{{ postgresql_password | default(matrix_postgresql_password | default('')) }}"
+    postgresql_database: "{{ postgresql_database | default(matrix_postgresql_database) }}"
+    postgresql_host: "{{ postgresql_host | default(matrix_postgresql_host) }}"
+
 - name: Load PostgreSQL secrets from secrets.yml
   block:
     - name: Check if Synapse secrets file exists
@@ -58,11 +65,24 @@
   set_fact:
     synapse_existing_secrets: "{{ synapse_existing_secrets | default({}) }}"
 
+- name: Generate PostgreSQL password when missing
+  no_log: true
+  when: postgresql_password is not defined or (postgresql_password | length) == 0
+  block:
+    - name: Generate PostgreSQL password value
+      command: "openssl rand -base64 32"
+      register: synapse_postgresql_password_command
+
+    - name: Cache generated PostgreSQL password
+      set_fact:
+        postgresql_password: "{{ synapse_postgresql_password_command.stdout }}"
+
 - name: Ensure PostgreSQL secrets are available
   ansible.builtin.assert:
     that:
       - postgresql_user is defined
       - postgresql_password is defined
+      - (postgresql_password | length) > 0
       - postgresql_database is defined
       - postgresql_host is defined
     fail_msg: >-
