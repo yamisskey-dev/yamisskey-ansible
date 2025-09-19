@@ -96,7 +96,7 @@
 
   tasks:
     - name: Apply misskey-proxy role
-      import_role:
+      include_role:
         name: yamisskey.servers.misskey-proxy
       vars:
         ansible_user: "root"

@@ -181,7 +181,7 @@
 
   tasks:
     - name: Apply ModSecurity-nginx role
-      import_role:
+      include_role:
         name: yamisskey.servers.modsecurity-nginx
       vars:
         # Test-specific configuration
