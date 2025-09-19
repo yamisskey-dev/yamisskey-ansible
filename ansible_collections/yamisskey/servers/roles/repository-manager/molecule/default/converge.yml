@@ -94,8 +94,7 @@
 
   tasks:
     - name: Apply repository-manager role
-      include_role:
-        name: yamisskey.servers.repository-manager
+      include_tasks: ../../tasks/main.yml
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
