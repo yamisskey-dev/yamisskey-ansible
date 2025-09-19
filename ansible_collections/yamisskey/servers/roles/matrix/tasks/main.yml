@@ -15,12 +15,79 @@
     state: directory
 
 # PostgreSQLの秘密情報をsecrets.ymlから読み込む
-- name: Load PostgreSQL secrets from secrets.yml
+- name: Ensure secrets directory exists
+  file:
+    path: "{{ synapse_secrets_file | dirname }}"
+    state: directory
+
+- name: Initialise PostgreSQL credential defaults
   set_fact:
-    postgresql_user: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.user }}"
-    postgresql_password: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.password }}"
-    postgresql_database: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.database }}"
-    postgresql_host: "{{ (lookup('file', synapse_secrets_file) | from_yaml).postgresql.host }}"
+    postgresql_user: "{{ postgresql_user | default(matrix_postgresql_user) }}"
+    postgresql_password: "{{ postgresql_password | default(matrix_postgresql_password | default('')) }}"
+    postgresql_database: "{{ postgresql_database | default(matrix_postgresql_database) }}"
+    postgresql_host: "{{ postgresql_host | default(matrix_postgresql_host) }}"
+
+- name: Load PostgreSQL secrets from secrets.yml
+  block:
+    - name: Check if Synapse secrets file exists
+      stat:
+        path: "{{ synapse_secrets_file }}"
+      register: synapse_secrets_file_stat
+
+    - name: Read secrets from managed host when present
+      slurp:
+        src: "{{ synapse_secrets_file }}"
+      register: synapse_existing_secrets_raw
+      when: synapse_secrets_file_stat.stat.exists
+      failed_when: false
+
+    - name: Parse existing secrets
+      set_fact:
+        synapse_existing_secrets: "{{ synapse_existing_secrets_raw.content | b64decode | from_yaml }}"
+      when:
+        - synapse_secrets_file_stat.stat.exists
+        - synapse_existing_secrets_raw is defined
+        - synapse_existing_secrets_raw.failed | default(false) | bool == false
+        - synapse_existing_secrets_raw.content is defined
+      failed_when: false
+
+    - name: Set PostgreSQL secrets facts
+      set_fact:
+        postgresql_user: "{{ synapse_existing_secrets.postgresql.user }}"
+        postgresql_password: "{{ synapse_existing_secrets.postgresql.password }}"
+        postgresql_database: "{{ synapse_existing_secrets.postgresql.database }}"
+        postgresql_host: "{{ synapse_existing_secrets.postgresql.host }}"
+      when:
+        - synapse_existing_secrets is defined
+        - synapse_existing_secrets.postgresql is defined
+
+- name: Initialize secrets structure when missing
+  set_fact:
+    synapse_existing_secrets: "{{ synapse_existing_secrets | default({}) }}"
+
+- name: Generate PostgreSQL password when missing
+  no_log: true
+  when: postgresql_password is not defined or (postgresql_password | length) == 0
+  block:
+    - name: Generate PostgreSQL password value
+      command: "openssl rand -base64 32"
+      register: synapse_postgresql_password_command
+
+    - name: Cache generated PostgreSQL password
+      set_fact:
+        postgresql_password: "{{ synapse_postgresql_password_command.stdout }}"
+
+- name: Ensure PostgreSQL secrets are available
+  ansible.builtin.assert:
+    that:
+      - postgresql_user is defined
+      - postgresql_password is defined
+      - (postgresql_password | length) > 0
+      - postgresql_database is defined
+      - postgresql_host is defined
+    fail_msg: >-
+      PostgreSQL credentials are not defined. Provide them via
+      'synapse_secrets_file' or explicit variables before invoking the role.
 
 # Docker Composeファイルをテンプレートから生成
 - name: Add required configurations to Docker Compose file
@@ -40,43 +107,64 @@
 
 - name: Generate synapse configuration using docker-compose
   shell: |
-    docker-compose run --rm synapse generate
+    docker compose run --rm synapse generate
   args:
     chdir: /var/www/synapse
   when: synapse_container.stdout == ""
 
-# secrets.ymlから秘密情報を確認
-- name: Check if secrets file exists
-  stat:
-    path: '{{ synapse_secrets_file }}'
-  register: synapse_secrets_file_stat
-
-- name: Generate registration_shared_secret if not exists
-  shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
-  register: registration_shared_secret_output
-  when: not synapse_secrets_file_stat.stat.exists
-
-- name: Set registration_shared_secret fact
+- name: Use existing registration_shared_secret when available
   set_fact:
-    registration_shared_secret: "{{ (lookup('file', synapse_secrets_file) | from_yaml).registration_shared_secret if synapse_secrets_file_stat.stat.exists else registration_shared_secret_output.stdout }}"
+    registration_shared_secret: "{{ synapse_existing_secrets.registration_shared_secret }}"
+  when:
+    - synapse_existing_secrets is defined
+    - synapse_existing_secrets.registration_shared_secret is defined
 
-- name: Generate macaroon_secret_key if not exists
-  shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
-  register: macaroon_secret_key_output
-  when: not synapse_secrets_file_stat.stat.exists
+- name: Generate registration_shared_secret when missing
+  when: registration_shared_secret is not defined
+  block:
+    - name: Generate registration_shared_secret value
+      shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
+      register: registration_shared_secret_output
 
-- name: Set macaroon_secret_key fact
+    - name: Cache generated registration_shared_secret
+      set_fact:
+        registration_shared_secret: "{{ registration_shared_secret_output.stdout }}"
+
+- name: Use existing macaroon_secret_key when available
   set_fact:
-    macaroon_secret_key: "{{ (lookup('file', synapse_secrets_file) | from_yaml).macaroon_secret_key if synapse_secrets_file_stat.stat.exists else macaroon_secret_key_output.stdout }}"
+    macaroon_secret_key: "{{ synapse_existing_secrets.macaroon_secret_key }}"
+  when:
+    - synapse_existing_secrets is defined
+    - synapse_existing_secrets.macaroon_secret_key is defined
 
-- name: Generate form_secret if not exists
-  shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
-  register: form_secret_output
-  when: not synapse_secrets_file_stat.stat.exists
+- name: Generate macaroon_secret_key when missing
+  when: macaroon_secret_key is not defined
+  block:
+    - name: Generate macaroon_secret_key value
+      shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
+      register: macaroon_secret_key_output
 
-- name: Set form_secret fact
+    - name: Cache generated macaroon_secret_key
+      set_fact:
+        macaroon_secret_key: "{{ macaroon_secret_key_output.stdout }}"
+
+- name: Use existing form_secret when available
   set_fact:
-    form_secret: "{{ (lookup('file', synapse_secrets_file) | from_yaml).form_secret if synapse_secrets_file_stat.stat.exists else form_secret_output.stdout }}"
+    form_secret: "{{ synapse_existing_secrets.form_secret }}"
+  when:
+    - synapse_existing_secrets is defined
+    - synapse_existing_secrets.form_secret is defined
+
+- name: Generate form_secret when missing
+  when: form_secret is not defined
+  block:
+    - name: Generate form_secret value
+      shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
+      register: form_secret_output
+
+    - name: Cache generated form_secret
+      set_fact:
+        form_secret: "{{ form_secret_output.stdout }}"
 
 # 秘密情報をファイルに保存
 - name: Save secrets to file

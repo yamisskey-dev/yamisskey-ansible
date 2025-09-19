@@ -97,19 +97,20 @@
     - name: Seed controller secrets file for lookup
       copy:
         dest: "/tmp/vikunja-secrets.yml"
+        force: false
         mode: '0600'
         content: |
           jwt_secret: "{{ jwt_secret | default('test-jwt-secret') }}"
-          db_root_password: "{{ db_root_password }}"
-          db_user: "{{ db_user }}"
-          db_password: "{{ db_password }}"
-          mailer_password: "{{ mailer_password }}"
+          db_root_password: "{{ db_root_password | default('vikunja-root-password') }}"
+          db_user: "{{ db_user | default('vikunja') }}"
+          db_password: "{{ db_password | default('vikunja-password') }}"
+          mailer_password: "{{ mailer_password | default('vikunja-mailer-password') }}"
 
   tasks:
     - name: Apply vikunja role
-      include_tasks: ../../tasks/main.yml
+      include_role:
+        name: yamisskey.servers.vikunja
       vars:
-        # Test-specific configuration will be added here
         ansible_user: "root"
         vikunja_secrets_file: "/tmp/vikunja-secrets.yml"
         jwt_secret: "test-jwt-secret"

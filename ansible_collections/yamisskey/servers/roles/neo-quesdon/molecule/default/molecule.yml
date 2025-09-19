@@ -25,8 +25,10 @@ provisioner:
       callbacks_enabled: profile_tasks,timer
       remote_tmp: /tmp/.ansible-tmp
       roles_path: ../../../
+      collections_paths: ../../../../../../../.vendor/collections:../../../../../../../ansible_collections
   env:
     ANSIBLE_REMOTE_TMP: /tmp/.ansible-tmp
+    ANSIBLE_COLLECTIONS_PATHS: ../../../../../../../ansible_collections:../../../../../../../.vendor/collections
   inventory:
     host_vars:
       neo-quesdon-test-instance:

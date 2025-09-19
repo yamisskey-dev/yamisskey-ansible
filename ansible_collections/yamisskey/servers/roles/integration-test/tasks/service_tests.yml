@@ -18,17 +18,46 @@
   when: service_tests.container_status | bool
   tags: ['service', 'health', 'containers']
 
+- name: Gather containers for log availability checks
+  community.docker.docker_container_info:
+    name: "{{ item }}"
+  loop:
+    - misskey
+    - minio
+    - postgres
+  register: integration_log_availability_containers
+  failed_when: false
+  when: service_tests.log_availability | bool
+  tags: ['service', 'logs']
+
+- name: Build container list for log availability checks
+  set_fact:
+    log_availability_containers: >-
+      {{ (log_availability_containers | default([])) +
+         ([ item.container.Name ] if (item.container is defined and item.container.Name is defined) else []) }}
+  loop: "{{ integration_log_availability_containers.results | default([]) }}"
+  when: service_tests.log_availability | bool
+  tags: ['service', 'logs']
+
+- name: Initialize empty log availability results when no containers
+  set_fact:
+    log_availability_test:
+      results: []
+  when:
+    - service_tests.log_availability | bool
+    - (log_availability_containers | default([])) | length == 0
+  tags: ['service', 'logs']
+
 - name: Test log availability for key services
   shell: |
     docker logs {{ item }} --tail=5 2>/dev/null | wc -l
   register: log_availability_test
   failed_when: false
   changed_when: false
-  loop:
-    - "$(docker ps --filter 'name=misskey' --format '{{ '{{.Names}}' }}' | head -1)"
-    - "$(docker ps --filter 'name=minio' --format '{{ '{{.Names}}' }}' | head -1)"
-    - "$(docker ps --filter 'name=postgres' --format '{{ '{{.Names}}' }}' | head -1)"
-  when: service_tests.log_availability | bool
+  loop: "{{ log_availability_containers | default([]) }}"
+  when:
+    - service_tests.log_availability | bool
+    - (log_availability_containers | default([])) | length > 0
   tags: ['service', 'logs']
 
 - name: Test backup integrity
