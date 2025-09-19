@@ -138,7 +138,7 @@
     performance_results:
       response_time: >-
         {{ 'pass' if performance_metrics.avg_response_time | int < performance_thresholds.response_time_ms
-           else 'fail' }}"
+           else 'fail' }}
       memory_usage: >-
         {{ 'pass' if performance_metrics.max_memory_usage | int < performance_thresholds.memory_usage_mb
            else 'fail' }}
@@ -157,6 +157,7 @@
       connection_handling: >-
         {{ 'pass' if 'port_3000_ok' in concurrent_connection_test.stdout or 'port_9000_ok' in concurrent_connection_test.stdout
            else 'fail' }}
+  when: performance_thresholds is defined
   tags: ['perf', 'results']
 
 - name: Display performance test results
@@ -174,4 +175,5 @@
       - Disk I/O time: {{ performance_metrics.disk_io_time }}ms
       - DB query time: {{ performance_metrics.db_query_time }}ms
       - Network latency: {{ performance_metrics.network_latency }}ms
+  when: performance_thresholds is defined and performance_results is defined
   tags: ['perf', 'info']

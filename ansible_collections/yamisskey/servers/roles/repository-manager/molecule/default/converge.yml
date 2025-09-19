@@ -14,7 +14,6 @@
       register: apt_update_result
       failed_when: false
 
-
     - name: Create keyrings directory for Docker
       file:
         path: /etc/apt/keyrings
@@ -54,7 +53,6 @@
         update_cache: true
       when: apt_update_result is not failed
       
-
     - name: Install Docker for testing (fallback - use system packages)
       apt:
         name:
@@ -97,7 +95,7 @@
   tasks:
     - name: Apply repository-manager role
       include_role:
-        name: yamisskey.servers.repository_manager
+        name: "{{ playbook_dir }}/../../"
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"

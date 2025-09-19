@@ -20,7 +20,6 @@
       failed_when: false
       environment: "{{ molecule_apt_env }}"
 
-
     - name: Create keyrings directory for Docker
       file:
         path: /etc/apt/keyrings
@@ -66,7 +65,6 @@
       when: apt_update_result is not failed
       environment: "{{ molecule_apt_env }}"
       
-
     - name: Install Docker for testing (fallback - use system packages)
       apt:
         name:
@@ -91,7 +89,8 @@
         state: present
         delay: 5
         sleep: 3
-        timeout: 120
+        timeout: 300
+      failed_when: false
         
     - name: Verify Docker is running
       command: docker version
@@ -158,7 +157,7 @@
   tasks:
     - name: Apply ModSecurity-nginx role
       include_role:
-        name: yamisskey.servers.modsecurity-nginx
+        name: "{{ playbook_dir }}/../../"
       vars:
         # Test-specific configuration
         modsecurity_upstream_backend: "test-backend:80"

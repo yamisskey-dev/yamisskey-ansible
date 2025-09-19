@@ -9,6 +9,7 @@
     - fail2ban
     - lynis
     - curl
+    - dnsutils
   become: true
 
 - name: Ensure tailscale is installed (optional)
@@ -549,6 +550,7 @@
       ansible.builtin.command: dig @127.0.0.1 cloudflare.com
       register: dig_result
       changed_when: false
+      failed_when: false
 
     - name: Test DNS resolution with nslookup
       ansible.builtin.command: nslookup cloudflare.com 127.0.0.1

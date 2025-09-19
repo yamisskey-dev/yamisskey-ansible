@@ -259,3 +259,4 @@
           4. ✅ URL preservation: https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}/
           ==============================================
       when: (minio_runtime_checks_enabled | default(true)) | bool
+  when: (minio_runtime_checks_enabled | default(true)) | bool

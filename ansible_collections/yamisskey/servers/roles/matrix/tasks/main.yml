@@ -105,6 +105,15 @@
   shell: docker ps --filter "name=synapse" --format "{{ '{{.Names}}' }}"
   register: synapse_container
 
+- name: Create synapse-data directory
+  file:
+    path: /var/www/synapse/synapse-data
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
 - name: Generate synapse configuration using docker-compose
   shell: |
     docker compose run --rm synapse generate
@@ -209,16 +218,6 @@
     owner: www-data
     group: www-data
     mode: '0644'
-
-# Synapseの設定ファイルを反映
-- name: Add required configurations to Synapse configuration file
-  template:
-    src: synapse.homeserver.yaml.j2
-    dest: /var/www/synapse/synapse-data/homeserver.yaml
-    owner: root
-    group: root
-    mode: '0644'
-  become: true
 
 # Synapseコンテナを起動
 - name: Start Synapse container

@@ -10,18 +10,8 @@ services:
     ports:
       - "127.0.0.1:1236:8536"
     volumes:
-      - type: bind
-        source: ./nginx_internal.conf
-        target: /etc/nginx/nginx.conf
-        read_only: true
-        bind:
-          create_host_path: true
-      - type: bind
-        source: ./proxy_params
-        target: /etc/nginx/proxy_params
-        read_only: true
-        bind:
-          create_host_path: true
+      - ./nginx_internal.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy_params:/etc/nginx/proxy_params:ro
     restart: always
     logging: *default-logging
     depends_on:
