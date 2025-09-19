@@ -16,6 +16,14 @@
     group: '{{ ansible_user }}'
 
 # secrets.ymlの存在確認
+- name: Ensure secrets directory exists
+  file:
+    path: "{{ minecraft_secrets_file | dirname }}"
+    state: directory
+    mode: '0755'
+    owner: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
+
 - name: Check if secrets file exists
   stat:
     path: '{{ minecraft_secrets_file }}'
@@ -33,11 +41,72 @@
   register: rcon_password_output
   when: not minecraft_secrets_file_stat.stat.exists
 
-# 秘密情報の設定
-- name: Set secrets facts
+- name: Cache generated secrets for current run
   set_fact:
-    admin_uuid: "{{ (lookup('file', minecraft_secrets_file) | from_yaml).admin_uuid if minecraft_secrets_file_stat.stat.exists else admin_uuid_output.stdout }}"
-    rcon_password: "{{ (lookup('file', minecraft_secrets_file) | from_yaml).rcon_password if minecraft_secrets_file_stat.stat.exists else rcon_password_output.stdout }}"
+    minecraft_generated_secrets:
+      admin_uuid: '{{ admin_uuid_output.stdout }}'
+      rcon_password: '{{ rcon_password_output.stdout }}'
+  when:
+    - not minecraft_secrets_file_stat.stat.exists
+    - admin_uuid_output is defined
+    - rcon_password_output is defined
+
+- name: Load existing secrets from managed host
+  when: minecraft_secrets_file_stat.stat.exists
+  block:
+    - name: Read secrets file
+      slurp:
+        src: '{{ minecraft_secrets_file }}'
+      register: minecraft_secrets_raw
+      failed_when: false
+
+    - name: Parse existing secrets
+      set_fact:
+        minecraft_existing_secrets: '{{ minecraft_secrets_raw.content | b64decode | from_yaml }}'
+      when:
+        - minecraft_secrets_raw is defined
+        - minecraft_secrets_raw.failed | default(false) | bool == false
+        - minecraft_secrets_raw.content is defined
+      failed_when: false
+
+- name: Use existing admin UUID when available
+  set_fact:
+    admin_uuid: '{{ minecraft_existing_secrets.admin_uuid }}'
+  when:
+    - minecraft_existing_secrets is defined
+    - minecraft_existing_secrets.admin_uuid is defined
+
+- name: Use generated admin UUID when secrets were created
+  set_fact:
+    admin_uuid: '{{ minecraft_generated_secrets.admin_uuid }}'
+  when:
+    - admin_uuid is not defined
+    - minecraft_generated_secrets is defined
+    - minecraft_generated_secrets.admin_uuid is defined
+
+- name: Use existing RCON password when available
+  set_fact:
+    rcon_password: '{{ minecraft_existing_secrets.rcon_password }}'
+  when:
+    - minecraft_existing_secrets is defined
+    - minecraft_existing_secrets.rcon_password is defined
+
+- name: Use generated RCON password when secrets were created
+  set_fact:
+    rcon_password: '{{ minecraft_generated_secrets.rcon_password }}'
+  when:
+    - rcon_password is not defined
+    - minecraft_generated_secrets is defined
+    - minecraft_generated_secrets.rcon_password is defined
+
+- name: Ensure secrets facts are defined
+  assert:
+    that:
+      - admin_uuid is defined
+      - rcon_password is defined
+    fail_msg: >-
+      Minecraft secrets could not be determined. Ensure '{{ minecraft_secrets_file }}'
+      exists or allow the role to generate new secrets.
 
 # 秘密情報の保存（初回のみ）
 - name: Save secrets to file

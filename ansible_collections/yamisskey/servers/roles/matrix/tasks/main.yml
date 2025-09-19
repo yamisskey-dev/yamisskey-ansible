@@ -97,7 +97,7 @@
     registration_shared_secret: "{{ synapse_existing_secrets.registration_shared_secret }}"
   when:
     - synapse_existing_secrets is defined
-    - 'registration_shared_secret' in synapse_existing_secrets
+    - synapse_existing_secrets.registration_shared_secret is defined
 
 - name: Generate registration_shared_secret when missing
   when: registration_shared_secret is not defined
@@ -115,7 +115,7 @@
     macaroon_secret_key: "{{ synapse_existing_secrets.macaroon_secret_key }}"
   when:
     - synapse_existing_secrets is defined
-    - 'macaroon_secret_key' in synapse_existing_secrets
+    - synapse_existing_secrets.macaroon_secret_key is defined
 
 - name: Generate macaroon_secret_key when missing
   when: macaroon_secret_key is not defined
@@ -133,7 +133,7 @@
     form_secret: "{{ synapse_existing_secrets.form_secret }}"
   when:
     - synapse_existing_secrets is defined
-    - 'form_secret' in synapse_existing_secrets
+    - synapse_existing_secrets.form_secret is defined
 
 - name: Generate form_secret when missing
   when: form_secret is not defined

@@ -95,6 +95,7 @@
 
 # Docker Composeでサービスを起動
 - name: Start Vikunja services
-  command: docker-compose up -d
-  args:
-    chdir: '/var/www/vikunja'
+  community.docker.docker_compose_v2:
+    project_src: '/var/www/vikunja'
+    pull: always
+    state: present
