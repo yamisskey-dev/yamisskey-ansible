@@ -97,7 +97,7 @@
   tasks:
     - name: Apply misskey-backup role
       import_role:
-        name: yamisskey.servers.misskey_backup
+        name: yamisskey.servers.misskey-backup
       vars:
         ansible_user: "root"
         
