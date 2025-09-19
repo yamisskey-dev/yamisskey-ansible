@@ -28,6 +28,7 @@ provisioner:
       collections_paths: ../../../../../../../.vendor/collections:../../../../../../../ansible_collections
   env:
     ANSIBLE_REMOTE_TMP: /tmp/.ansible-tmp
+    ANSIBLE_COLLECTIONS_PATHS: "{{ lookup('env','MOLECULE_PROJECT_DIRECTORY') | dirname | dirname | dirname | dirname | dirname | dirname | dirname }}/.vendor/collections:{{ lookup('env','MOLECULE_PROJECT_DIRECTORY') | dirname | dirname | dirname | dirname | dirname | dirname | dirname }}/ansible_collections"
   inventory:
     host_vars:
       neo-quesdon-test-instance:

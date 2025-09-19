@@ -82,7 +82,7 @@
     mode: '0600'
     owner: '{{ ansible_user | default("root") }}'
     group: '{{ ansible_user | default("root") }}'
-  when: vikunja_jwt_secret_output is defined
+  when: not vikunja_secrets_stat.stat.exists
 
 - name: Expose Vikunja secrets as individual facts
   set_fact:
