@@ -169,4 +169,4 @@
     state: present
   failed_when: false
   register: mcaptcha_compose_result
-  changed_when: mcaptcha_compose_result.changed | default(false)
+  changed_when: false

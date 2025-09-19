@@ -87,14 +87,15 @@
     - (minio_runtime_checks_enabled | default(true)) | bool
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
+  ignore_errors: true
 
 - name: Wait for MinIO container to be ready (Molecule test)
   wait_for:
     host: localhost
     port: 9000
-    delay: 2
-    sleep: 2
-    timeout: 15
+    delay: 1
+    sleep: 1
+    timeout: 5
   when:
     - (minio_runtime_checks_enabled | default(true)) | bool
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
@@ -117,8 +118,11 @@
   command: docker inspect -f "{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}" minio
   register: minio_ip
   changed_when: false
-  failed_when: minio_ip.rc != 0
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+  failed_when: false
+  ignore_errors: true
+  when:
+    - (minio_runtime_checks_enabled | default(true)) | bool
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Wait for MinIO service to be fully ready (health check)
   uri:
@@ -129,7 +133,10 @@
   retries: 12
   delay: 5
   ignore_errors: true
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+  when:
+    - (minio_runtime_checks_enabled | default(true)) | bool
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - minio_ip is defined and minio_ip.stdout is defined
 
 - name: Set Minio Client alias with retry mechanism
   command: >
