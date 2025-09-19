@@ -181,7 +181,8 @@
 
   tasks:
     - name: Apply ModSecurity-nginx role
-      include_tasks: ../../tasks/main.yml
+      import_role:
+        name: modsecurity-nginx
       vars:
         # Test-specific configuration
         modsecurity_upstream_backend: "test-backend:80"

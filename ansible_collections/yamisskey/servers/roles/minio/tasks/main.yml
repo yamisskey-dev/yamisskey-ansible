@@ -65,7 +65,9 @@
 
 - name: Determine if MinIO runtime checks should run
   set_fact:
-    minio_runtime_checks_enabled: "{{ (ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']) | bool }}"
+    minio_runtime_checks_enabled: >-
+      {{ ((ansible_env.MOLECULE_SCENARIO_NAME is not defined)
+      and (ansible_virtualization_type | default('') not in ['docker', 'container'])) | bool }}
 
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
@@ -84,8 +86,7 @@
     sleep: 3
     timeout: 60
   when:
-    - (minio_runtime_checks_enabled | default(true)) | bool
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - minio_runtime_checks_enabled
   failed_when: false
   ignore_errors: true
 
@@ -97,7 +98,7 @@
     sleep: 1
     timeout: 5
   when:
-    - (minio_runtime_checks_enabled | default(true)) | bool
+    - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
   failed_when: false
   ignore_errors: true

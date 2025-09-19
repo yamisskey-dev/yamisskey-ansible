@@ -133,3 +133,14 @@
   failed_when: false
   register: lemmy_compose_result
   changed_when: lemmy_compose_result.changed | default(false)
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+
+- name: Start Lemmy Docker containers (test environment)
+  community.docker.docker_compose_v2:
+    project_src: "{{ lemmy_dir }}"
+    pull: never
+    remove_orphans: true
+  failed_when: false
+  register: lemmy_compose_test_result
+  changed_when: false
+  when: ansible_env.MOLECULE_SCENARIO_NAME is defined

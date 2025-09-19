@@ -94,9 +94,9 @@
 
   tasks:
     - name: Apply neo-quesdon role
-      include_tasks: ../../tasks/main.yml
+      import_role:
+        name: neo-quesdon
       vars:
-        # Test-specific configuration will be added here
         ansible_user: "root"
         
     - name: Basic role verification

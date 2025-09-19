@@ -28,7 +28,9 @@
     status_code: 200
   register: node_exporter_metrics
   ignore_errors: true
-  when: ansible_service_mgr | default('') == 'systemd'
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
 
 # 4. Prometheus Base Setup
 - name: Ensure Prometheus is enabled and running
@@ -36,7 +38,9 @@
     name: prometheus
     enabled: true
     state: started
-  when: ansible_service_mgr | default('') == 'systemd'
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
 
 # 5. Exporters Setup
 ## 5.1 cAdvisor Setup
@@ -128,7 +132,9 @@
     name: grafana-server
     enabled: true
     state: started
-  when: ansible_service_mgr | default('') == 'systemd'
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
 
 # 7. Prometheus Final Configuration
 - name: Deploy Prometheus configuration
@@ -152,6 +158,7 @@
     state: restarted
   when:
     - ansible_service_mgr | default('') == 'systemd'
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
     - prometheus_config.changed or blackbox_config.changed
 
 # 9. Final Health Checks
@@ -172,4 +179,6 @@
     - name: Report service check failures
       debug:
         msg: "Service checks failed: {{ service_checks }}"
-  when: ansible_service_mgr | default('') == 'systemd'
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
