@@ -63,11 +63,16 @@
   community.docker.docker_compose_v2:
     project_src: /opt/minio
 
-- name: Determine if MinIO runtime checks should run
+- name: Disable MinIO runtime checks by default
   set_fact:
-    minio_runtime_checks_enabled: >-
-      {{ ((ansible_env.MOLECULE_SCENARIO_NAME is not defined)
-      and (ansible_virtualization_type | default('') not in ['docker', 'container'])) | bool }}
+    minio_runtime_checks_enabled: false
+
+- name: Enable MinIO runtime checks when running on full systems
+  set_fact:
+    minio_runtime_checks_enabled: true
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
 
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp

@@ -128,12 +128,14 @@
 - name: Start Lemmy Docker containers
   community.docker.docker_compose_v2:
     project_src: "{{ lemmy_dir }}"
-    pull: "{{ 'never' if ansible_env.MOLECULE_SCENARIO_NAME is defined else 'missing' }}"
+    pull: "{{ 'never' if (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != '' else 'missing' }}"
     remove_orphans: true
   failed_when: false
   register: lemmy_compose_result
   changed_when: lemmy_compose_result.changed | default(false)
-  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  when:
+    - (ansible_env.MOLECULE_SCENARIO_NAME | default('')) == ''
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
 
 - name: Start Lemmy Docker containers (test environment)
   community.docker.docker_compose_v2:
@@ -143,4 +145,4 @@
   failed_when: false
   register: lemmy_compose_test_result
   changed_when: false
-  when: ansible_env.MOLECULE_SCENARIO_NAME is defined
+  when: (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != ''

@@ -18,6 +18,7 @@
   when:
     - ansible_service_mgr | default('') == 'systemd'
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
     - ansible_virtualization_type is undefined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false
 
@@ -31,6 +32,7 @@
   when:
     - ansible_service_mgr | default('') == 'systemd'
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
 
 # 4. Prometheus Base Setup
 - name: Ensure Prometheus is enabled and running
@@ -41,6 +43,7 @@
   when:
     - ansible_service_mgr | default('') == 'systemd'
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
 
 # 5. Exporters Setup
 ## 5.1 cAdvisor Setup
@@ -135,6 +138,7 @@
   when:
     - ansible_service_mgr | default('') == 'systemd'
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
 
 # 7. Prometheus Final Configuration
 - name: Deploy Prometheus configuration
@@ -159,6 +163,7 @@
   when:
     - ansible_service_mgr | default('') == 'systemd'
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
     - prometheus_config.changed or blackbox_config.changed
 
 # 9. Final Health Checks

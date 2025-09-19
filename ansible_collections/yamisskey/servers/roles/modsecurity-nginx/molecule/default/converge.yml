@@ -182,7 +182,7 @@
   tasks:
     - name: Apply ModSecurity-nginx role
       import_role:
-        name: modsecurity-nginx
+        name: yamisskey.servers.modsecurity_nginx
       vars:
         # Test-specific configuration
         modsecurity_upstream_backend: "test-backend:80"
