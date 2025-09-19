@@ -67,12 +67,11 @@
   set_fact:
     minio_runtime_checks_enabled: false
 
-- name: Enable MinIO runtime checks when running on full systems
+- name: Enable MinIO runtime checks when running outside Molecule
   set_fact:
     minio_runtime_checks_enabled: true
   when:
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-    - ansible_virtualization_type | default('') not in ['docker', 'container']
 
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
@@ -127,7 +126,7 @@
   failed_when: false
   ignore_errors: true
   when:
-    - (minio_runtime_checks_enabled | default(true)) | bool
+    - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Wait for MinIO service to be fully ready (health check)
@@ -140,7 +139,7 @@
   delay: 5
   ignore_errors: true
   when:
-    - (minio_runtime_checks_enabled | default(true)) | bool
+    - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
     - minio_ip is defined and minio_ip.stdout is defined
 
@@ -155,7 +154,7 @@
   retries: 5
   delay: 3
   changed_when: mc_alias_result.rc == 0
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+  when: minio_runtime_checks_enabled
 
 - name: Create and configure secure buckets
   block:
@@ -219,6 +218,7 @@
       loop:
         - "{{ minio_bucket_name_for_misskey }}"
         - "{{ minio_bucket_name_for_outline }}"
+  when: minio_runtime_checks_enabled
       register: bucket_policy_result
       changed_when: bucket_policy_result.rc == 0
 
@@ -284,5 +284,5 @@
           3. ✅ Federation image display via Cloudflare
           4. ✅ URL preservation: https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}/
           ==============================================
-      when: (minio_runtime_checks_enabled | default(true)) | bool
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+      when: minio_runtime_checks_enabled
+  when: minio_runtime_checks_enabled
