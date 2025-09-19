@@ -95,7 +95,7 @@
   tasks:
     - name: Apply repository-manager role
       include_role:
-        name: yamisskey.servers.repository-manager
+        name: yamisskey.servers.repository_manager
       vars:
         ansible_user: "root"
         

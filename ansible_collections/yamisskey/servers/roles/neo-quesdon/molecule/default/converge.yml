@@ -95,7 +95,7 @@
   tasks:
     - name: Apply neo-quesdon role
       include_role:
-        name: yamisskey.servers.neo-quesdon
+        name: yamisskey.servers.neo_quesdon
       vars:
         ansible_user: "root"
         
