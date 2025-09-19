@@ -185,26 +185,27 @@
       {% endfor %}
       
       🚨 Security Findings:
-      {% if security_results.port_security == 'fail' %}
+      {% if security_results.port_security is defined and security_results.port_security == 'fail' %}
       - Unexpected open ports detected: {{ port_scan_test.stdout_lines | select('match', '^unexpected:') | join(', ') }}
       {% endif %}
-      {% if security_results.container_security == 'fail' %}
+      {% if security_results.container_security is defined and security_results.container_security == 'fail' %}
       - Privileged containers found: {{ container_security_test.stdout_lines | select('match', '.*:.*:true$') | join(', ') }}
       {% endif %}
-      {% if security_results.credential_security == 'fail' %}
+      {% if security_results.credential_security is defined and security_results.credential_security == 'fail' %}
       - Potential default credentials: {{ default_creds_test.stdout_lines | select('match', '.*:potential_default_creds$') | join(', ') }}
       {% endif %}
-      {% if security_results.security_updates == 'fail' %}
+      {% if security_results.security_updates is defined and security_results.security_updates == 'fail' %}
       - Critical security updates needed: {{ security_updates_test.stdout | regex_replace('.*:(\\d+)', '\\1') }}
       {% endif %}
       
       ⚠️  Security Warnings:
-      {% if security_results.firewall_status == 'warn' %}
+      {% if security_results.firewall_status is defined and security_results.firewall_status == 'warn' %}
       - Firewall not active or configured
       {% endif %}
-      {% if security_results.password_policy == 'warn' %}
+      {% if security_results.password_policy is defined and security_results.password_policy == 'warn' %}
       - Basic password policy detected
-      {% elif security_results.password_policy == 'fail' %}
+      {% elif security_results.password_policy is defined and security_results.password_policy == 'fail' %}
       - No password policy configured
       {% endif %}
+  when: security_results is defined
   tags: ['security', 'info']

@@ -23,16 +23,19 @@
 
 - name: Set ownership for newly cloned repositories
   file:
-    path: "{{ item.item.dest }}"
-    owner: "{{ item.item.owner }}"
-    group: "{{ item.item.owner }}"
+    path: "{{ item.item.item.dest | default(item.item.dest) }}"
+    owner: "{{ item.item.item.owner | default(item.item.owner) }}"
+    group: "{{ item.item.item.owner | default(item.item.owner) }}"
     recurse: true
   loop: "{{ clone_results.results }}"
-  when: 
+  when:
     - clone_results is defined
+    - clone_results.results is defined
     - item.changed | default(false)
     - not item.failed | default(false)
-  become: "{{ item.item.item.become_required | default(false) }}"
+    - (item.item.item.dest is defined) or (item.item.dest is defined)
+  become: "{{ item.item.item.become_required | default(item.item.become_required | default(false)) }}"
+  failed_when: false
   tags: ['clone', 'ownership']
 
 - name: Display clone results

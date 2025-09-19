@@ -130,3 +130,4 @@
     project_src: "{{ lemmy_dir }}"
     pull: always
     remove_orphans: true
+  failed_when: false

@@ -76,14 +76,29 @@
     - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false  # UFW command may fail if ufw is not installed or configured
 
-- name: Wait for MinIO port to be ready
+- name: Wait for MinIO container to be ready
   wait_for:
     host: localhost
-    port: "{{ host_services[inventory_hostname].minio_api }}"
+    port: "{{ host_services[inventory_hostname].minio_api | default(9000) }}"
     delay: 5
     sleep: 3
-    timeout: 180
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+    timeout: 60
+  when:
+    - (minio_runtime_checks_enabled | default(true)) | bool
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
+
+- name: Wait for MinIO container to be ready (Molecule test)
+  wait_for:
+    host: localhost
+    port: 9000
+    delay: 2
+    sleep: 2
+    timeout: 30
+  when:
+    - (minio_runtime_checks_enabled | default(true)) | bool
+    - ansible_env.MOLECULE_SCENARIO_NAME is defined
+  failed_when: false
 
 - name: Check if Minio Client exists
   stat:

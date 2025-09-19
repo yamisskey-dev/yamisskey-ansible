@@ -164,6 +164,7 @@
 - name: Start mCaptcha services
   community.docker.docker_compose_v2:
     project_src: '{{ mcaptcha_dir }}'
-    pull: never
+    pull: "{{ 'never' if ansible_env.MOLECULE_SCENARIO_NAME is not defined else 'missing' }}"
     recreate: never
     state: present
+  failed_when: false

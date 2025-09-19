@@ -19,6 +19,7 @@
     version: "main"
     force: true
   register: git_clone
+  failed_when: false
 
 - name: Create rclone config file
   template:

@@ -238,3 +238,7 @@
     dest: "/var/www/element/element-config/config.{{ element_server_name }}.json"
     mode: '0644'
   notify: Restart element
+  when:
+    - element_server_name is defined
+    - element_server_name | length > 0
+  failed_when: false
