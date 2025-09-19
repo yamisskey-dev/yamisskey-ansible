@@ -107,7 +107,7 @@
 
 - name: Generate synapse configuration using docker-compose
   shell: |
-    docker-compose run --rm synapse generate
+    docker compose run --rm synapse generate
   args:
     chdir: /var/www/synapse
   when: synapse_container.stdout == ""

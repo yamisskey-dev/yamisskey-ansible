@@ -47,6 +47,11 @@
     regexp: '# cap_drop: - ALL'
     replace: 'cap_drop: - ALL'
 
+- name: Detect if systemd is available
+  ansible.builtin.stat:
+    path: /run/systemd/system
+  register: searxng_systemd_dir
+
 - name: Create systemd service file for SearXNG
   ansible.builtin.copy:
     dest: '/etc/systemd/system/searxng-docker.service'
@@ -64,7 +69,9 @@
 
       [Install]
       WantedBy=multi-user.target
-  when: ansible_facts.service_mgr == 'systemd'
+  when:
+    - ansible_facts.service_mgr == 'systemd'
+    - searxng_systemd_dir.stat.exists | default(false)
 
 - name: Enable and start SearXNG systemd service
   ansible.builtin.systemd:
@@ -72,4 +79,6 @@
     enabled: true
     state: started
     daemon_reload: true
-  when: ansible_facts.service_mgr == 'systemd'
+  when:
+    - ansible_facts.service_mgr == 'systemd'
+    - searxng_systemd_dir.stat.exists | default(false)

@@ -14,10 +14,14 @@ services:
         source: ./nginx_internal.conf
         target: /etc/nginx/nginx.conf
         read_only: true
+        bind:
+          create_host_path: true
       - type: bind
         source: ./proxy_params
         target: /etc/nginx/proxy_params
         read_only: true
+        bind:
+          create_host_path: true
     restart: always
     logging: *default-logging
     depends_on:
