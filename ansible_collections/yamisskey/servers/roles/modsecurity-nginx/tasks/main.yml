@@ -21,14 +21,14 @@
 
 - name: Create custom rules before CRS
   template:
-    src: REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.j2
+    src: rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.j2
     dest: "/etc/modsecurity-nginx/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf"
     mode: '0644'
   notify: restart modsecurity nginx
 
 - name: Create custom rules after CRS
   template:
-    src: RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.j2
+    src: rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.j2
     dest: "/etc/modsecurity-nginx/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf"
     mode: '0644'
   notify: restart modsecurity nginx

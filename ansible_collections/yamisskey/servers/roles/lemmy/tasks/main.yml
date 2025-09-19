@@ -10,7 +10,6 @@
   loop:
     - "{{ lemmy_dir }}"
     - "{{ lemmy_dir }}/volumes"
-    - "{{ lemmy_dir }}/volumes/pictrs"
     - "{{ lemmy_dir }}/volumes/postgres"
 
 # シークレットファイルの存在確認
@@ -118,13 +117,12 @@
 - name: Set pictrs folder permissions
   file:
     path: "{{ lemmy_dir }}/volumes/pictrs"
+    state: directory
     owner: 991
     group: 991
     mode: '0755'
     recurse: true
   become: true
-  register: pictrs_permissions
-  changed_when: pictrs_permissions.changed and pictrs_permissions.diff is defined
 
 # コンテナの起動
 - name: Start Lemmy Docker containers

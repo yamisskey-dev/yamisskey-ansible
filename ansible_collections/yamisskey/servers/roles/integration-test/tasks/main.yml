@@ -131,10 +131,13 @@
       📊 Final Score: {{ final_test_score }}/100 ({{ 'PASS' if final_test_score | int >= 80 else 'FAIL' }})
       
       📈 Test Statistics:
+      {% set total_tests = test_summary.total_tests | int %}
+      {% set passed_tests = test_summary.passed_tests | int %}
+      {% set warned_tests = test_summary.warned_tests | int %}
       - Total Tests: {{ test_summary.total_tests }}
-      - Passed: {{ test_summary.passed_tests }} ({{ ((test_summary.passed_tests | int * 100) / test_summary.total_tests | int) | round(1) }}%)
+      - Passed: {{ test_summary.passed_tests }} ({% if total_tests > 0 %}{{ ((passed_tests * 100.0) / total_tests) | round(1) }}%{% else %}N/A{% endif %})
       - Warned: {{ test_summary.warned_tests }}
-      - Failed: {{ (test_summary.total_tests | int - test_summary.passed_tests | int - test_summary.warned_tests | int) }}
+      - Failed: {{ (total_tests - passed_tests - warned_tests) }}
       
       🔧 Infrastructure Tests: {{ infrastructure_results.values() | select('equalto', 'pass') | list | length }}/{{ infrastructure_results | length }} passed
       🚀 Application Tests: {{ application_results.values() | select('equalto', 'pass') | list | length }}/{{ application_results | length }} passed

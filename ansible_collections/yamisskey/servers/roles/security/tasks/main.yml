@@ -472,10 +472,6 @@
   become: true
   when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
-- name: Reload sysctl
-  ansible.builtin.command: sysctl -p
-  become: true
-
 - name: Setup dnscrypt-proxy (System Install)
   block:
     - name: Install dnscrypt-proxy

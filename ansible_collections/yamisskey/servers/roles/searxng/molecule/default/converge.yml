@@ -134,6 +134,7 @@
 
         - name: Stage repository contents
           command: git -C "{{ searxng_repo }}" add -A
+          changed_when: false
 
         - name: Commit mock repository contents
           command: git -C "{{ searxng_repo }}" -c user.name="molecule" -c user.email="molecule@example.com" commit -m "Initial"
