@@ -51,8 +51,8 @@
     path: "{{ ansible_env.HOME }}/go/bin"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   when: ghq_version_check.rc != 0
 
 - name: Verify Go installation
@@ -65,10 +65,10 @@
   shell: |
     export GOPATH="$HOME/go"
     export PATH="$GOPATH/bin:$PATH"
-    go install github.com/x-motemen/ghq@latest
+    go install github.com/x-motemen/ghq@v1.4.0
   args:
     executable: /bin/bash
-  become_user: "{{ ansible_user }}"
+  become_user: "{{ ansible_user | default('root') }}"
   environment:
     GOPATH: "{{ ansible_env.HOME }}/go"
     PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
@@ -81,7 +81,7 @@
   shell: |
     export GOPATH="/root/go"
     export PATH="$GOPATH/bin:$PATH"
-    go install github.com/x-motemen/ghq@latest
+    go install github.com/x-motemen/ghq@v1.4.0
   args:
     executable: /bin/bash
   environment:
@@ -114,13 +114,14 @@
     - go_version_check.rc == 0
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
 
+
 - name: Create ghq configuration directory
   file:
     path: "{{ ansible_env.HOME }}/.config/ghq"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create ghq configuration directory (test environment)
@@ -139,8 +140,8 @@
       github = "{{ ghq_github_remote }}"
     dest: "{{ ansible_env.HOME }}/.config/ghq/config"
     mode: '0644'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   register: ghq_config_result
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
@@ -161,20 +162,16 @@
     path: "{{ ghq_root | expanduser }}"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-  when: 
-    - ghq_config_result.changed
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create ghq root directory (test environment)
   file:
     path: "{{ ghq_root | expanduser }}"
     state: directory
     mode: '0755'
-  when: 
-    - ghq_config_result.changed
-    - ansible_env.MOLECULE_SCENARIO_NAME is defined
+  when: ansible_env.MOLECULE_SCENARIO_NAME is defined
 
 - name: Verify ghq installation
   command: ghq --version
