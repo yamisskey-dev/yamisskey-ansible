@@ -16,13 +16,23 @@
   register: secrets_file_stat
 
 - name: Load existing secrets from secrets.yml
-  set_fact:
-    existing_secrets: "{{ lookup('file', minio_secrets_file) | from_yaml }}"
+  slurp:
+    src: "{{ minio_secrets_file }}"
+  register: secrets_file_content
   when: 
     - secrets_file_stat.stat.exists
     - minio_secrets_file is defined
   failed_when: false
   ignore_errors: true
+  no_log: true
+
+- name: Parse existing secrets content
+  set_fact:
+    existing_secrets: "{{ secrets_file_content.content | b64decode | from_yaml }}"
+  when: 
+    - secrets_file_content is defined
+    - secrets_file_content.content is defined
+  no_log: true
 
 - name: Initialize empty secrets structure if file doesn't exist
   set_fact:
@@ -54,19 +64,40 @@
     minio_kms_master_key: "{{ 'minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode) }}"
   when: need_new_credentials
 
-- name: Create/update secrets.yml with all credentials
-  copy:
-    content: |
+- name: Generate secrets content
+  set_fact:
+    secrets_content: |
       minio:
         root_user: "{{ minio_root_user }}"
         root_password: "{{ minio_root_password }}"
         misskey_s3_access_key: "{{ misskey_s3_access_key }}"
         misskey_s3_secret_key: "{{ misskey_s3_secret_key }}"
         kms_master_key: "{{ minio_kms_master_key }}"
+
+- name: Check if secrets file content has changed
+  stat:
+    path: "{{ minio_secrets_file }}"
+  register: secrets_file_check
+  when: not need_new_credentials
+
+- name: Compare secrets content with existing file
+  command: echo "{{ secrets_content }}" | diff - "{{ minio_secrets_file }}"
+  register: secrets_diff
+  changed_when: false
+  failed_when: false
+  when: 
+    - not need_new_credentials
+    - secrets_file_check.stat.exists
+
+- name: Create/update secrets.yml with all credentials
+  copy:
+    content: "{{ secrets_content }}"
     dest: "{{ minio_secrets_file }}"
     backup: true
     mode: '0600'
-  when: need_new_credentials
+  when: 
+    - need_new_credentials or (secrets_diff is defined and secrets_diff.rc != 0)
+  no_log: true
 
 - name: Deploy Docker Compose file for Minio
   template:
@@ -76,7 +107,6 @@
     group: root
     mode: '0644'
     backup: true
-  when: need_new_credentials
 
 - name: Create Docker network if not exists
   community.docker.docker_network:
@@ -94,6 +124,15 @@
   until: minio_start_result is succeeded
   failed_when: false
 
+- name: Check if running in Molecule test environment
+  stat:
+    path: /tmp/.ansible-tmp
+  register: molecule_tmp_check
+
+- name: Set molecule test flag
+  set_fact:
+    is_molecule_test: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined or molecule_tmp_check.stat.exists }}"
+
 - name: Disable MinIO runtime checks by default
   set_fact:
     minio_runtime_checks_enabled: false
@@ -102,7 +141,17 @@
   set_fact:
     minio_runtime_checks_enabled: true
   when:
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - not is_molecule_test
+
+- name: Debug MinIO runtime checks setting
+  debug:
+    msg: |
+      minio_runtime_checks_enabled: {{ minio_runtime_checks_enabled }}
+      is_molecule_test: {{ is_molecule_test }}
+      MOLECULE_SCENARIO_NAME: {{ ansible_env.MOLECULE_SCENARIO_NAME | default('undefined') }}
+      molecule_tmp_check.stat.exists: {{ molecule_tmp_check.stat.exists | default('undefined') }}
+      PWD: {{ ansible_env.PWD | default('undefined') }}
+      Will skip MinIO tasks: {{ not is_molecule_test and ansible_env.MOLECULE_SCENARIO_NAME is not defined }}
 
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
@@ -122,6 +171,7 @@
     timeout: 60
   when:
     - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
   ignore_errors: true
 
@@ -133,7 +183,6 @@
     sleep: 1
     timeout: 5
   when:
-    - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
   failed_when: false
   ignore_errors: true
@@ -254,7 +303,6 @@
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
         backup: true
-      when: need_new_credentials
 
     - name: Check if IAM policy already exists
       command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" misskey-policy
@@ -274,7 +322,6 @@
       file:
         path: /tmp/minio_iam_policy.json
         state: absent
-      when: need_new_credentials
 
     - name: Check if policy is already attached to user
       command: /usr/local/bin/mc admin policy entities "{{ minio_alias }}" misskey-policy
@@ -298,7 +345,6 @@
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
         backup: true
-      when: need_new_credentials
 
     - name: Check current bucket anonymous policy
       command: /usr/local/bin/mc anonymous get "{{ minio_alias }}/{{ item }}"
@@ -345,7 +391,6 @@
       file:
         path: /tmp/minio_bucket_policy.json
         state: absent
-      when: need_new_credentials
 
     - name: Check if encryption is already enabled
       command: /usr/local/bin/mc encrypt info "{{ minio_alias }}/{{ item }}"
