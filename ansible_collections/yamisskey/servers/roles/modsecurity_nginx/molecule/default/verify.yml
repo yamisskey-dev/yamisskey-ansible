@@ -297,11 +297,11 @@
           ModSecurity-nginx Verification Summary:
           =====================================
           {% if ansible_env.MOLECULE_SCENARIO_NAME is not defined %}
-          ✅ Container Status: {{ 'Running' if container_status is defined and container_status.stdout == 'running' else 'Failed' }}
-          ✅ HTTP Response: {{ basic_http_test.status | default('Skipped') }}
-          ✅ SQL Injection Test: {{ 'Blocked' if sql_injection_test is defined and sql_injection_test.status in [403, 406] else 'Skipped' }}
-          ✅ API Exclusions: {{ 'Working' if api_exclusion_test is defined and api_exclusion_test.status != 403 else 'Skipped' }}
-          ✅ WebSocket Support: {{ 'Working' if websocket_test is defined and websocket_test.status != 403 else 'Skipped' }}
+          ✅ Container Status: {{ 'Running' if container_status is defined and container_status.stdout is defined and container_status.stdout == 'running' else 'Failed' }}
+          ✅ HTTP Response: {{ basic_http_test.status | default('Skipped') if basic_http_test is defined else 'Skipped' }}
+          ✅ SQL Injection Test: {{ 'Blocked' if sql_injection_test is defined and sql_injection_test.status is defined and sql_injection_test.status in [403, 406] else 'Skipped' }}
+          ✅ API Exclusions: {{ 'Working' if api_exclusion_test is defined and api_exclusion_test.status is defined and api_exclusion_test.status != 403 else 'Skipped' }}
+          ✅ WebSocket Support: {{ 'Working' if websocket_test is defined and websocket_test.status is defined and websocket_test.status != 403 else 'Skipped' }}
           {% else %}
           ✅ Test Environment: Configuration files verified
           {% endif %}
