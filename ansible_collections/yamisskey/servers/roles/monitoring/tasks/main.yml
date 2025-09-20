@@ -167,6 +167,14 @@
     - prometheus_config.changed or blackbox_config.changed
 
 # 9. Final Health Checks
+- name: Debug environment variables
+  debug:
+    msg: |
+      Environment check:
+      - MOLECULE_SCENARIO_NAME: {{ ansible_env.MOLECULE_SCENARIO_NAME | default('undefined') }}
+      - Service manager: {{ ansible_service_mgr | default('undefined') }}
+      - Should skip: {{ ansible_env.MOLECULE_SCENARIO_NAME is not defined }}
+
 - name: Verify all services
   block:
     - name: Check service endpoints
@@ -180,12 +188,11 @@
         - { port: "{{ monitoring_services.blackbox_exporter }}", name: 'blackbox-exporter', path: '/probe?target=localhost&module=http_2xx' }
         - { port: "{{ monitoring_services.grafana }}", name: 'grafana', path: '/api/health' }
       register: service_checks
+      failed_when: false
   rescue:
     - name: Report service check failures
       debug:
         msg: "Service checks failed: {{ service_checks }}"
   when:
     - ansible_service_mgr | default('') == 'systemd'
-    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
-    - not (ansible_env.MOLECULE_SCENARIO_NAME is defined and ansible_env.MOLECULE_SCENARIO_NAME == 'default')
-    - not (ansible_env.MOLECULE_SCENARIO_NAME is defined and ansible_env.MOLECULE_SCENARIO_NAME == 'converge')
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined

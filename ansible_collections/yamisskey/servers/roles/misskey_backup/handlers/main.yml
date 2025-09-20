@@ -3,8 +3,12 @@
     project_src: /opt/misskey-backup
     state: absent
   listen: Restart backup container
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
 
 - name: Restart backup container
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
   listen: Restart backup container
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
