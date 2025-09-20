@@ -69,21 +69,22 @@
     dest: "{{ neo_quesdon_dir }}/docker-compose.yml"
     mode: '0644'
 
-- name: Create data directories
+- name: Create data directories with proper permissions
   file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    mode: '0755'
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0755') }}"
   loop:
-    - "{{ neo_quesdon_dir }}/data/postgres"
-    - "{{ neo_quesdon_dir }}/data/redis"
-
-- name: Set PostgreSQL data directory permissions
-  file:
-    path: "{{ neo_quesdon_dir }}/data/postgres"
-    owner: "70"
-    group: "70"
-    mode: '0700'
+    - path: "{{ neo_quesdon_dir }}/data/postgres"
+      owner: "70"
+      group: "70"
+      mode: '0700'
+    - path: "{{ neo_quesdon_dir }}/data/redis"
+      owner: "999"
+      group: "999"
+      mode: '0755'
 
 # 設定ファイルの存在確認
 - name: Verify docker-compose.yml exists
