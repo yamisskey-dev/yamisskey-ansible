@@ -134,12 +134,12 @@
       timestamp: "{{ ansible_date_time.iso8601 }}"
       host: "{{ inventory_hostname }}"
       operation: "{{ repo_operation }}"
-      total_repositories: "{{ target_repositories | length | int }}"
-      verified_repositories: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', true) | list | length | int }}"
-      missing_required: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | selectattr('required', 'equalto', true) | list | length | int }}"
-      integrity_issues: "{{ (git_integrity_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) | int if git_integrity_check is defined else 0 }}"
-      branch_mismatches: "{{ (branch_check.results | selectattr('stdout', 'search', 'BRANCH_MISMATCH') | list | length) | int if branch_check is defined else 0 }}"
-      remote_failures: "{{ (remote_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) | int if remote_check is defined else 0 }}"
+      total_repositories: "{{ target_repositories | length }}"
+      verified_repositories: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
+      missing_required: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | selectattr('required', 'equalto', true) | list | length }}"
+      integrity_issues: "{{ (git_integrity_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) if git_integrity_check is defined else 0 }}"
+      branch_mismatches: "{{ (branch_check.results | selectattr('stdout', 'search', 'BRANCH_MISMATCH') | list | length) if branch_check is defined else 0 }}"
+      remote_failures: "{{ (remote_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) if remote_check is defined else 0 }}"
   tags: ['verify', 'summary']
 
 - name: Fail if critical issues detected
@@ -150,7 +150,7 @@
       - Git integrity issues: {{ verification_summary.integrity_issues }}
       - Branch mismatches: {{ verification_summary.branch_mismatches }}
   when:
-    - verification_summary.missing_required > 0 or verification_summary.integrity_issues > 0 or verification_summary.branch_mismatches > 0
+    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or (verification_summary.branch_mismatches | int) > 0
     - repo_operation in ['clone', 'restore']
   tags: ['verify', 'critical']
 

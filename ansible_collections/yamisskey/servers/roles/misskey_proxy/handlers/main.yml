@@ -4,9 +4,13 @@
     name: squid
     state: restarted
   become: true
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
 
 - name: reload squid
   systemd:
     name: squid
     state: reloaded
   become: true
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
