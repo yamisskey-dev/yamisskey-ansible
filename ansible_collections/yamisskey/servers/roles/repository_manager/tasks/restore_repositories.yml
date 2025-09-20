@@ -128,8 +128,8 @@
       🔄 Repository Restore Results:
       {% if restore_results is defined and restore_results.results | length > 0 %}
       {% for result in restore_results.results %}
-      - {{ result.item.name }}: {{ '✅ Restored successfully' if not result.failed else '❌ Restore failed' }}
-      {% if not result.failed %}
+      - {{ result.item.name }}: {{ '✅ Restored successfully' if not (result.rc is defined and result.rc != 0) else '❌ Restore failed' }}
+      {% if not (result.rc is defined and result.rc != 0) %}
         📍 Location: {{ result.item.dest }}
         📦 Source: {{ result.item.name }}_{{ restore_backup_date }}.tar.gz
       {% endif %}

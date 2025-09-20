@@ -18,7 +18,7 @@
   become: "{{ item.item.become_required | default(false) }}"
   register: update_results
   failed_when:
-    - update_results.failed
+    - update_results.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
     - item.item.required | default(false)
   tags: ['update', 'git']
 
@@ -43,8 +43,8 @@
       {% for result in update_results.results %}
       {% if result.item.item is defined %}
       - {{ result.item.item.name }}:
-        {% if result.failed %}
-        ❌ Update failed: {{ result.msg | default('Unknown error') }}
+        {% if result.rc is defined and result.rc != 0 %}
+        ❌ Update failed: {{ result.stderr | default('Unknown error') }}
         {% elif result.changed %}
         ✅ Updated successfully
         📍 Location: {{ result.item.item.dest }}

@@ -17,7 +17,7 @@
   become: "{{ item.item.become_required | default(false) }}"
   register: clone_results
   failed_when:
-    - clone_results.failed
+    - clone_results.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
     - item.item.required | default(false)
   tags: ['clone', 'git']
 
@@ -32,7 +32,7 @@
     - clone_results is defined
     - clone_results.results is defined
     - item.changed | default(false)
-    - not item.failed | default(false)
+    - not (item.rc is defined and item.rc != 0)
     - item.item is defined
     - item.item.dest is defined
   become: "{{ item.item.become_required | default(false) }}"
@@ -46,10 +46,13 @@
       {% if clone_results is defined and clone_results.results | length > 0 %}
       {% for result in clone_results.results %}
       {% if result.item.item is defined %}
-      - {{ result.item.item.name }}: {{ '✅ Cloned successfully' if result.changed else ('❌ Clone failed' if result.failed else '⏭️ Skipped (already exists)') }}
+      - {{ result.item.item.name }}: {{ '✅ Cloned successfully' if result.changed else ('❌ Clone failed' if result.rc is defined and result.rc != 0 else '⏭️ Skipped (already exists)') }}
       {% if result.changed %}
         📍 Location: {{ result.item.item.dest }}
         🌿 Branch: {{ result.item.item.branch | default('HEAD') }}
+      {% endif %}
+      {% if result.rc is defined and result.rc != 0 %}
+        ❌ Error: {{ result.stderr | default('Unknown error') }}
       {% endif %}
       {% endif %}
       {% endfor %}

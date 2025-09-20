@@ -85,8 +85,8 @@
       📦 Backup Results:
       {% if backup_results is defined and backup_results.results | length > 0 %}
       {% for result in backup_results.results %}
-      - {{ result.item.name }}: {{ '✅ Backed up successfully' if not result.failed else '❌ Backup failed' }}
-      {% if not result.failed %}
+      - {{ result.item.name }}: {{ '✅ Backed up successfully' if not (result.rc is defined and result.rc != 0) else '❌ Backup failed' }}
+      {% if not (result.rc is defined and result.rc != 0) %}
         📄 Archive: {{ result.dest }}
         📏 Size: {{ result.size | default('Unknown') }} bytes
       {% endif %}
