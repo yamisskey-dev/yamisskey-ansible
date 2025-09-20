@@ -117,7 +117,7 @@
     project_src: /opt/minio
     state: present
     recreate: always
-    pull: true
+    pull: always
   register: minio_start_result
   retries: 3
   delay: 5
@@ -173,7 +173,6 @@
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
-  ignore_errors: true
 
 - name: Wait for MinIO container to be ready (Molecule test)
   wait_for:
@@ -456,4 +455,3 @@
   when: 
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-

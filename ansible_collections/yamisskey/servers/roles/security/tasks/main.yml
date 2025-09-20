@@ -278,7 +278,6 @@
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
     - ansible_virtualization_type is undefined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false
-  ignore_errors: true
 
 - name: Check fail2ban status for sshd
   ansible.builtin.command: fail2ban-client status sshd
