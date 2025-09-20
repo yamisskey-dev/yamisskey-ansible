@@ -30,6 +30,10 @@
       minio: {}
   when: not secrets_file_stat.stat.exists or existing_secrets is not defined
 
+- name: Determine if we need to generate new credentials
+  set_fact:
+    need_new_credentials: "{{ not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0 }}"
+
 - name: Load existing credentials from secrets file
   set_fact:
     minio_root_user: "{{ existing_secrets.minio.root_user }}"
@@ -48,7 +52,7 @@
     misskey_s3_access_key: "{{ ansible_hostname + '-' + ansible_date_time.epoch }}"
     misskey_s3_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
     minio_kms_master_key: "{{ 'minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode) }}"
-  when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+  when: need_new_credentials
 
 - name: Create/update secrets.yml with all credentials
   copy:
@@ -62,7 +66,7 @@
     dest: "{{ minio_secrets_file }}"
     backup: true
     mode: '0600'
-  when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+  when: need_new_credentials
 
 - name: Deploy Docker Compose file for Minio
   template:
@@ -72,7 +76,7 @@
     group: root
     mode: '0644'
     backup: true
-  when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+  when: need_new_credentials
 
 - name: Create Docker network if not exists
   community.docker.docker_network:
@@ -250,7 +254,7 @@
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
         backup: true
-      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+      when: need_new_credentials
 
     - name: Check if IAM policy already exists
       command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" misskey-policy
@@ -270,7 +274,7 @@
       file:
         path: /tmp/minio_iam_policy.json
         state: absent
-      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+      when: need_new_credentials
 
     - name: Check if policy is already attached to user
       command: /usr/local/bin/mc admin policy entities "{{ minio_alias }}" misskey-policy
@@ -294,7 +298,7 @@
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
         backup: true
-      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+      when: need_new_credentials
 
     - name: Check current bucket anonymous policy
       command: /usr/local/bin/mc anonymous get "{{ minio_alias }}/{{ item }}"
@@ -341,7 +345,7 @@
       file:
         path: /tmp/minio_bucket_policy.json
         state: absent
-      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
+      when: need_new_credentials
 
     - name: Check if encryption is already enabled
       command: /usr/local/bin/mc encrypt info "{{ minio_alias }}/{{ item }}"
