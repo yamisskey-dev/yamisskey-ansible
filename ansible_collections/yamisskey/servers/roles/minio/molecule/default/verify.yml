@@ -35,7 +35,7 @@
         host: localhost
         timeout: 30
       when: container_status.rc == 0
-      ignore_errors: true
+      failed_when: false
 
     - name: Test MinIO health endpoint
       uri:

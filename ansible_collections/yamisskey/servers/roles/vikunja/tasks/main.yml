@@ -57,12 +57,7 @@
 
 - name: Ensure Vikunja secrets include default values
   set_fact:
-    vikunja_secrets: '{{ {
-        "db_root_password": db_root_password | default("vikunja-root-password"),
-        "db_user": db_user | default("vikunja"),
-        "db_password": db_password | default("vikunja-password"),
-        "mailer_password": mailer_password | default("vikunja-mailer-password")
-      } | combine(vikunja_secrets | default({}), recursive=True) }}'
+    vikunja_secrets: '{{ {"db_root_password": db_root_password | default("vikunja-root-password"), "db_user": db_user | default("vikunja"), "db_password": db_password | default("vikunja-password"), "mailer_password": mailer_password | default("vikunja-mailer-password")} | combine(vikunja_secrets | default({}), recursive=True) }}'
 
 - name: Ensure JWT secret is defined
   when: vikunja_secrets.jwt_secret is not defined or vikunja_secrets.jwt_secret | length == 0

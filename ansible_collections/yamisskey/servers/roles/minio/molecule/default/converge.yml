@@ -61,7 +61,7 @@
       changed_when: false
 
     - name: Install Docker from snap if apt failed
-      snap:
+      community.general.snap:
         name: docker
         state: present
       when: docker_version_check.rc != 0

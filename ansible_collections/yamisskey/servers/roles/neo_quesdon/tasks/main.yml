@@ -121,7 +121,7 @@
     project_src: "{{ neo_quesdon_dir }}"
     state: present
     recreate: always
-    pull: true
+    pull: always
   when:
     - compose_file.stat.exists
     - env_file.stat.exists
