@@ -1,0 +1,20 @@
+---
+# Neo-Quesdon role default variables
+neo_quesdon_dir: "/var/www/neo-quesdon"
+neo_quesdon_version: "develop"
+neo_quesdon_secrets_file: "/etc/neo-quesdon/secrets.yml"
+
+# Default domain (can be overridden)
+neo_quesdon_domain: "{{ domain | default('localhost') }}"
+
+# Database configuration
+neo_quesdon_postgres_user: "neo_quesdon"
+neo_quesdon_postgres_db: "neo_quesdon"
+
+# Redis configuration
+neo_quesdon_redis_host: "redis"
+neo_quesdon_redis_port: 6379
+
+# Application configuration
+neo_quesdon_port: 3000
+neo_quesdon_host: "0.0.0.0"

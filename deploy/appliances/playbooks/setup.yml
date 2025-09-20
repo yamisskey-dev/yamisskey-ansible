@@ -20,12 +20,12 @@
 
     - name: Setup TrueNAS Core Infrastructure
       include_role:
-        name: core
+        name: yamisskey.appliances.core
       tags: ['core', 'infrastructure']
 
     - name: Deploy TrueNAS Applications
       include_role:
-        name: apps
+        name: yamisskey.appliances.apps
       tags: ['apps', 'applications']
 
     - name: Display completion summary

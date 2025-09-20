@@ -1,0 +1,169 @@
+---
+# ModSecurity NGINX configuration
+modsecurity_nginx_name: "modsecurity-nginx"
+modsecurity_nginx_image: "owasp/modsecurity-nginx"
+modsecurity_nginx_tag: "latest"
+
+# Directory configuration
+modsecurity_config_dir: "/etc/modsecurity-nginx"
+modsecurity_rules_dir: "/etc/modsecurity-nginx/rules"
+modsecurity_conf_dir: "/etc/modsecurity-nginx/conf.d"
+modsecurity_lists_dir: "/etc/modsecurity-nginx/lists"
+
+# Security lists (empty by default)
+modsecurity_blocked_ips: []
+modsecurity_allowed_ips: []
+modsecurity_maintenance_allowed_ips: []
+modsecurity_blocked_user_agents: []
+
+# Maintenance mode configuration
+modsecurity_maintenance_mode: false
+
+# Rate limiting configuration
+modsecurity_rate_limit_requests_per_minute: 100
+modsecurity_rate_limit_requests_per_second: 10
+
+# Misskey-specific exclusions
+modsecurity_misskey_exclusions_enabled: true
+
+# Request body limits
+modsecurity_enforce_body_limit: true
+modsecurity_max_request_size: "10M"
+
+# Security headers configuration
+modsecurity_security_headers:
+  - "X-Content-Type-Options: nosniff"
+  - "X-Frame-Options: DENY"
+  - "X-XSS-Protection: 1; mode=block"
+  - "Referrer-Policy: strict-origin-when-cross-origin"
+  - "Content-Security-Policy: default-src 'self'"
+
+# HSTS configuration
+modsecurity_hsts_enabled: true
+modsecurity_hsts_max_age: 31536000
+modsecurity_hsts_include_subdomains: true
+modsecurity_hsts_preload: true
+
+# Alert configuration
+modsecurity_alert_high_severity: true
+modsecurity_alert_threshold_per_minute: 100
+
+# Collection timeout
+modsecurity_collection_timeout: 600
+
+# Debug log level
+modsecurity_debug_log_level: 0
+
+# Docker configuration
+modsecurity_nginx_restart_policy: "unless-stopped"
+modsecurity_nginx_port: 80
+modsecurity_docker_volumes: []
+
+# ModSecurity engine configuration
+modsecurity_rule_engine: "On"
+modsecurity_req_body_access: "On"
+modsecurity_resp_body_access: "On"
+modsecurity_audit_engine: "On"
+modsecurity_audit_log_format: "JSON"
+modsecurity_blocking_paranoia: 1
+modsecurity_detection_paranoia: 1
+modsecurity_anomaly_inbound: 5
+modsecurity_anomaly_outbound: 4
+modsecurity_allowed_methods: "GET POST PUT DELETE HEAD OPTIONS"
+modsecurity_allowed_request_content_type: "application/x-www-form-urlencoded|multipart/form-data|text/xml|application/xml|application/x-amf|application/json"
+modsecurity_allowed_http_versions: "HTTP/1.0 HTTP/1.1 HTTP/2"
+
+# Log configuration
+modsecurity_log_dir: "/var/log/nginx"
+modsecurity_log_level: "warn"
+modsecurity_access_log: "/var/log/nginx/access.log"
+modsecurity_error_log: "/var/log/nginx/error.log"
+
+# Host services configuration
+host_services:
+  balthasar:
+    modsecurity_nginx: 80
+    misskey: 3000
+    synapse: 8008
+    element: 8080
+    jitsi: 8080
+    ctfd: 8000
+    grafana: 3000
+    vikunja: 8080
+    cryptpad: 3000
+    zitadel: 8080
+    searxng: 8080
+    outline: 3000
+    uptime: 3001
+    mcaptcha: 8080
+    neo_quesdon: 3025
+    lemmy: 8536
+  joseph:
+    minio_api: 9000
+
+# Server names configuration
+misskey_server_name: "misskey.example.com"
+synapse_server_name: "matrix.example.com"
+element_server_name: "element.example.com"
+jitsi_server_name: "jitsi.example.com"
+ctfd_server_name: "ctf.example.com"
+grafana_server_name: "grafana.example.com"
+vikunja_server_name: "vikunja.example.com"
+cryptpad_server_name: "cryptpad.example.com"
+zitadel_server_name: "zitadel.example.com"
+searxng_server_name: "searx.example.com"
+outline_server_name: "outline.example.com"
+uptime_server_name: "uptime.example.com"
+mcaptcha_server_name: "mcaptcha.example.com"
+neo_quesdon_server_name: "neo-quesdon.example.com"
+lemmy_server_name: "lemmy.example.com"
+minio_api_server_name: "minio.example.com"
+
+# MinIO configuration
+minio_bucket_name_for_misskey: "misskey-files"
+
+# Service configuration
+modsecurity_enabled: true
+modsecurity_detection_only: false
+
+# Rate limiting
+modsecurity_rate_limit_enabled: true
+modsecurity_rate_limit_burst: 100
+modsecurity_rate_limit_rate: "10r/s"
+
+# SSL/TLS configuration
+modsecurity_ssl_enabled: true
+modsecurity_ssl_protocols: "TLSv1.2 TLSv1.3"
+
+# Docker network configuration
+modsecurity_network_name: "modsecurity"
+modsecurity_port_http: 80
+modsecurity_port_https: 443
+
+# Individual service configurations
+modsecurity_services:
+  - "00-shared"
+  - "misskey"
+  - "synapse"
+  - "element"
+  - "jitsi"
+  - "ctfd"
+  - "grafana"
+  - "minio"
+  - "vikunja"
+  - "cryptpad"
+  - "zitadel"
+  - "searxng"
+  - "outline"
+  - "uptime"
+  - "mcaptcha"
+  - "neo_quesdon"
+  - "lemmy"
+
+# Monitoring configuration
+modsecurity_monitoring_enabled: true
+modsecurity_monitoring_script: "/etc/modsecurity-nginx/monitor-modsecurity.sh"
+
+# Log rotation
+modsecurity_logrotate_days: 30
+modsecurity_logrotate_compress: true

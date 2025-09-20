@@ -1,0 +1,30 @@
+---
+galaxy_info:
+  author: yamisskey-dev
+  description: Enterprise-grade reverse proxy configuration for Misskey services
+  company: yamisskey
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+  galaxy_tags:
+    - proxy
+    - nginx
+    - reverse-proxy
+    - misskey
+    - ssl
+    - web
+
+dependencies:
+  - role: yamisskey.servers.common
+  - role: yamisskey.servers.security
+
+collections:
+  - ansible.posix

@@ -54,23 +54,23 @@
       tags: ['info', 'plan']
 
   roles:
-    - role: common
+    - role: yamisskey.servers.common
       when: enable_common | bool
       tags: ['common', 'base']
       
-    - role: security
+    - role: yamisskey.servers.security
       when: enable_security | bool
       tags: ['security', 'cloudflared']
       
-    - role: monitoring
+    - role: yamisskey.servers.monitoring
       when: enable_monitoring | bool
       tags: ['monitoring', 'observability']
       
-    - role: import
+    - role: yamisskey.servers.import
       when: enable_import | bool
       tags: ['import', 'data']
       
-    - role: export
+    - role: yamisskey.servers.export
       when: enable_export | bool
       tags: ['export', 'data']
 

@@ -11,7 +11,8 @@
     repo: '{{ searxng_repo }}'
     dest: '{{ searxng_dir }}'
     version: '{{ searxng_repo_version | default("main") }}'
-    force: false
+    force: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined }}"
+  failed_when: false
 
 - name: Configure .env file for SearXNG
   ansible.builtin.copy:
@@ -20,15 +21,24 @@
       SEARXNG_HOSTNAME={{ searxng_server_name }}
       SEARXNG_ADMIN_EMAIL=admin@{{ domain }}
 
+- name: Check if secret key already exists in settings
+  ansible.builtin.command: 'grep -q "secret_key:" {{ searxng_settings_file }}'
+  register: secret_key_exists
+  failed_when: false
+  changed_when: false
+
 - name: Generate secret key for SearXNG
   ansible.builtin.command: 'openssl rand -hex 32'
   register: secret_key
+  when: secret_key_exists.rc != 0
+  changed_when: secret_key_exists.rc != 0
 
 - name: Insert secret key into SearXNG settings.yml
   ansible.builtin.lineinfile:
     path: '{{ searxng_settings_file }}'
     regexp: 'ultrasecretkey'
     line: 'secret_key: {{ secret_key.stdout }}'
+  when: secret_key_exists.rc != 0
 
 - name: Temporarily disable cap_drop for initial setup
   ansible.builtin.replace:

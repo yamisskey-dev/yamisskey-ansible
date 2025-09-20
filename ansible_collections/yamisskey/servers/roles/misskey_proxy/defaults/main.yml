@@ -1,0 +1,48 @@
+---
+# Proxy service configuration
+proxy_dir: "/opt/proxy"
+squid_cache_dir: "/var/cache/squid"
+squid_log_dir: "/var/log/squid"
+proxy_squid_config_dir: "/etc/squid"
+
+# GitHub organization
+github_org: "yamisskey-dev"
+
+# Summaly configuration
+summaly_repo: "https://github.com/yamisskey-dev/summaly-docker.git"
+summaly_dir: "/opt/summaly-docker"
+
+# Service ports with defaults for dynamic host support
+default_proxy_ports:
+  media_proxy_rs: 8081
+  nginx: 8080
+
+# Host services with fallback to defaults
+host_services_defaults:
+  media_proxy_rs: "{{ host_services[inventory_hostname].media_proxy_rs | default(default_proxy_ports.media_proxy_rs) }}"
+  nginx: "{{ host_services[inventory_hostname].nginx | default(default_proxy_ports.nginx) }}"
+
+# Docker configuration
+media_proxy_image: "ghcr.io/yamisskey/media-proxy-rs:main"
+nginx_image: "nginx"
+docker_restart_policy: "always"
+docker_pull_policy: true
+
+# Service names
+media_proxy_container_name: "media-proxy-rs-server"
+nginx_proxy_container_name: "proxy"
+
+# Host services configuration
+host_services:
+  linode_prox:
+    squid: 3128
+    media_proxy_rs: 8081
+    nginx: 8080
+  balthasar:
+    squid: 3128
+    media_proxy_rs: 8081
+    nginx: 8080
+  joseph:
+    squid: 3128
+    media_proxy_rs: 8081
+    nginx: 8080

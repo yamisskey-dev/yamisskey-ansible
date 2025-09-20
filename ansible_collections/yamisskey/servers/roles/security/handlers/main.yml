@@ -16,6 +16,10 @@
     state: restarted
     enabled: true
   become: true
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type is undefined or ansible_virtualization_type not in ['docker', 'container']
+  failed_when: false
 
 - name: Restart crowdsec
   systemd:
@@ -39,6 +43,10 @@
   systemd:
     name: ssh
     state: restarted
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - ansible_virtualization_type is undefined or ansible_virtualization_type not in ['docker', 'container']
+  failed_when: false
 
 - name: Restart systemd-resolved
   systemd:

@@ -1,8 +1,0 @@
----
-- name: Repository management with enhanced features
-  hosts: all
-  become: false
-  gather_facts: true
-  
-  roles:
-    - repository-manager

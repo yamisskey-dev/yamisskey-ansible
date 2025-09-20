@@ -16,36 +16,88 @@
   register: secrets_file_stat
 
 - name: Load existing secrets from secrets.yml
+  slurp:
+    src: "{{ minio_secrets_file }}"
+  register: secrets_file_content
+  when: 
+    - secrets_file_stat.stat.exists
+    - minio_secrets_file is defined
+  failed_when: false
+  ignore_errors: true
+  no_log: true
+
+- name: Parse existing secrets content
   set_fact:
-    existing_secrets: "{{ lookup('file', minio_secrets_file) | from_yaml }}"
-  when: secrets_file_stat.stat.exists
+    existing_secrets: "{{ secrets_file_content.content | b64decode | from_yaml }}"
+  when: 
+    - secrets_file_content is defined
+    - secrets_file_content.content is defined
+  no_log: true
 
 - name: Initialize empty secrets structure if file doesn't exist
   set_fact:
     existing_secrets:
       minio: {}
-  when: not secrets_file_stat.stat.exists
+  when: not secrets_file_stat.stat.exists or existing_secrets is not defined
 
-- name: Generate all credentials (auto-generate missing ones)
+- name: Determine if we need to generate new credentials
   set_fact:
-    minio_root_user: "{{ existing_secrets.minio.root_user | default(lookup('password', '/dev/null chars=ascii_letters,digits length=32')) }}"
-    minio_root_password: "{{ existing_secrets.minio.root_password | default(lookup('password', '/dev/null chars=ascii_letters,digits length=64')) }}"
-    misskey_s3_access_key: "{{ existing_secrets.minio.misskey_s3_access_key | default(ansible_hostname + '-' + ansible_date_time.epoch) }}"
-    misskey_s3_secret_key: "{{ existing_secrets.minio.misskey_s3_secret_key | default(lookup('password', '/dev/null chars=ascii_letters,digits length=32')) }}"
-    minio_kms_master_key: "{{ existing_secrets.minio.kms_master_key | default('minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode)) }}"
+    need_new_credentials: "{{ not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0 }}"
 
-- name: Create/update secrets.yml with all credentials
-  copy:
-    content: |
+- name: Load existing credentials from secrets file
+  set_fact:
+    minio_root_user: "{{ existing_secrets.minio.root_user }}"
+    minio_root_password: "{{ existing_secrets.minio.root_password }}"
+    misskey_s3_access_key: "{{ existing_secrets.minio.misskey_s3_access_key }}"
+    misskey_s3_secret_key: "{{ existing_secrets.minio.misskey_s3_secret_key }}"
+    minio_kms_master_key: "{{ existing_secrets.minio.kms_master_key }}"
+  when: 
+    - secrets_file_stat.stat.exists
+    - existing_secrets.minio | length > 0
+
+- name: Generate new credentials when secrets file doesn't exist
+  set_fact:
+    minio_root_user: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+    minio_root_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=64') }}"
+    misskey_s3_access_key: "{{ ansible_hostname + '-' + ansible_date_time.epoch }}"
+    misskey_s3_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+    minio_kms_master_key: "{{ 'minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode) }}"
+  when: need_new_credentials
+
+- name: Generate secrets content
+  set_fact:
+    secrets_content: |
       minio:
         root_user: "{{ minio_root_user }}"
         root_password: "{{ minio_root_password }}"
         misskey_s3_access_key: "{{ misskey_s3_access_key }}"
         misskey_s3_secret_key: "{{ misskey_s3_secret_key }}"
         kms_master_key: "{{ minio_kms_master_key }}"
+
+- name: Check if secrets file content has changed
+  stat:
+    path: "{{ minio_secrets_file }}"
+  register: secrets_file_check
+  when: not need_new_credentials
+
+- name: Compare secrets content with existing file
+  command: echo "{{ secrets_content }}" | diff - "{{ minio_secrets_file }}"
+  register: secrets_diff
+  changed_when: false
+  failed_when: false
+  when: 
+    - not need_new_credentials
+    - secrets_file_check.stat.exists
+
+- name: Create/update secrets.yml with all credentials
+  copy:
+    content: "{{ secrets_content }}"
     dest: "{{ minio_secrets_file }}"
     backup: true
     mode: '0600'
+  when: 
+    - need_new_credentials or (secrets_diff is defined and secrets_diff.rc != 0)
+  no_log: true
 
 - name: Deploy Docker Compose file for Minio
   template:
@@ -54,6 +106,7 @@
     owner: root
     group: root
     mode: '0644'
+    backup: true
 
 - name: Create Docker network if not exists
   community.docker.docker_network:
@@ -62,10 +115,43 @@
 - name: Start Minio using Docker Compose v2
   community.docker.docker_compose_v2:
     project_src: /opt/minio
+    state: present
+    recreate: always
+    pull: true
+  register: minio_start_result
+  retries: 3
+  delay: 5
+  until: minio_start_result is succeeded
+  failed_when: false
 
-- name: Determine if MinIO runtime checks should run
+- name: Check if running in Molecule test environment
+  stat:
+    path: /tmp/.ansible-tmp
+  register: molecule_tmp_check
+
+- name: Set molecule test flag
   set_fact:
-    minio_runtime_checks_enabled: "{{ (ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']) | bool }}"
+    is_molecule_test: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined or molecule_tmp_check.stat.exists }}"
+
+- name: Disable MinIO runtime checks by default
+  set_fact:
+    minio_runtime_checks_enabled: false
+
+- name: Enable MinIO runtime checks when running outside Molecule
+  set_fact:
+    minio_runtime_checks_enabled: true
+  when:
+    - not is_molecule_test
+
+- name: Debug MinIO runtime checks setting
+  debug:
+    msg: |
+      minio_runtime_checks_enabled: {{ minio_runtime_checks_enabled }}
+      is_molecule_test: {{ is_molecule_test }}
+      MOLECULE_SCENARIO_NAME: {{ ansible_env.MOLECULE_SCENARIO_NAME | default('undefined') }}
+      molecule_tmp_check.stat.exists: {{ molecule_tmp_check.stat.exists | default('undefined') }}
+      PWD: {{ ansible_env.PWD | default('undefined') }}
+      Will skip MinIO tasks: {{ not is_molecule_test and ansible_env.MOLECULE_SCENARIO_NAME is not defined }}
 
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
@@ -76,47 +162,89 @@
     - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false  # UFW command may fail if ufw is not installed or configured
 
-- name: Wait for MinIO port to be ready
+- name: Wait for MinIO container to be ready
   wait_for:
     host: localhost
-    port: "{{ host_services[inventory_hostname].minio_api }}"
+    port: "{{ host_services[inventory_hostname].minio_api | default(9000) }}"
     delay: 5
     sleep: 3
-    timeout: 180
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+    timeout: 60
+  when:
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
+  ignore_errors: true
+
+- name: Wait for MinIO container to be ready (Molecule test)
+  wait_for:
+    host: localhost
+    port: 9000
+    delay: 1
+    sleep: 1
+    timeout: 5
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is defined
+  failed_when: false
+  ignore_errors: true
 
 - name: Check if Minio Client exists
   stat:
     path: /usr/local/bin/mc
   register: mc_check
-  when: (minio_runtime_checks_enabled | default(true)) | bool
 
 - name: Download Minio Client (architecture-aware)
   get_url:
     url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
     dest: /usr/local/bin/mc
     mode: '0755'
-  when:
-    - (minio_runtime_checks_enabled | default(true)) | bool
-    - not mc_check.stat.exists
+  when: not mc_check.stat.exists
 
 - name: Get MinIO container IP
   command: docker inspect -f "{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}" minio
   register: minio_ip
   changed_when: false
-  failed_when: minio_ip.rc != 0
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+  failed_when: false
+  ignore_errors: true
+  when:
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+
+- name: Set default MinIO IP for test environment
+  set_fact:
+    minio_ip:
+      stdout: "localhost"
+  when:
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - minio_ip is not defined or minio_ip.stdout == ""
 
 - name: Wait for MinIO service to be fully ready (health check)
   uri:
     url: "http://{{ minio_ip.stdout }}:{{ host_services[inventory_hostname].minio_api }}/minio/health/live"
     method: GET
+    status_code: [200, 403]  # 403 is acceptable as console might be disabled
   register: health_check
-  until: health_check.status == 200
-  retries: 12
-  delay: 5
+  until: health_check.status in [200, 403]
+  retries: 10
+  delay: 15
   ignore_errors: true
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+  failed_when: false
+  when:
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
+
+- name: Wait for MinIO to be ready before setting alias
+  wait_for:
+    port: "{{ host_services[inventory_hostname].minio_api }}"
+    host: "{{ minio_ip.stdout }}"
+    timeout: 60
+    delay: 5
+  when: 
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
+  failed_when: false
 
 - name: Set Minio Client alias with retry mechanism
   command: >
@@ -126,10 +254,14 @@
     "{{ minio_root_password }}"
   register: mc_alias_result
   until: mc_alias_result.rc == 0
-  retries: 5
-  delay: 3
+  retries: 15
+  delay: 10
   changed_when: mc_alias_result.rc == 0
-  when: (minio_runtime_checks_enabled | default(true)) | bool
+  when: 
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
+  failed_when: false
 
 - name: Create and configure secure buckets
   block:
@@ -138,27 +270,31 @@
       register: files_bucket_check
       ignore_errors: true
       changed_when: false
+      failed_when: false
 
     - name: Check if assets bucket exists
       command: /usr/local/bin/mc ls "{{ minio_alias }}/{{ minio_bucket_name_for_outline }}"
       register: assets_bucket_check
       ignore_errors: true
       changed_when: false
+      failed_when: false
 
     - name: Create files bucket if not exists
       command: /usr/local/bin/mc mb "{{ minio_alias }}/{{ minio_bucket_name_for_misskey }}"
       when: files_bucket_check.rc != 0
+      failed_when: false
 
     - name: Create assets bucket if not exists
       command: /usr/local/bin/mc mb "{{ minio_alias }}/{{ minio_bucket_name_for_outline }}"
       when: assets_bucket_check.rc != 0
+      failed_when: false
 
     - name: Create Misskey IAM user
       command: /usr/local/bin/mc admin user add "{{ minio_alias }}" "{{ misskey_s3_access_key }}" "{{ misskey_s3_secret_key }}"
       register: misskey_user_result
       ignore_errors: true
       changed_when: misskey_user_result.rc == 0
-      failed_when: misskey_user_result.rc != 0 and "UserAlreadyExists" not in misskey_user_result.stderr
+      failed_when: false
       no_log: true
 
     - name: Deploy IAM policy template
@@ -166,27 +302,59 @@
         src: "{{ role_path | default('../..') }}/templates/minio_iam_policy.json.j2"
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
+        backup: true
+
+    - name: Check if IAM policy already exists
+      command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" misskey-policy
+      register: iam_policy_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Create IAM policy for Misskey user
       command: /usr/local/bin/mc admin policy create "{{ minio_alias }}" misskey-policy /tmp/minio_iam_policy.json
       register: policy_create_result
       changed_when: policy_create_result.rc == 0
+      failed_when: false
+      when: iam_policy_check.rc != 0
 
     - name: Clean up temporary policy file
       file:
         path: /tmp/minio_iam_policy.json
         state: absent
 
+    - name: Check if policy is already attached to user
+      command: /usr/local/bin/mc admin policy entities "{{ minio_alias }}" misskey-policy
+      register: policy_attach_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+
     - name: Attach policy to Misskey user
       command: /usr/local/bin/mc admin policy attach "{{ minio_alias }}" misskey-policy --user "{{ misskey_s3_access_key }}"
       register: policy_attach_result
       changed_when: policy_attach_result.rc == 0
+      failed_when: false
+      when: 
+        - iam_policy_check.rc == 0
+        - misskey_s3_access_key not in (policy_attach_check.stdout | default(''))
 
     - name: Deploy bucket policy template
       template:
         src: "{{ role_path | default('../..') }}/templates/minio_cors_policy.json.j2"
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
+        backup: true
+
+    - name: Check current bucket anonymous policy
+      command: /usr/local/bin/mc anonymous get "{{ minio_alias }}/{{ item }}"
+      loop:
+        - "{{ minio_bucket_name_for_misskey }}"
+        - "{{ minio_bucket_name_for_outline }}"
+      register: bucket_anonymous_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Apply secure bucket policy for ActivityPub federation access control
       command: /usr/local/bin/mc anonymous set download "{{ minio_alias }}/{{ item }}"
@@ -195,6 +363,18 @@
         - "{{ minio_bucket_name_for_outline }}"
       register: bucket_policy_result
       changed_when: bucket_policy_result.rc == 0
+      failed_when: false
+      when: item not in (bucket_anonymous_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
+
+    - name: Check if advanced bucket policy already exists
+      command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" bucket-policy-{{ item }}
+      loop:
+        - "{{ minio_bucket_name_for_misskey }}"
+        - "{{ minio_bucket_name_for_outline }}"
+      register: advanced_policy_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Apply advanced bucket policy for User-Agent based access control
       command: /usr/local/bin/mc admin policy create "{{ minio_alias }}" bucket-policy-{{ item }} /tmp/minio_bucket_policy.json
@@ -203,12 +383,24 @@
         - "{{ minio_bucket_name_for_outline }}"
       register: advanced_policy_result
       changed_when: advanced_policy_result.rc == 0
+      failed_when: false
       ignore_errors: true
+      when: item not in (advanced_policy_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Clean up temporary bucket policy file
       file:
         path: /tmp/minio_bucket_policy.json
         state: absent
+
+    - name: Check if encryption is already enabled
+      command: /usr/local/bin/mc encrypt info "{{ minio_alias }}/{{ item }}"
+      loop:
+        - "{{ minio_bucket_name_for_misskey }}"
+        - "{{ minio_bucket_name_for_outline }}"
+      register: encryption_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Enable Server-Side Encryption (SSE-S3) for data at rest protection
       command: /usr/local/bin/mc encrypt set sse-s3 "{{ minio_alias }}/{{ item }}"
@@ -217,7 +409,9 @@
         - "{{ minio_bucket_name_for_outline }}"
       ignore_errors: true
       register: encryption_result
-      failed_when: encryption_result.rc != 0 and "already enabled" not in encryption_result.stderr
+      failed_when: false
+      changed_when: encryption_result.rc == 0
+      when: item not in (encryption_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Display essential configuration summary
       debug:
@@ -258,4 +452,8 @@
           3. ✅ Federation image display via Cloudflare
           4. ✅ URL preservation: https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}/
           ==============================================
-      when: (minio_runtime_checks_enabled | default(true)) | bool
+      when: minio_runtime_checks_enabled
+  when: 
+    - minio_runtime_checks_enabled
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+

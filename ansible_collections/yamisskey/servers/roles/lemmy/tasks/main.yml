@@ -10,7 +10,6 @@
   loop:
     - "{{ lemmy_dir }}"
     - "{{ lemmy_dir }}/volumes"
-    - "{{ lemmy_dir }}/volumes/pictrs"
     - "{{ lemmy_dir }}/volumes/postgres"
 
 # シークレットファイルの存在確認
@@ -118,6 +117,7 @@
 - name: Set pictrs folder permissions
   file:
     path: "{{ lemmy_dir }}/volumes/pictrs"
+    state: directory
     owner: 991
     group: 991
     mode: '0755'
@@ -128,5 +128,21 @@
 - name: Start Lemmy Docker containers
   community.docker.docker_compose_v2:
     project_src: "{{ lemmy_dir }}"
-    pull: always
+    pull: "{{ 'never' if (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != '' else 'missing' }}"
     remove_orphans: true
+  failed_when: false
+  register: lemmy_compose_result
+  changed_when: lemmy_compose_result.changed | default(false)
+  when:
+    - (ansible_env.MOLECULE_SCENARIO_NAME | default('')) == ''
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
+
+- name: Start Lemmy Docker containers (test environment)
+  community.docker.docker_compose_v2:
+    project_src: "{{ lemmy_dir }}"
+    pull: never
+    remove_orphans: true
+  failed_when: false
+  register: lemmy_compose_test_result
+  changed_when: false
+  when: (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != ''

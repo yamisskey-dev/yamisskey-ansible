@@ -1,0 +1,187 @@
+---
+- name: Create ModSecurity NGINX directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  loop:
+    - "/etc/modsecurity-nginx"
+    - "/var/log/nginx"
+    - "/etc/modsecurity-nginx/rules"
+  changed_when: false
+
+- name: Set proper permissions for log directory
+  file:
+    path: "/var/log/nginx"
+    mode: '0777'
+    owner: root
+    group: root
+    state: directory
+  changed_when: false
+
+- name: Create custom rules before CRS
+  template:
+    src: rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.j2
+    dest: "/etc/modsecurity-nginx/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf"
+    mode: '0644'
+  notify: restart modsecurity nginx
+
+- name: Create custom rules after CRS
+  template:
+    src: rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.j2
+    dest: "/etc/modsecurity-nginx/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf"
+    mode: '0644'
+  notify: restart modsecurity nginx
+
+- name: Create conf.d directory for individual service configs
+  file:
+    path: "/etc/modsecurity-nginx/conf.d"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+# Create IP lists and configuration files for enhanced security
+- name: Create IP lists directory
+  file:
+    path: "/etc/modsecurity-nginx/lists"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create blocked IPs list
+  copy:
+    content: |
+      {% for ip in modsecurity_blocked_ips %}
+      {{ ip }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/blocked_ips.txt"
+    mode: '0644'
+  when: modsecurity_blocked_ips | length > 0
+  notify: restart modsecurity nginx
+
+- name: Create allowed IPs list
+  copy:
+    content: |
+      {% for ip in modsecurity_allowed_ips %}
+      {{ ip }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/allowed_ips.txt"
+    mode: '0644'
+  when: modsecurity_allowed_ips | length > 0
+  notify: restart modsecurity nginx
+
+- name: Create maintenance IPs list
+  copy:
+    content: |
+      {% for ip in modsecurity_maintenance_allowed_ips %}
+      {{ ip }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/maintenance_ips.txt"
+    mode: '0644'
+  notify: restart modsecurity nginx
+
+- name: Create blocked user agents list
+  copy:
+    content: |
+      {% for ua in modsecurity_blocked_user_agents %}
+      {{ ua }}
+      {% endfor %}
+    dest: "/etc/modsecurity-nginx/lists/blocked_user_agents.txt"
+    mode: '0644'
+  when: modsecurity_blocked_user_agents | length > 0
+  notify: restart modsecurity nginx
+
+- name: Create individual service nginx configurations
+  template:
+    src: "conf.d/{{ item }}.conf.j2"
+    dest: "/etc/modsecurity-nginx/conf.d/{{ item }}.conf"
+    mode: '0644'
+  loop:
+    - 00-shared      # Common settings (loaded first)
+    - misskey        # Main Misskey service
+    - synapse        # Matrix Synapse
+    - element        # Element Web client
+    - jitsi          # Jitsi Meet
+    - ctfd           # CTFd platform
+    - grafana        # Grafana monitoring
+    - minio          # MinIO object storage
+    - vikunja        # Vikunja task management
+    - cryptpad       # CryptPad collaborative editor
+    - zitadel        # Zitadel identity provider
+    - searxng        # SearXNG search engine
+    - outline        # Outline wiki
+    - uptime         # Uptime Kuma monitoring
+    - mcaptcha       # mCaptcha service
+    - neo_quesdon    # Neo-Quesdon Q&A
+    - lemmy          # Lemmy link aggregator
+  notify: restart modsecurity nginx
+
+- name: Create security monitoring script
+  template:
+    src: monitor-modsecurity.sh.j2
+    dest: "/etc/modsecurity-nginx/monitor-modsecurity.sh"
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - monitoring
+
+- name: Setup log rotation for ModSecurity
+  copy:
+    content: |
+      /var/log/nginx/*.log {
+        daily
+        missingok
+        rotate 30
+        compress
+        delaycompress
+        notifempty
+        create 0644 www-data www-data
+        postrotate
+          docker exec {{ modsecurity_nginx_name }} nginx -s reload > /dev/null 2>&1 || true
+        endscript
+      }
+    dest: /etc/logrotate.d/modsecurity-nginx
+    mode: '0644'
+
+- name: Create Docker Compose file for ModSecurity NGINX
+  template:
+    src: docker-compose.yml.j2
+    dest: "/etc/modsecurity-nginx/docker-compose.yml"
+    mode: '0644'
+  notify: restart modsecurity nginx
+
+- name: Pull ModSecurity NGINX Docker image
+  community.docker.docker_image:
+    name: "{{ modsecurity_nginx_image }}:{{ modsecurity_nginx_tag }}"
+    source: pull
+    force_source: true
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
+  failed_when: false
+
+- name: Start ModSecurity NGINX container
+  community.docker.docker_compose_v2:
+    project_src: "/etc/modsecurity-nginx"
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
+  failed_when: false
+
+- name: Ensure ModSecurity NGINX is running
+  command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" {{ modsecurity_nginx_name }}
+  register: modsec_status
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
+
+- name: Display container status
+  debug:
+    msg: "ModSecurity NGINX container is {{ modsec_status.stdout | default('not available in test environment') }}"

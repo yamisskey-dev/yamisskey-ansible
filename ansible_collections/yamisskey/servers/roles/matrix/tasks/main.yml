@@ -104,13 +104,28 @@
 - name: Check if synapse container is running
   shell: docker ps --filter "name=synapse" --format "{{ '{{.Names}}' }}"
   register: synapse_container
+  changed_when: false
+
+- name: Create synapse-data directory
+  file:
+    path: /var/www/synapse/synapse-data
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: Check if homeserver.yaml exists
+  stat:
+    path: /var/www/synapse/synapse-data/homeserver.yaml
+  register: homeserver_config_stat
 
 - name: Generate synapse configuration using docker-compose
   shell: |
     docker compose run --rm synapse generate
   args:
     chdir: /var/www/synapse
-  when: synapse_container.stdout == ""
+  when: not homeserver_config_stat.stat.exists
 
 - name: Use existing registration_shared_secret when available
   set_fact:
@@ -210,16 +225,6 @@
     group: www-data
     mode: '0644'
 
-# Synapseの設定ファイルを反映
-- name: Add required configurations to Synapse configuration file
-  template:
-    src: synapse.homeserver.yaml.j2
-    dest: /var/www/synapse/synapse-data/homeserver.yaml
-    owner: root
-    group: root
-    mode: '0644'
-  become: true
-
 # Synapseコンテナを起動
 - name: Start Synapse container
   community.docker.docker_compose_v2:
@@ -239,3 +244,7 @@
     dest: "/var/www/element/element-config/config.{{ element_server_name }}.json"
     mode: '0644'
   notify: Restart element
+  when:
+    - element_server_name is defined
+    - element_server_name | length > 0
+  failed_when: false

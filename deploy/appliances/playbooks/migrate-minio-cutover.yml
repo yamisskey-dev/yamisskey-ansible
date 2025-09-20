@@ -19,5 +19,5 @@
   tasks:
     - name: Run Cutover sequence via role
       include_role:
-        name: migrate-minio
+        name: yamisskey.appliances.migrate_minio
         tasks_from: cutover.yml
