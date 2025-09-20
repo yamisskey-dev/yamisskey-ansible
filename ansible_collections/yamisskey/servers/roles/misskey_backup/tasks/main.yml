@@ -97,7 +97,7 @@
   register: compose_start
 
 - name: Check if backup container is running
-  command: docker ps --filter name=misskey-backup --format "{{.Names}}"
+  command: docker ps --filter name=misskey-backup --format "{{ '{{' }}.Names{{ '}}' }}"
   register: backup_container_check
   failed_when: false
   changed_when: false

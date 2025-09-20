@@ -101,6 +101,27 @@ host_services:
   joseph:
     minio_api: 9000
 
+# Server names configuration
+misskey_server_name: "misskey.example.com"
+synapse_server_name: "matrix.example.com"
+element_server_name: "element.example.com"
+jitsi_server_name: "jitsi.example.com"
+ctfd_server_name: "ctf.example.com"
+grafana_server_name: "grafana.example.com"
+vikunja_server_name: "vikunja.example.com"
+cryptpad_server_name: "cryptpad.example.com"
+zitadel_server_name: "zitadel.example.com"
+searxng_server_name: "searx.example.com"
+outline_server_name: "outline.example.com"
+uptime_server_name: "uptime.example.com"
+mcaptcha_server_name: "mcaptcha.example.com"
+neo_quesdon_server_name: "neo-quesdon.example.com"
+lemmy_server_name: "lemmy.example.com"
+minio_api_server_name: "minio.example.com"
+
+# MinIO configuration
+minio_bucket_name_for_misskey: "misskey-files"
+
 # Service configuration
 modsecurity_enabled: true
 modsecurity_detection_only: false

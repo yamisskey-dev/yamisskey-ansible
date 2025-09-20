@@ -90,8 +90,8 @@
       🔍 Git Integrity Check:
       {% for result in git_integrity_check.results %}
       {% if result.item is defined %}
-      - {{ result.item.item.name }}: {{ '✅ Clean' if result.rc == 0 else '⚠️ Issues detected' }}
-      {% if result.rc != 0 and result.stderr %}
+      - {{ result.item.item.name }}: {{ '✅ Clean' if result.rc is defined and result.rc == 0 else '⚠️ Issues detected' }}
+      {% if result.rc is defined and result.rc != 0 and result.stderr is defined %}
         Error: {{ result.stderr | truncate(100) }}
       {% endif %}
       {% endif %}
@@ -111,7 +111,7 @@
       🔗 Remote Connectivity:
       {% for result in remote_check.results %}
       {% if result.item is defined %}
-      - {{ result.item.item.name }}: {{ '✅ Connected' if result.rc == 0 else '❌ Connection failed' }}
+      - {{ result.item.item.name }}: {{ '✅ Connected' if result.rc is defined and result.rc == 0 else '❌ Connection failed' }}
       {% endif %}
       {% endfor %}
       {% endif %}

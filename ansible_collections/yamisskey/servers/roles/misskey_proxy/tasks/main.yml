@@ -109,12 +109,56 @@
   become: true
   notify: restart squid
 
+- name: Check Squid service status
+  systemd:
+    name: squid
+  register: squid_service_status
+  become: true
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+  failed_when: false
+
+- name: Check if Squid is running using command
+  command: systemctl is-active squid
+  register: squid_active_check
+  become: true
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+  failed_when: false
+  changed_when: false
+
+- name: Display Squid service status
+  debug:
+    msg: |
+      Squid service status:
+      - Status: {{ squid_service_status.status | default('unknown') }}
+      - ActiveState: {{ squid_service_status.status.ActiveState | default('undefined') }}
+      - SubState: {{ squid_service_status.status.SubState | default('undefined') }}
+  when:
+    - squid_service_status is defined
+    - squid_service_status.status is defined
+
 - name: Start and enable Squid service
   systemd:
     name: squid
     state: started
     enabled: true
   become: true
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - squid_active_check is defined
+    - squid_active_check.stdout != 'active'
+  failed_when: false
+
+- name: Try alternative Squid service start
+  command: systemctl start squid
+  become: true
+  register: squid_alt_start_result
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - squid_active_check is defined
+    - squid_active_check.stdout != 'active'
+  failed_when: false
 
 - name: Clone summaly-docker repository
   git:
