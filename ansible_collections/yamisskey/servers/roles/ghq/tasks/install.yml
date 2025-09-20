@@ -1,33 +1,94 @@
 ---
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install required packages
+  package:
+    name:
+      - git
+      - golang-go
+    state: present
+
 - name: Check if ghq is already installed
   command: ghq --version
   register: ghq_version_check
   failed_when: false
   changed_when: false
 
-- name: Install ghq via package manager
-  package:
-    name: ghq
+- name: Set up Go environment for system
+  lineinfile:
+    path: /etc/environment
+    line: "GOPATH={{ ansible_env.HOME }}/go"
     state: present
-  when: 
-    - ghq_install_method == "package"
-    - ghq_version_check.rc != 0
+  when: ghq_version_check.rc != 0
+
+- name: Set up Go PATH for system
+  lineinfile:
+    path: /etc/environment
+    line: "PATH={{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    state: present
+  when: ghq_version_check.rc != 0
+
+- name: Set up Go environment for user
+  blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - Go environment"
+    block: |
+      export GOPATH="$HOME/go"
+      export PATH="$GOPATH/bin:$PATH"
+    create: true
+  when: ghq_version_check.rc != 0
+
+- name: Create Go workspace directory
+  file:
+    path: "{{ ansible_env.HOME }}/go/bin"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  when: ghq_version_check.rc != 0
+
+- name: Verify Go installation
+  command: go version
+  register: go_version_check
+  changed_when: false
+  when: ghq_version_check.rc != 0
 
 - name: Install ghq via go install
-  command: go install github.com/x-motemen/ghq@latest
+  shell: |
+    export GOPATH="$HOME/go"
+    export PATH="$GOPATH/bin:$PATH"
+    go install github.com/x-motemen/ghq@latest
+  args:
+    executable: /bin/bash
   become_user: "{{ ansible_user }}"
   environment:
     GOPATH: "{{ ansible_env.HOME }}/go"
     PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
   when: 
-    - ghq_install_method == "go"
     - ghq_version_check.rc != 0
+    - go_version_check.rc == 0
+
+- name: Create symlink for ghq in /usr/local/bin
+  file:
+    src: "{{ ansible_env.HOME }}/go/bin/ghq"
+    dest: "/usr/local/bin/ghq"
+    state: link
+    force: true
+  when: 
+    - ghq_version_check.rc != 0
+    - go_version_check.rc == 0
 
 - name: Create ghq configuration directory
   file:
     path: "{{ ansible_env.HOME }}/.config/ghq"
     state: directory
     mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Configure ghq
   copy:
@@ -38,6 +99,8 @@
       github = "{{ ghq_github_remote }}"
     dest: "{{ ansible_env.HOME }}/.config/ghq/config"
     mode: '0644'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
   register: ghq_config_result
 
 - name: Create ghq root directory
@@ -45,6 +108,8 @@
     path: "{{ ghq_root | expanduser }}"
     state: directory
     mode: '0755'
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
   when: ghq_config_result.changed
 
 - name: Verify ghq installation

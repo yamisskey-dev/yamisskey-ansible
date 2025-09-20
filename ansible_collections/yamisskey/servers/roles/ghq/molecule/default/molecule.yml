@@ -7,16 +7,10 @@ platforms:
   - name: ghq-test-instance
     image: ubuntu:22.04
     pre_build_image: true
-    privileged: true
-    capabilities:
-      - SYS_ADMIN
+    privileged: false
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    cgroupns_mode: host
-    command: /sbin/init
-    tmpfs:
-      - /run
-      - /tmp
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    command: sleep infinity
     env:
       container: docker
 provisioner:
