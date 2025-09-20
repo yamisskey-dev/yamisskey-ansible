@@ -149,7 +149,7 @@
       Environment check:
       - MOLECULE_SCENARIO_NAME: {{ ansible_env.MOLECULE_SCENARIO_NAME | default('undefined') }}
       - Verification summary: {{ verification_summary }}
-      - Should fail: {{ (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence'])) }}
+      - Should fail: {{ (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is defined and ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence'])) }}
   tags: ['verify', 'debug']
 
 - name: Fail if critical issues detected
@@ -160,7 +160,7 @@
       - Git integrity issues: {{ verification_summary.integrity_issues }}
       - Branch mismatches: {{ verification_summary.branch_mismatches }}
   when:
-    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence']))
+    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is defined and ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence']))
     - repo_operation in ['clone', 'restore']
   tags: ['verify', 'critical']
 
