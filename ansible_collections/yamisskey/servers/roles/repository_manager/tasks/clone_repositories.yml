@@ -23,9 +23,9 @@
 
 - name: Set ownership for newly cloned repositories
   file:
-    path: "{{ item.item.item.dest | default(item.item.dest) }}"
-    owner: "{{ item.item.item.owner | default(item.item.owner) }}"
-    group: "{{ item.item.item.owner | default(item.item.owner) }}"
+    path: "{{ item.dest }}"
+    owner: "{{ item.item.owner | default('root') }}"
+    group: "{{ item.item.owner | default('root') }}"
     recurse: true
   loop: "{{ clone_results.results }}"
   when:
@@ -33,8 +33,8 @@
     - clone_results.results is defined
     - item.changed | default(false)
     - not item.failed | default(false)
-    - (item.item.item.dest is defined) or (item.item.dest is defined)
-  become: "{{ item.item.item.become_required | default(item.item.become_required | default(false)) }}"
+    - item.dest is defined
+  become: "{{ item.item.become_required | default(false) }}"
   failed_when: false
   tags: ['clone', 'ownership']
 
@@ -60,7 +60,7 @@
 
 - name: Validate cloned repositories
   stat:
-    path: "{{ item.item.dest }}/.git"
+    path: "{{ item.dest }}/.git"
   register: clone_validation
   loop: "{{ clone_results.results }}"
   when: 
@@ -70,10 +70,10 @@
 
 - name: Report clone validation failures
   fail:
-    msg: "Clone validation failed for required repository: {{ item.item.item.name }}"
+    msg: "Clone validation failed for required repository: {{ item.item.name }}"
   loop: "{{ clone_validation.results }}"
   when:
     - clone_validation is defined
     - not item.stat.exists | default(true)
-    - item.item.item.item.required | default(false)
+    - item.item.required | default(false)
   tags: ['clone', 'validation']

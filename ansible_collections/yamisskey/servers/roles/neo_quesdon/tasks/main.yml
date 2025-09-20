@@ -77,7 +77,43 @@
     group: "70"
     mode: '0700'
 
+# 設定ファイルの存在確認
+- name: Verify docker-compose.yml exists
+  stat:
+    path: "{{ neo_quesdon_dir }}/docker-compose.yml"
+  register: compose_file
+
+- name: Verify docker.env exists
+  stat:
+    path: "{{ neo_quesdon_dir }}/config/docker.env"
+  register: env_file
+
+- name: Fail if required files are missing
+  fail:
+    msg: "Required configuration files are missing"
+  when:
+    - not compose_file.stat.exists
+    - not env_file.stat.exists
+
+# Docker Composeファイルの構文検証
+- name: Validate docker-compose.yml syntax
+  command: docker compose config
+  args:
+    chdir: "{{ neo_quesdon_dir }}"
+  register: compose_validation
+  failed_when: compose_validation.rc != 0
+  when:
+    - compose_file.stat.exists
+    - env_file.stat.exists
+
 # コンテナの起動
 - name: Start Neo-Quesdon containers
   community.docker.docker_compose_v2:
     project_src: "{{ neo_quesdon_dir }}"
+    state: present
+    recreate: always
+    pull: true
+  when:
+    - compose_file.stat.exists
+    - env_file.stat.exists
+    - compose_validation.rc == 0

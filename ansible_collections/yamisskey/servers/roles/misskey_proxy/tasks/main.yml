@@ -22,14 +22,57 @@
     - ansible_env.MOLECULE_SCENARIO_NAME is defined or (ansible_virtualization_type is defined and ansible_virtualization_type in ['docker', 'container'])
   failed_when: false
 
+- name: Check Docker service status
+  systemd:
+    name: docker
+  register: docker_service_status
+  become: true
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+  failed_when: false
+
+- name: Display Docker service status
+  debug:
+    msg: "Docker service status: {{ docker_service_status.status | default('unknown') }}"
+  when:
+    - docker_service_status is defined
+    - docker_service_status.status is defined
+
 - name: Start and enable Docker service
   systemd:
     name: docker
     state: started
     enabled: true
   become: true
+  register: docker_start_result
   when:
     - ansible_service_mgr | default('') == 'systemd'
+    - docker_service_status.status is defined
+    - docker_service_status.status.ActiveState != 'active'
+  failed_when: false
+
+- name: Try alternative Docker service start
+  command: systemctl start docker
+  become: true
+  register: docker_alt_start_result
+  when:
+    - docker_start_result is defined
+    - docker_start_result.failed | default(false)
+    - ansible_service_mgr | default('') == 'systemd'
+  failed_when: false
+
+- name: Verify Docker is running
+  command: docker --version
+  register: docker_version_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if Docker is not available
+  fail:
+    msg: "Docker is not available or not running"
+  when:
+    - docker_version_check.rc != 0
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create proxy directories
   file:

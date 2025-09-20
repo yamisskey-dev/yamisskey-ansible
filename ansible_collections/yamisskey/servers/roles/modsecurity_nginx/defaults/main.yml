@@ -16,6 +16,20 @@ modsecurity_allowed_ips: []
 modsecurity_maintenance_allowed_ips: []
 modsecurity_blocked_user_agents: []
 
+# Maintenance mode configuration
+modsecurity_maintenance_mode: false
+
+# Rate limiting configuration
+modsecurity_rate_limit_requests_per_minute: 100
+modsecurity_rate_limit_requests_per_second: 10
+
+# Misskey-specific exclusions
+modsecurity_misskey_exclusions_enabled: true
+
+# Request body limits
+modsecurity_enforce_body_limit: true
+modsecurity_max_request_size: "10M"
+
 # Log configuration
 modsecurity_log_dir: "/var/log/nginx"
 modsecurity_log_level: "warn"

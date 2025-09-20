@@ -28,7 +28,7 @@ provisioner:
       collections_paths: ../../../../../../../.vendor/collections:../../../../../../../ansible_collections
   env:
     ANSIBLE_REMOTE_TMP: /tmp/.ansible-tmp
-    ANSIBLE_COLLECTIONS_PATHS: ../../../../../../../ansible_collections:../../../../../../../.vendor/collections
+    ANSIBLE_COLLECTIONS_PATH: ../../../../../../../ansible_collections:../../../../../../../.vendor/collections
   inventory:
     host_vars:
       neo-quesdon-test-instance:

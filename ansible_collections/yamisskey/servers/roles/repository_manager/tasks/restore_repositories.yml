@@ -160,7 +160,7 @@
 - name: Report integrity issues
   debug:
     msg: |
-      ⚠️ Git integrity check for {{ item.item.item.name }}:
+      ⚠️ Git integrity check for {{ item.item.name }}:
       {% if item.rc == 0 %}
       ✅ Repository integrity verified
       {% else %}

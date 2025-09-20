@@ -32,6 +32,42 @@
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
 
+- name: Check if Docker Compose file exists
+  stat:
+    path: "{{ item }}"
+  register: compose_file_check
+  loop:
+    - "/opt/misskey-backup/docker-compose.yml"
+    - "/opt/misskey-backup/docker-compose.yaml"
+    - "/opt/misskey-backup/compose.yml"
+    - "/opt/misskey-backup/compose.yaml"
+
+- name: Create basic Docker Compose file if not found
+  copy:
+    content: |
+      services:
+        misskey-backup:
+          image: alpine:latest
+          container_name: misskey-backup
+          volumes:
+            - /opt/misskey-backup:/backup
+            - /opt/misskey-backup/config:/config
+          command: /bin/sh -c "while true; do sleep 3600; done"
+          restart: unless-stopped
+    dest: /opt/misskey-backup/docker-compose.yml
+    mode: '0644'
+  when: not compose_file_check.results | selectattr('stat.exists') | list
+
+- name: Re-check Docker Compose file after creation
+  stat:
+    path: "/opt/misskey-backup/docker-compose.yml"
+  register: final_compose_check
+  when: not compose_file_check.results | selectattr('stat.exists') | list
+
+- name: Set Docker Compose file path
+  set_fact:
+    compose_file_path: "{{ (compose_file_check.results | selectattr('stat.exists') | first).item if compose_file_check.results | selectattr('stat.exists') | list else '/opt/misskey-backup/docker-compose.yml' }}"
+
 - name: Check if backup service is already running
   command: docker inspect -f "{% raw %}{{.State.Status}}{% endraw %}" backup
   register: backup_container_status
@@ -47,13 +83,17 @@
     project_src: /opt/misskey-backup
     pull: always
     build: always
-  when: not backup_container_running | bool
+  when: 
+    - not backup_container_running | bool
+    - compose_file_path is defined
   register: compose_pull_build
 
 - name: Start Docker Compose services
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
-  when: not backup_container_running | bool
+  when: 
+    - not backup_container_running | bool
+    - compose_file_path is defined
   register: compose_start
 
 - name: Run manual backup script

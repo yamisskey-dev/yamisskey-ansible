@@ -66,7 +66,7 @@
 - name: Show local modifications warning
   debug:
     msg: |
-      ⚠️ Local modifications detected in {{ item.item.item.name }}:
+      ⚠️ Local modifications detected in {{ item.item.name }}:
       {{ item.stdout_lines | join('\n') }}
       {% if git_force_update %}
       🔧 Force update enabled - local changes may be overwritten
@@ -92,7 +92,7 @@
 
 - name: Report update validation issues
   debug:
-    msg: "⚠️ Update verification warning for {{ item.item.item.item.name }}: Branch reference may not exist"
+    msg: "⚠️ Update verification warning for {{ item.item.name }}: Branch reference may not exist"
   loop: "{{ update_verification.results }}"
   when:
     - update_verification is defined
