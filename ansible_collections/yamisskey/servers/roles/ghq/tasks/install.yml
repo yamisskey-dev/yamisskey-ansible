@@ -68,6 +68,7 @@
     go install github.com/x-motemen/ghq@v1.4.0
   args:
     executable: /bin/bash
+  become: true
   become_user: "{{ ansible_user | default('root') }}"
   environment:
     GOPATH: "{{ ansible_env.HOME }}/go"
