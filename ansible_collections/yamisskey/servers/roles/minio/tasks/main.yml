@@ -18,7 +18,9 @@
 - name: Load existing secrets from secrets.yml
   set_fact:
     existing_secrets: "{{ lookup('file', minio_secrets_file) | from_yaml }}"
-  when: secrets_file_stat.stat.exists
+  when: 
+    - secrets_file_stat.stat.exists
+    - minio_secrets_file is defined
   failed_when: false
   ignore_errors: true
 
@@ -56,6 +58,7 @@
     owner: root
     group: root
     mode: '0644'
+    backup: true
 
 - name: Create Docker network if not exists
   community.docker.docker_network:
@@ -232,29 +235,59 @@
         src: "{{ role_path | default('../..') }}/templates/minio_iam_policy.json.j2"
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
+        backup: true
+
+    - name: Check if IAM policy already exists
+      command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" misskey-policy
+      register: iam_policy_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Create IAM policy for Misskey user
       command: /usr/local/bin/mc admin policy create "{{ minio_alias }}" misskey-policy /tmp/minio_iam_policy.json
       register: policy_create_result
       changed_when: policy_create_result.rc == 0
       failed_when: false
+      when: iam_policy_check.rc != 0
 
     - name: Clean up temporary policy file
       file:
         path: /tmp/minio_iam_policy.json
         state: absent
 
+    - name: Check if policy is already attached to user
+      command: /usr/local/bin/mc admin policy entities "{{ minio_alias }}" misskey-policy
+      register: policy_attach_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+
     - name: Attach policy to Misskey user
       command: /usr/local/bin/mc admin policy attach "{{ minio_alias }}" misskey-policy --user "{{ misskey_s3_access_key }}"
       register: policy_attach_result
       changed_when: policy_attach_result.rc == 0
       failed_when: false
+      when: 
+        - iam_policy_check.rc == 0
+        - misskey_s3_access_key not in (policy_attach_check.stdout | default(''))
 
     - name: Deploy bucket policy template
       template:
         src: "{{ role_path | default('../..') }}/templates/minio_cors_policy.json.j2"
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
+        backup: true
+
+    - name: Check current bucket anonymous policy
+      command: /usr/local/bin/mc anonymous get "{{ minio_alias }}/{{ item }}"
+      loop:
+        - "{{ minio_bucket_name_for_misskey }}"
+        - "{{ minio_bucket_name_for_outline }}"
+      register: bucket_anonymous_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Apply secure bucket policy for ActivityPub federation access control
       command: /usr/local/bin/mc anonymous set download "{{ minio_alias }}/{{ item }}"
@@ -264,6 +297,17 @@
       register: bucket_policy_result
       changed_when: bucket_policy_result.rc == 0
       failed_when: false
+      when: item.item not in (bucket_anonymous_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
+
+    - name: Check if advanced bucket policy already exists
+      command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" bucket-policy-{{ item }}
+      loop:
+        - "{{ minio_bucket_name_for_misskey }}"
+        - "{{ minio_bucket_name_for_outline }}"
+      register: advanced_policy_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Apply advanced bucket policy for User-Agent based access control
       command: /usr/local/bin/mc admin policy create "{{ minio_alias }}" bucket-policy-{{ item }} /tmp/minio_bucket_policy.json
@@ -274,11 +318,22 @@
       changed_when: advanced_policy_result.rc == 0
       failed_when: false
       ignore_errors: true
+      when: item.item not in (advanced_policy_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Clean up temporary bucket policy file
       file:
         path: /tmp/minio_bucket_policy.json
         state: absent
+
+    - name: Check if encryption is already enabled
+      command: /usr/local/bin/mc encrypt info "{{ minio_alias }}/{{ item }}"
+      loop:
+        - "{{ minio_bucket_name_for_misskey }}"
+        - "{{ minio_bucket_name_for_outline }}"
+      register: encryption_check
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
 
     - name: Enable Server-Side Encryption (SSE-S3) for data at rest protection
       command: /usr/local/bin/mc encrypt set sse-s3 "{{ minio_alias }}/{{ item }}"
@@ -289,6 +344,7 @@
       register: encryption_result
       failed_when: false
       changed_when: encryption_result.rc == 0
+      when: item.item not in (encryption_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Display essential configuration summary
       debug:
