@@ -2,4 +2,4 @@
   hosts: all
   become: true
   roles:
-    - minecraft
+    - yamisskey.servers.minecraft

@@ -2,4 +2,4 @@
   hosts: all
   become: true
   roles:
-    - misskey
+    - yamisskey.servers.misskey

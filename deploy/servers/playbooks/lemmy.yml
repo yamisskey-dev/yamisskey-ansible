@@ -3,4 +3,4 @@
   hosts: balthasar
   become: true
   roles:
-    - lemmy
+    - yamisskey.servers.lemmy

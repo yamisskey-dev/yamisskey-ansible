@@ -4,4 +4,4 @@
   vars_files:
     - /opt/misskey-backup/config/env.yml
   roles:
-    - misskey-backup
+    - yamisskey.servers.misskey_backup

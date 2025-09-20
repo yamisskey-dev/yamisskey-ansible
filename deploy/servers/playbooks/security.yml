@@ -2,4 +2,4 @@
   hosts: all
   become: true
   roles:
-    - security
+    - yamisskey.servers.security

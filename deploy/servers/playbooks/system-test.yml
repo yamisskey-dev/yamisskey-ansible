@@ -5,4 +5,4 @@
   gather_facts: true
   
   roles:
-    - system-test
+    - yamisskey.servers.system_test
