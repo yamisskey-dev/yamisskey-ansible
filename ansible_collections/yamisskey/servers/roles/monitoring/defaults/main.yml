@@ -30,6 +30,9 @@ grafana_service: "grafana-server"
 grafana_apt_key_url: "https://apt.grafana.com/gpg.key"
 grafana_apt_repo: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main"
 
+# Domain settings
+primary_domain: "{{ domain | default('localhost.localdomain') }}"
+
 # Default service ports with dynamic host support
 default_monitoring_ports:
   node_exporter: 9100
