@@ -159,6 +159,17 @@
     - squid_active_check is defined
     - squid_active_check.stdout != 'active'
   failed_when: false
+  changed_when: squid_alt_start_result.rc == 0 and squid_active_check.stdout != 'active'
+
+- name: Verify Squid service is running after start
+  command: systemctl is-active squid
+  register: squid_final_check
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+    - squid_alt_start_result is defined
+    - squid_alt_start_result.rc == 0
+  changed_when: false
+  failed_when: false
 
 - name: Clone summaly-docker repository
   git:
