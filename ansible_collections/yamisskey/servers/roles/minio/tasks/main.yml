@@ -297,7 +297,7 @@
       register: bucket_policy_result
       changed_when: bucket_policy_result.rc == 0
       failed_when: false
-      when: item.item not in (bucket_anonymous_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
+      when: item not in (bucket_anonymous_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Check if advanced bucket policy already exists
       command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" bucket-policy-{{ item }}
@@ -318,7 +318,7 @@
       changed_when: advanced_policy_result.rc == 0
       failed_when: false
       ignore_errors: true
-      when: item.item not in (advanced_policy_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
+      when: item not in (advanced_policy_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Clean up temporary bucket policy file
       file:
@@ -344,7 +344,7 @@
       register: encryption_result
       failed_when: false
       changed_when: encryption_result.rc == 0
-      when: item.item not in (encryption_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
+      when: item not in (encryption_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
 
     - name: Display essential configuration summary
       debug:
