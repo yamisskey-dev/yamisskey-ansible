@@ -1,0 +1,8 @@
+---
+- name: Repository management by ghq
+  hosts: all
+  become: false
+  gather_facts: true
+  
+  roles:
+    - ghq

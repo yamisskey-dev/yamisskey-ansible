@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - integration-test role with comprehensive testing suite
-- repository-manager role with backup and restore capabilities  
 - migration-validator role for deployment validation
 - operations role for Docker operations and health checks
 - system-init role for system initialization and dependency management
