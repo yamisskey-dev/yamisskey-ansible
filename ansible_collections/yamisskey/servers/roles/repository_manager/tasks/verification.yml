@@ -46,7 +46,7 @@
   when:
     - item.stat.exists
     - verify_branch_consistency | bool
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME not in ['undefined', 'default', 'converge']
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence']
   failed_when: false
   changed_when: false
   tags: ['verify', 'branch']
@@ -139,7 +139,7 @@
       verified_repositories: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
       missing_required: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | selectattr('required', 'equalto', true) | list | length }}"
       integrity_issues: "{{ (git_integrity_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) if git_integrity_check is defined else 0 }}"
-      branch_mismatches: "{{ (branch_check.results | selectattr('stdout', 'search', 'BRANCH_MISMATCH') | list | length) if branch_check is defined and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME not in ['undefined', 'default', 'converge']) else 0 }}"
+      branch_mismatches: "{{ (branch_check.results | selectattr('stdout', 'search', 'BRANCH_MISMATCH') | list | length) if branch_check is defined and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence']) else 0 }}"
       remote_failures: "{{ (remote_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length) if remote_check is defined else 0 }}"
   tags: ['verify', 'summary']
 
@@ -149,7 +149,7 @@
       Environment check:
       - MOLECULE_SCENARIO_NAME: {{ ansible_env.MOLECULE_SCENARIO_NAME | default('undefined') }}
       - Verification summary: {{ verification_summary }}
-      - Should fail: {{ (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME not in ['undefined', 'default', 'converge'])) }}
+      - Should fail: {{ (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence'])) }}
   tags: ['verify', 'debug']
 
 - name: Fail if critical issues detected
@@ -160,7 +160,7 @@
       - Git integrity issues: {{ verification_summary.integrity_issues }}
       - Branch mismatches: {{ verification_summary.branch_mismatches }}
   when:
-    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME not in ['undefined', 'default', 'converge']))
+    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and (ansible_env.MOLECULE_SCENARIO_NAME is not defined or ansible_env.MOLECULE_SCENARIO_NAME | string not in ['undefined', 'default', 'converge', 'idempotence']))
     - repo_operation in ['clone', 'restore']
   tags: ['verify', 'critical']
 
