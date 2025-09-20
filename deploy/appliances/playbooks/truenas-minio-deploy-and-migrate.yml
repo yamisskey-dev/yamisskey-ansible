@@ -22,9 +22,9 @@
         fail_msg: "Missing required TrueNAS variables (pool/app/domain). Check host_vars/truenas.yml"
 
   roles:
-    - role: core
+    - role: yamisskey.appliances.core
       tags: [core]
-    - role: apps
+    - role: yamisskey.appliances.apps
       tags: [apps]
 
   post_tasks:

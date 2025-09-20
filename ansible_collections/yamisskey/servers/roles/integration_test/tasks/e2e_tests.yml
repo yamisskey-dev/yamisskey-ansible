@@ -6,7 +6,7 @@
   block:
     - name: Test system initialization
       include_role:
-        name: system-init
+        name: yamisskey.servers.system_init
       vars:
         install_docker: true
         install_tailscale: false
@@ -16,7 +16,7 @@
 
     - name: Test repository management
       include_role:
-        name: repository-manager
+        name: yamisskey.servers.repository_manager
       vars:
         repo_operation: status
         repo_target: yamisskey
@@ -25,7 +25,7 @@
 
     - name: Test service operations
       include_role:
-        name: operations
+        name: yamisskey.servers.operations
       vars:
         op: status
         service: all
@@ -42,7 +42,7 @@
   block:
     - name: Test migration validation
       include_role:
-        name: migration-validator
+        name: yamisskey.servers.migration_validator
       vars:
         validation_phase: pre_migration
         source_minio_host: "{{ inventory_hostname }}"

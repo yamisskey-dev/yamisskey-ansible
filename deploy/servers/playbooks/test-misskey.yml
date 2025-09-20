@@ -13,14 +13,14 @@
   tasks:
     - name: Include compat role from collection
       include_role:
-        name: compat
+        name: yamisskey.servers.compat
       tags:
         - compat
         - test
     
     - name: Include misskey role from collection  
       include_role:
-        name: misskey
+        name: yamisskey.servers.misskey
       tags:
         - misskey
         - test

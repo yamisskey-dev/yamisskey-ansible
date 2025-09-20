@@ -23,8 +23,8 @@ galaxy_info:
     - s3
 
 dependencies:
-  - role: common
-  - role: security
+  - role: yamisskey.servers.common
+  - role: yamisskey.servers.security
 
 collections:
   - community.docker

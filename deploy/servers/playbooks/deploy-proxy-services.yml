@@ -15,7 +15,7 @@
     - role: yamisskey.servers.security
       tags: [security, hardening]
       
-    - role: misskey-proxy
+    - role: yamisskey.servers.misskey_proxy
       tags: [proxy, nginx]
       
     - role: yamisskey.servers.monitoring

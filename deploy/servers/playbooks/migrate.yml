@@ -7,19 +7,19 @@
   pre_tasks:
     - name: Pre-migration validation
       include_role:
-        name: migration-validator
+        name: yamisskey.servers.migration_validator
       vars:
         validation_phase: pre_migration
       tags: ['validation', 'pre_migration']
 
   roles:
-    - role: migrate
+    - role: yamisskey.servers.migrate
       tags: ['migration', 'data_transfer']
 
   post_tasks:
     - name: Post-migration validation
       include_role:
-        name: migration-validator
+        name: yamisskey.servers.migration_validator
       vars:
         validation_phase: post_migration
       tags: ['validation', 'post_migration']

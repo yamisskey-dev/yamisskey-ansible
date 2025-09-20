@@ -23,7 +23,7 @@ galaxy_info:
     - audit
 
 dependencies:
-  - role: common
+  - role: yamisskey.servers.common
 
 collections:
   - ansible.posix
