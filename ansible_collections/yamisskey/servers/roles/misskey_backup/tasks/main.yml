@@ -160,6 +160,18 @@
     msg: "Backup container is not running, skipping manual backup"
   when: backup_container_check.stdout != 'misskey-backup'
 
+- name: Check if secrets file exists
+  stat:
+    path: "{{ misskey_backup_secrets_file }}"
+  register: secrets_file_check
+
 - name: Load secrets from secrets.yml
   include_vars:
     file: '{{ misskey_backup_secrets_file }}'
+  when: secrets_file_check.stat.exists
+  failed_when: false
+
+- name: Skip secrets loading if file doesn't exist
+  debug:
+    msg: "Secrets file {{ misskey_backup_secrets_file }} not found, skipping secrets loading"
+  when: not secrets_file_check.stat.exists

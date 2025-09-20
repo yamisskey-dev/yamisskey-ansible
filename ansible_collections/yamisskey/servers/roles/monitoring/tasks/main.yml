@@ -187,3 +187,5 @@
   when:
     - ansible_service_mgr | default('') == 'systemd'
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
+    - not (ansible_env.MOLECULE_SCENARIO_NAME is defined and ansible_env.MOLECULE_SCENARIO_NAME == 'default')
+    - not (ansible_env.MOLECULE_SCENARIO_NAME is defined and ansible_env.MOLECULE_SCENARIO_NAME == 'converge')

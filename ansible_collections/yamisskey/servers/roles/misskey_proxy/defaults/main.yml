@@ -5,6 +5,9 @@ squid_cache_dir: "/var/cache/squid"
 squid_log_dir: "/var/log/squid"
 proxy_squid_config_dir: "/etc/squid"
 
+# GitHub organization
+github_org: "yamisskey-dev"
+
 # Summaly configuration
 summaly_repo: "https://github.com/yamisskey-dev/summaly-docker.git"
 summaly_dir: "/opt/summaly-docker"
