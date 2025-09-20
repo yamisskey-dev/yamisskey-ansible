@@ -319,18 +319,4 @@ scrape_configs:
 # Advanced Relabeling and Filtering
 # ==================================================
 # Global metric relabeling for performance optimization
-metric_relabel_configs:
-  # Drop high-cardinality metrics to reduce storage
-  - source_labels: [__name__]
-    regex: 'go_.*'
-    action: drop
-  
-  # Add environment labels to all metrics
-  - target_label: deployment
-    replacement: 'yamisskey'
-  
-  # Standardize instance labels
-  - source_labels: [instance]
-    regex: '(.+)'
-    target_label: host
-    replacement: '${1}'
+# Note: metric_relabel_configs must be defined per job, not globally
