@@ -17,9 +17,7 @@
     - item.item.name in (target_repositories | map(attribute='name') | list)
   become: "{{ item.item.become_required | default(false) }}"
   register: update_results
-  failed_when:
-    - update_results.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length > 0
-    - item.item.required | default(false)
+  failed_when: (item.rc is defined and item.rc != 0) and (item.item.required | default(false))
   tags: ['update', 'git']
 
 - name: Check for local modifications before update
