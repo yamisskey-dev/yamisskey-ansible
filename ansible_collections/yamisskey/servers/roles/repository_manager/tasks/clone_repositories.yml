@@ -33,6 +33,7 @@
     - clone_results.results is defined
     - item.changed | default(false)
     - not item.failed | default(false)
+    - item.item is defined
     - item.item.dest is defined
   become: "{{ item.item.become_required | default(false) }}"
   failed_when: false
@@ -58,6 +59,19 @@
   when: clone_results is defined
   tags: ['clone', 'info']
 
+- name: Debug clone results structure
+  debug:
+    msg: |
+      Clone results debug:
+      - Results count: {{ clone_results.results | length | default(0) }}
+      - First result keys: {{ clone_results.results[0].keys() | default([]) if clone_results.results | length > 0 else 'No results' }}
+      - First result item keys: {{ clone_results.results[0].item.keys() | default([]) if clone_results.results | length > 0 and clone_results.results[0].item is defined else 'No item' }}
+  when: 
+    - clone_results is defined
+    - clone_results.results is defined
+    - clone_results.results | length > 0
+  tags: ['clone', 'debug']
+
 - name: Validate cloned repositories
   stat:
     path: "{{ item.item.dest }}/.git"
@@ -66,6 +80,8 @@
   when: 
     - clone_results is defined
     - item.changed | default(false)
+    - item.item is defined
+    - item.item.dest is defined
   tags: ['clone', 'validation']
 
 - name: Report clone validation failures

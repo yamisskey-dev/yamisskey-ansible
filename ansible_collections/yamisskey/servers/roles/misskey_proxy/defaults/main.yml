@@ -28,3 +28,18 @@ docker_pull_policy: true
 # Service names
 media_proxy_container_name: "media-proxy-rs-server"
 nginx_proxy_container_name: "proxy"
+
+# Host services configuration
+host_services:
+  linode_prox:
+    squid: 3128
+    media_proxy_rs: 8081
+    nginx: 8080
+  balthasar:
+    squid: 3128
+    media_proxy_rs: 8081
+    nginx: 8080
+  joseph:
+    squid: 3128
+    media_proxy_rs: 8081
+    nginx: 8080
