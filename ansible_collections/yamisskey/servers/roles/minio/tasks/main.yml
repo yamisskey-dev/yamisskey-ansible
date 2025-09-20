@@ -19,12 +19,14 @@
   set_fact:
     existing_secrets: "{{ lookup('file', minio_secrets_file) | from_yaml }}"
   when: secrets_file_stat.stat.exists
+  failed_when: false
+  ignore_errors: true
 
 - name: Initialize empty secrets structure if file doesn't exist
   set_fact:
     existing_secrets:
       minio: {}
-  when: not secrets_file_stat.stat.exists
+  when: not secrets_file_stat.stat.exists or existing_secrets is not defined
 
 - name: Generate all credentials (auto-generate missing ones)
   set_fact:
