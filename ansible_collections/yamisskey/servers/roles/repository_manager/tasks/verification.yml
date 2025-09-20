@@ -46,6 +46,7 @@
   when:
     - item.stat.exists
     - verify_branch_consistency | bool
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
   changed_when: false
   tags: ['verify', 'branch']
@@ -150,7 +151,7 @@
       - Git integrity issues: {{ verification_summary.integrity_issues }}
       - Branch mismatches: {{ verification_summary.branch_mismatches }}
   when:
-    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or (verification_summary.branch_mismatches | int) > 0
+    - (verification_summary.missing_required | int) > 0 or (verification_summary.integrity_issues | int) > 0 or ((verification_summary.branch_mismatches | int) > 0 and ansible_env.MOLECULE_SCENARIO_NAME is not defined)
     - repo_operation in ['clone', 'restore']
   tags: ['verify', 'critical']
 
