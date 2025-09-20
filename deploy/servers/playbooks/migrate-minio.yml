@@ -5,4 +5,4 @@
   gather_facts: true
 
   roles:
-    - migrate_minio
+    - yamisskey.servers.migrate_minio

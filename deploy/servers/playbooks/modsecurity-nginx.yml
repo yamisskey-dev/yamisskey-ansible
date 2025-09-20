@@ -18,4 +18,4 @@
     modsecurity_log_level: "warn"
 
   roles:
-    - modsecurity-nginx
+    - yamisskey.servers.modsecurity_nginx
