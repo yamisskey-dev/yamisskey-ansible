@@ -30,13 +30,25 @@
       minio: {}
   when: not secrets_file_stat.stat.exists or existing_secrets is not defined
 
-- name: Generate all credentials (auto-generate missing ones)
+- name: Load existing credentials from secrets file
   set_fact:
-    minio_root_user: "{{ existing_secrets.minio.root_user | default(lookup('password', '/dev/null chars=ascii_letters,digits length=32')) }}"
-    minio_root_password: "{{ existing_secrets.minio.root_password | default(lookup('password', '/dev/null chars=ascii_letters,digits length=64')) }}"
-    misskey_s3_access_key: "{{ existing_secrets.minio.misskey_s3_access_key | default(ansible_hostname + '-' + ansible_date_time.epoch) }}"
-    misskey_s3_secret_key: "{{ existing_secrets.minio.misskey_s3_secret_key | default(lookup('password', '/dev/null chars=ascii_letters,digits length=32')) }}"
-    minio_kms_master_key: "{{ existing_secrets.minio.kms_master_key | default('minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode)) }}"
+    minio_root_user: "{{ existing_secrets.minio.root_user }}"
+    minio_root_password: "{{ existing_secrets.minio.root_password }}"
+    misskey_s3_access_key: "{{ existing_secrets.minio.misskey_s3_access_key }}"
+    misskey_s3_secret_key: "{{ existing_secrets.minio.misskey_s3_secret_key }}"
+    minio_kms_master_key: "{{ existing_secrets.minio.kms_master_key }}"
+  when: 
+    - secrets_file_stat.stat.exists
+    - existing_secrets.minio | length > 0
+
+- name: Generate new credentials when secrets file doesn't exist
+  set_fact:
+    minio_root_user: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+    minio_root_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=64') }}"
+    misskey_s3_access_key: "{{ ansible_hostname + '-' + ansible_date_time.epoch }}"
+    misskey_s3_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+    minio_kms_master_key: "{{ 'minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode) }}"
+  when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
 - name: Create/update secrets.yml with all credentials
   copy:
@@ -50,6 +62,7 @@
     dest: "{{ minio_secrets_file }}"
     backup: true
     mode: '0600'
+  when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
 - name: Deploy Docker Compose file for Minio
   template:
@@ -59,6 +72,7 @@
     group: root
     mode: '0644'
     backup: true
+  when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
 - name: Create Docker network if not exists
   community.docker.docker_network:
@@ -236,6 +250,7 @@
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
         backup: true
+      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
     - name: Check if IAM policy already exists
       command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" misskey-policy
@@ -255,6 +270,7 @@
       file:
         path: /tmp/minio_iam_policy.json
         state: absent
+      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
     - name: Check if policy is already attached to user
       command: /usr/local/bin/mc admin policy entities "{{ minio_alias }}" misskey-policy
@@ -278,6 +294,7 @@
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
         backup: true
+      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
     - name: Check current bucket anonymous policy
       command: /usr/local/bin/mc anonymous get "{{ minio_alias }}/{{ item }}"
@@ -324,6 +341,7 @@
       file:
         path: /tmp/minio_bucket_policy.json
         state: absent
+      when: not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0
 
     - name: Check if encryption is already enabled
       command: /usr/local/bin/mc encrypt info "{{ minio_alias }}/{{ item }}"
