@@ -1,0 +1,32 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: ghq-test-instance
+    image: ubuntu:22.04
+    pre_build_image: true
+    privileged: true
+    capabilities:
+      - SYS_ADMIN
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /sbin/init
+    tmpfs:
+      - /run
+      - /tmp
+    env:
+      container: docker
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      ghq-test-instance:
+        ghq_operation: "install"
+        yamisskey_repositories:
+          - "yamisskey-dev/yamisskey"
+          - "yamisskey-dev/yamisskey-assets"
+verifier:
+  name: ansible

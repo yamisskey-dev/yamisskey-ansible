@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  tasks:
+    - name: "Include yamisskey.servers.ghq"
+      include_role:
+        name: yamisskey.servers.ghq

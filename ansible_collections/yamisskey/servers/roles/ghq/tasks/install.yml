@@ -1,0 +1,59 @@
+---
+- name: Check if ghq is already installed
+  command: ghq --version
+  register: ghq_version_check
+  failed_when: false
+  changed_when: false
+
+- name: Install ghq via package manager
+  package:
+    name: ghq
+    state: present
+  when: 
+    - ghq_install_method == "package"
+    - ghq_version_check.rc != 0
+
+- name: Install ghq via go install
+  command: go install github.com/x-motemen/ghq@latest
+  become_user: "{{ ansible_user }}"
+  environment:
+    GOPATH: "{{ ansible_env.HOME }}/go"
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  when: 
+    - ghq_install_method == "go"
+    - ghq_version_check.rc != 0
+
+- name: Create ghq configuration directory
+  file:
+    path: "{{ ansible_env.HOME }}/.config/ghq"
+    state: directory
+    mode: '0755'
+
+- name: Configure ghq
+  copy:
+    content: |
+      [ghq]
+      root = "{{ ghq_root }}"
+      [ghq.remote]
+      github = "{{ ghq_github_remote }}"
+    dest: "{{ ansible_env.HOME }}/.config/ghq/config"
+    mode: '0644'
+  register: ghq_config_result
+
+- name: Create ghq root directory
+  file:
+    path: "{{ ghq_root | expanduser }}"
+    state: directory
+    mode: '0755'
+  when: ghq_config_result.changed
+
+- name: Verify ghq installation
+  command: ghq --version
+  register: ghq_install_verify
+  changed_when: false
+  failed_when: false
+
+- name: Display ghq version
+  debug:
+    msg: "ghq version: {{ ghq_install_verify.stdout }}"
+  when: ghq_install_verify.rc == 0

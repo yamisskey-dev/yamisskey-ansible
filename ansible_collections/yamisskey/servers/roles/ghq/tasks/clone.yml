@@ -1,0 +1,31 @@
+---
+- name: Clone yamisskey-dev repositories
+  command: ghq get {{ item }}
+  loop: "{{ yamisskey_repositories }}"
+  register: ghq_clone_results
+  failed_when: false
+  changed_when: ghq_clone_results.rc == 0
+
+- name: Display clone results
+  debug:
+    msg: |
+      🔄 Repository Clone Results:
+      {% for result in ghq_clone_results.results %}
+      - {{ result.item }}: {{ '✅ Cloned successfully' if result.rc == 0 else '❌ Clone failed' }}
+      {% if result.rc != 0 and result.stderr is defined %}
+        Error: {{ result.stderr }}
+      {% endif %}
+      {% endfor %}
+
+- name: List cloned repositories
+  command: ghq list
+  register: ghq_list_result
+  changed_when: false
+  failed_when: false
+
+- name: Display cloned repositories
+  debug:
+    msg: |
+      📁 Cloned repositories in {{ ghq_root }}:
+      {{ ghq_list_result.stdout_lines | join('\n') }}
+  when: ghq_list_result.rc == 0

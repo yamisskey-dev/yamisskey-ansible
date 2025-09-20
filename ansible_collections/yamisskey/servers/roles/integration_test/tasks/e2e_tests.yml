@@ -14,15 +14,6 @@
       register: init_test
       failed_when: false
 
-    - name: Test repository management
-      include_role:
-        name: yamisskey.servers.repository_manager
-      vars:
-        repo_operation: status
-        repo_target: yamisskey
-      register: repo_test
-      failed_when: false
-
     - name: Test service operations
       include_role:
         name: yamisskey.servers.operations
