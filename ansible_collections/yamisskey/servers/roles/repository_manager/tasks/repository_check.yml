@@ -60,7 +60,7 @@
   debug:
     msg: |
       📋 Git Status for {{ item.item.name }}:
-      {% if item.stdout_lines | length > 0 %}
+      {% if item.stdout_lines is defined and item.stdout_lines | length > 0 %}
       ⚠️  Uncommitted changes detected:
       {{ item.stdout_lines | join('\n') }}
       {% else %}
@@ -70,4 +70,5 @@
   when: 
     - git_status_check is defined
     - item.item is defined
+    - item.stdout_lines is defined
   tags: ['git', 'info']
