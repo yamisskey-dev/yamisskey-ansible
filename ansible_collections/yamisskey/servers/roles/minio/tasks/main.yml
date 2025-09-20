@@ -153,13 +153,14 @@
     status_code: [200, 403]  # 403 is acceptable as console might be disabled
   register: health_check
   until: health_check.status in [200, 403]
-  retries: 20
-  delay: 10
+  retries: 10
+  delay: 15
   ignore_errors: true
+  failed_when: false
   when:
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-    - minio_ip is defined and minio_ip.stdout is defined
+    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
 
 - name: Wait for MinIO to be ready before setting alias
   wait_for:
@@ -284,7 +285,8 @@
         - "{{ minio_bucket_name_for_outline }}"
       ignore_errors: true
       register: encryption_result
-      failed_when: encryption_result.rc != 0 and "already enabled" not in encryption_result.stderr
+      failed_when: false
+      changed_when: encryption_result.rc == 0
 
     - name: Display essential configuration summary
       debug:

@@ -128,8 +128,12 @@
     - name: Show container logs if verification fails
       command: docker logs minio
       register: container_logs
+      failed_when: false
+      changed_when: false
       
     - name: Display container logs for debugging
       debug:
         var: container_logs.stdout_lines
-      when: container_logs.rc == 0
+      when: 
+        - container_logs.rc == 0
+        - container_logs.stdout_lines is defined
