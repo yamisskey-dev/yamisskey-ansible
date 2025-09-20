@@ -137,9 +137,9 @@
       total_repositories: "{{ target_repositories | length }}"
       verified_repositories: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
       missing_required: "{{ final_repo_check.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | selectattr('required', 'equalto', true) | list | length }}"
-      integrity_issues: "{{ git_integrity_check.results | selectattr('rc', 'ne', 0) | list | length if git_integrity_check is defined else 0 }}"
+      integrity_issues: "{{ git_integrity_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length if git_integrity_check is defined else 0 }}"
       branch_mismatches: "{{ branch_check.results | selectattr('stdout', 'search', 'BRANCH_MISMATCH') | list | length if branch_check is defined else 0 }}"
-      remote_failures: "{{ remote_check.results | selectattr('rc', 'ne', 0) | list | length if remote_check is defined else 0 }}"
+      remote_failures: "{{ remote_check.results | selectattr('rc', 'defined') | selectattr('rc', 'ne', 0) | list | length if remote_check is defined else 0 }}"
   tags: ['verify', 'summary']
 
 - name: Fail if critical issues detected
