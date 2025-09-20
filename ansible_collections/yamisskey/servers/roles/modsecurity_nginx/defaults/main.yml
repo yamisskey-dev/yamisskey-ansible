@@ -79,6 +79,28 @@ modsecurity_log_level: "warn"
 modsecurity_access_log: "/var/log/nginx/access.log"
 modsecurity_error_log: "/var/log/nginx/error.log"
 
+# Host services configuration
+host_services:
+  balthasar:
+    modsecurity_nginx: 80
+    misskey: 3000
+    synapse: 8008
+    element: 8080
+    jitsi: 8080
+    ctfd: 8000
+    grafana: 3000
+    vikunja: 8080
+    cryptpad: 3000
+    zitadel: 8080
+    searxng: 8080
+    outline: 3000
+    uptime: 3001
+    mcaptcha: 8080
+    neo_quesdon: 3025
+    lemmy: 8536
+  joseph:
+    minio_api: 9000
+
 # Service configuration
 modsecurity_enabled: true
 modsecurity_detection_only: false
