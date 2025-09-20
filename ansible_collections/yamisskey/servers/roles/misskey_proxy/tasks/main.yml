@@ -31,9 +31,22 @@
     - ansible_service_mgr | default('') == 'systemd'
   failed_when: false
 
+- name: Check if Docker is running using command
+  command: systemctl is-active docker
+  register: docker_active_check
+  become: true
+  when:
+    - ansible_service_mgr | default('') == 'systemd'
+  failed_when: false
+  changed_when: false
+
 - name: Display Docker service status
   debug:
-    msg: "Docker service status: {{ docker_service_status.status | default('unknown') }}"
+    msg: |
+      Docker service status:
+      - Status: {{ docker_service_status.status | default('unknown') }}
+      - ActiveState: {{ docker_service_status.status.ActiveState | default('undefined') }}
+      - SubState: {{ docker_service_status.status.SubState | default('undefined') }}
   when:
     - docker_service_status is defined
     - docker_service_status.status is defined
@@ -47,8 +60,8 @@
   register: docker_start_result
   when:
     - ansible_service_mgr | default('') == 'systemd'
-    - docker_service_status.status is defined
-    - docker_service_status.status.ActiveState != 'active'
+    - docker_active_check is defined
+    - docker_active_check.stdout != 'active'
   failed_when: false
 
 - name: Try alternative Docker service start
@@ -59,6 +72,8 @@
     - docker_start_result is defined
     - docker_start_result.failed | default(false)
     - ansible_service_mgr | default('') == 'systemd'
+    - docker_active_check is defined
+    - docker_active_check.stdout != 'active'
   failed_when: false
 
 - name: Verify Docker is running

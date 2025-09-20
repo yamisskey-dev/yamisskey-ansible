@@ -30,9 +30,54 @@ modsecurity_misskey_exclusions_enabled: true
 modsecurity_enforce_body_limit: true
 modsecurity_max_request_size: "10M"
 
+# Security headers configuration
+modsecurity_security_headers:
+  - "X-Content-Type-Options: nosniff"
+  - "X-Frame-Options: DENY"
+  - "X-XSS-Protection: 1; mode=block"
+  - "Referrer-Policy: strict-origin-when-cross-origin"
+  - "Content-Security-Policy: default-src 'self'"
+
+# HSTS configuration
+modsecurity_hsts_enabled: true
+modsecurity_hsts_max_age: 31536000
+modsecurity_hsts_include_subdomains: true
+modsecurity_hsts_preload: true
+
+# Alert configuration
+modsecurity_alert_high_severity: true
+modsecurity_alert_threshold_per_minute: 100
+
+# Collection timeout
+modsecurity_collection_timeout: 600
+
+# Debug log level
+modsecurity_debug_log_level: 0
+
+# Docker configuration
+modsecurity_nginx_restart_policy: "unless-stopped"
+modsecurity_nginx_port: 80
+modsecurity_docker_volumes: []
+
+# ModSecurity engine configuration
+modsecurity_rule_engine: "On"
+modsecurity_req_body_access: "On"
+modsecurity_resp_body_access: "On"
+modsecurity_audit_engine: "On"
+modsecurity_audit_log_format: "JSON"
+modsecurity_blocking_paranoia: 1
+modsecurity_detection_paranoia: 1
+modsecurity_anomaly_inbound: 5
+modsecurity_anomaly_outbound: 4
+modsecurity_allowed_methods: "GET POST PUT DELETE HEAD OPTIONS"
+modsecurity_allowed_request_content_type: "application/x-www-form-urlencoded|multipart/form-data|text/xml|application/xml|application/x-amf|application/json"
+modsecurity_allowed_http_versions: "HTTP/1.0 HTTP/1.1 HTTP/2"
+
 # Log configuration
 modsecurity_log_dir: "/var/log/nginx"
 modsecurity_log_level: "warn"
+modsecurity_access_log: "/var/log/nginx/access.log"
+modsecurity_error_log: "/var/log/nginx/error.log"
 
 # Service configuration
 modsecurity_enabled: true

@@ -96,8 +96,69 @@
     - compose_file_path is defined
   register: compose_start
 
+- name: Check if backup container is running
+  command: docker ps --filter name=misskey-backup --format "{{.Names}}"
+  register: backup_container_check
+  failed_when: false
+  changed_when: false
+
+- name: List files in backup container
+  command: docker exec misskey-backup ls -la /
+  register: container_files
+  when: backup_container_check.stdout == 'misskey-backup'
+  failed_when: false
+  changed_when: false
+
+- name: Display container files
+  debug:
+    msg: "Container files: {{ container_files.stdout_lines | default([]) }}"
+  when: 
+    - backup_container_check.stdout == 'misskey-backup'
+    - container_files is defined
+
+- name: Find backup script in container
+  command: docker exec misskey-backup find / -name "*.sh" -type f 2>/dev/null
+  register: backup_scripts
+  when: backup_container_check.stdout == 'misskey-backup'
+  failed_when: false
+  changed_when: false
+
+- name: Display found scripts
+  debug:
+    msg: "Found scripts: {{ backup_scripts.stdout_lines | default([]) }}"
+  when: 
+    - backup_container_check.stdout == 'misskey-backup'
+    - backup_scripts is defined
+
 - name: Run manual backup script
-  command: sudo docker exec misskey-backup /root/backup.sh
+  command: docker exec misskey-backup /backup.sh
+  when: 
+    - backup_container_check.stdout == 'misskey-backup'
+    - backup_scripts is defined
+    - '/backup.sh' in (backup_scripts.stdout_lines | default([]))
+  failed_when: false
+
+- name: Run alternative backup script
+  command: docker exec misskey-backup /usr/local/bin/backup.sh
+  when: 
+    - backup_container_check.stdout == 'misskey-backup'
+    - backup_scripts is defined
+    - '/usr/local/bin/backup.sh' in (backup_scripts.stdout_lines | default([]))
+  failed_when: false
+
+- name: Skip backup if no script found
+  debug:
+    msg: "No backup script found in container, skipping manual backup"
+  when: 
+    - backup_container_check.stdout == 'misskey-backup'
+    - backup_scripts is defined
+    - '/backup.sh' not in (backup_scripts.stdout_lines | default([]))
+    - '/usr/local/bin/backup.sh' not in (backup_scripts.stdout_lines | default([]))
+
+- name: Skip backup if container not running
+  debug:
+    msg: "Backup container is not running, skipping manual backup"
+  when: backup_container_check.stdout != 'misskey-backup'
 
 - name: Load secrets from secrets.yml
   include_vars:

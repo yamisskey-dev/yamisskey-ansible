@@ -23,7 +23,7 @@
 
 - name: Set ownership for newly cloned repositories
   file:
-    path: "{{ item.dest }}"
+    path: "{{ item.item.dest }}"
     owner: "{{ item.item.owner | default('root') }}"
     group: "{{ item.item.owner | default('root') }}"
     recurse: true
@@ -33,7 +33,7 @@
     - clone_results.results is defined
     - item.changed | default(false)
     - not item.failed | default(false)
-    - item.dest is defined
+    - item.item.dest is defined
   become: "{{ item.item.become_required | default(false) }}"
   failed_when: false
   tags: ['clone', 'ownership']
@@ -60,7 +60,7 @@
 
 - name: Validate cloned repositories
   stat:
-    path: "{{ item.dest }}/.git"
+    path: "{{ item.item.dest }}/.git"
   register: clone_validation
   loop: "{{ clone_results.results }}"
   when: 
