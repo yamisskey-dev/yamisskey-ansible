@@ -23,7 +23,6 @@
     - secrets_file_stat.stat.exists
     - minio_secrets_file is defined
   failed_when: false
-  ignore_errors: true
   no_log: true
 
 - name: Parse existing secrets content
@@ -184,7 +183,6 @@
   when:
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
   failed_when: false
-  ignore_errors: true
 
 - name: Check if Minio Client exists
   stat:
@@ -203,7 +201,6 @@
   register: minio_ip
   changed_when: false
   failed_when: false
-  ignore_errors: true
   when:
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
@@ -226,7 +223,6 @@
   until: health_check.status in [200, 403]
   retries: 10
   delay: 15
-  ignore_errors: true
   failed_when: false
   when:
     - minio_runtime_checks_enabled
@@ -267,14 +263,12 @@
     - name: Check if files bucket exists
       command: /usr/local/bin/mc ls "{{ minio_alias }}/{{ minio_bucket_name_for_misskey }}"
       register: files_bucket_check
-      ignore_errors: true
       changed_when: false
       failed_when: false
 
     - name: Check if assets bucket exists
       command: /usr/local/bin/mc ls "{{ minio_alias }}/{{ minio_bucket_name_for_outline }}"
       register: assets_bucket_check
-      ignore_errors: true
       changed_when: false
       failed_when: false
 
@@ -291,7 +285,6 @@
     - name: Create Misskey IAM user
       command: /usr/local/bin/mc admin user add "{{ minio_alias }}" "{{ misskey_s3_access_key }}" "{{ misskey_s3_secret_key }}"
       register: misskey_user_result
-      ignore_errors: true
       changed_when: misskey_user_result.rc == 0
       failed_when: false
       no_log: true
@@ -308,7 +301,6 @@
       register: iam_policy_check
       changed_when: false
       failed_when: false
-      ignore_errors: true
 
     - name: Create IAM policy for Misskey user
       command: /usr/local/bin/mc admin policy create "{{ minio_alias }}" misskey-policy /tmp/minio_iam_policy.json
@@ -327,7 +319,6 @@
       register: policy_attach_check
       changed_when: false
       failed_when: false
-      ignore_errors: true
 
     - name: Attach policy to Misskey user
       command: /usr/local/bin/mc admin policy attach "{{ minio_alias }}" misskey-policy --user "{{ misskey_s3_access_key }}"
@@ -353,7 +344,6 @@
       register: bucket_anonymous_check
       changed_when: false
       failed_when: false
-      ignore_errors: true
 
     - name: Apply secure bucket policy for ActivityPub federation access control
       command: /usr/local/bin/mc anonymous set download "{{ minio_alias }}/{{ item }}"
@@ -373,7 +363,6 @@
       register: advanced_policy_check
       changed_when: false
       failed_when: false
-      ignore_errors: true
 
     - name: Apply advanced bucket policy for User-Agent based access control
       command: /usr/local/bin/mc admin policy create "{{ minio_alias }}" bucket-policy-{{ item }} /tmp/minio_bucket_policy.json
@@ -399,14 +388,12 @@
       register: encryption_check
       changed_when: false
       failed_when: false
-      ignore_errors: true
 
     - name: Enable Server-Side Encryption (SSE-S3) for data at rest protection
       command: /usr/local/bin/mc encrypt set sse-s3 "{{ minio_alias }}/{{ item }}"
       loop:
         - "{{ minio_bucket_name_for_misskey }}"
         - "{{ minio_bucket_name_for_outline }}"
-      ignore_errors: true
       register: encryption_result
       failed_when: false
       changed_when: encryption_result.rc == 0
