@@ -13,6 +13,11 @@ platforms:
     command: sleep infinity
     env:
       container: docker
+    tmpfs:
+      - /run
+      - /tmp
+    capabilities:
+      - SYS_ADMIN
 provisioner:
   name: ansible
   inventory:
