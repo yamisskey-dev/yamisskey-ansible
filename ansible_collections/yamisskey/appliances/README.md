@@ -1,64 +1,162 @@
-# yamisskey.appliances Collection
+# yamisskey.appliances
 
-TrueNAS などのアプライアンス系を扱う Ansible コレクションです。実行用の playbook/inventory はレポジトリ直下の `deploy/` に分離しています。
+TrueNAS Scale およびその他のアプライアンス機器向けのAnsibleコレクション
 
-## 構成（モノレポ）
-- `ansible_collections/yamisskey/appliances/`
-  - `roles/` 再配布対象のロール群
-  - `plugins/` プラグイン（必要に応じて）
-  - `meta/runtime.yml` 対応 Ansible などの宣言
-  - `tests/` ansible-test 用（sanity/integration）
-- `deploy/appliances/`
-  - `ansible.cfg` 実行用設定（roles_path はコレクションを指す）
-  - `inventory` 運用向けインベントリ
-  - `playbooks/` 運用用プレイブック
+## 🏗️ ロール構造（改善後）
 
-## 🚀 Install & Use (Quick)
-```bash
-# From Galaxy
-ansible-galaxy collection install yamisskey.appliances
+### 責任分離された3つのロール
 
-# Or from local tarball
-ansible-galaxy collection install dist/appliances/yamisskey-appliances-*.tar.gz
+```
+roles/
+├── core/           # TrueNAS基盤管理
+├── minio/          # MinIO構築専用
+└── migrate_minio/  # MinIO移行専用
 ```
 
-## 実行
+#### **`yamisskey.appliances.core`**
+- **責任**: TrueNAS Scale基盤の準備
+- **機能**: ZFSデータセット、ユーザー管理、システム設定
+
+#### **`yamisskey.appliances.minio`** ✨ 新規作成
+- **責任**: MinIO環境の構築のみ
+- **機能**: Docker Compose、Cloudflare Tunnel、Nginx設定
+
+#### **`yamisskey.appliances.migrate_minio`**
+- **責任**: MinIOデータ移行のみ  
+- **機能**: データ同期、IAM/CORS移行、移行検証
+
+### 非推奨ロール
+
+#### **`yamisskey.appliances.apps`** ⚠️ 機能移行済み
+- MinIO固有機能は [`minio`](roles/minio) ロールに移行済み
+- 汎用アプリ管理ロールとして今後活用予定
+
+## 🚀 使用方法
+
+### 1. MinIO構築のみ
+
 ```bash
-# 一覧
-make list TARGET=appliances
-
-# ドライラン
-make check PLAYBOOK=setup TARGET=appliances
-
-# 実行
-make run PLAYBOOK=setup TARGET=appliances
+# TrueNAS上にMinIOを構築
+ansible-playbook -i deploy/appliances/inventory \
+  deploy/appliances/playbooks/minio-deploy.yml
 ```
 
-## テスト
-### Sanity
+### 2. MinIO移行のみ
+
 ```bash
-# コレクション直下で sanity
-cd ansible_collections/yamisskey/appliances
-ansible-test sanity --python 3.11 -v
+# 既存MinIOからTrueNAS MinIOへデータ移行
+ansible-playbook -i deploy/appliances/inventory \
+  deploy/appliances/playbooks/minio-migrate.yml \
+  -e "migration_source=raspberrypi"
 ```
 
-### Integration (smoke)
-最小の smoke テストを用意しています。
+### 3. フルワークフロー（構築 + 移行）
+
 ```bash
-ansible-test integration -v --docker default --python 3.11 \
-  --targets smoke
+# 構築と移行を一括実行
+ansible-playbook -i deploy/appliances/inventory \
+  deploy/appliances/playbooks/minio-full.yml \
+  -e "migration_source=raspberrypi"
 ```
 
-## ビルド
-```bash
-# コレクション単体のビルド
-cd ansible_collections/yamisskey/appliances
-ansible-galaxy collection build --force
+### 4. 構築のみ実行（移行スキップ）
 
-# ルートのヘルパー
-make build  # 両コレクション分を dist/ に生成
+```bash
+# 移行を無効化して構築のみ
+ansible-playbook -i deploy/appliances/inventory \
+  deploy/appliances/playbooks/minio-full.yml \
+  -e "enable_migration=false"
 ```
 
-## メモ
-- 運用物（inventory/group_vars/host_vars/playbooks）は `deploy/` 側で管理します。
-- コレクションは roles/plugins/meta/tests のみを含め、再配布可能な最小構成に保ちます。
+## 📋 Playbook一覧
+
+| Playbook | 責任 | 使用ケース |
+|----------|------|-----------|
+| [`minio-deploy.yml`](deploy/appliances/playbooks/minio-deploy.yml) | MinIO構築のみ | 新規環境構築 |
+| [`minio-migrate.yml`](deploy/appliances/playbooks/minio-migrate.yml) | MinIO移行のみ | 既存環境からの移行 |
+| [`minio-full.yml`](deploy/appliances/playbooks/minio-full.yml) | 構築 + 移行 | ワンストップデプロイ |
+| [`truenas-minio-deploy-and-migrate.yml`](deploy/appliances/playbooks/truenas-minio-deploy-and-migrate.yml) | 既存互換 | 後方互換性維持 |
+
+## ⚙️ 必要な変数
+
+### TrueNAS基盤
+```yaml
+truenas_pool_name: "tank"
+truenas_api_key: "{{ vault_truenas_api_key }}"
+```
+
+### MinIO設定
+```yaml
+truenas_minio_domain: "drive.example.com"
+truenas_minio_root_user: "{{ vault_minio_root_user }}"
+truenas_minio_root_password: "{{ vault_minio_root_password }}"
+truenas_tunnel_token: "{{ vault_tunnel_token }}"
+```
+
+### 移行設定（移行時のみ）
+```yaml
+migration_source: "raspberrypi"  # 移行元ホスト名
+source_minio_ip: "192.168.1.100"  # オプション
+```
+
+## 🔄 移行シナリオ
+
+### raspberrypi → joseph (TrueNAS Scale)
+
+```bash
+# 段階的移行
+ansible-playbook minio-deploy.yml      # 1. TrueNAS環境構築
+ansible-playbook minio-migrate.yml     # 2. データ移行
+
+# または一括移行
+ansible-playbook minio-full.yml -e "migration_source=raspberrypi"
+```
+
+## 🎯 改善点
+
+### Before（問題あり）
+```yaml
+roles:
+  - yamisskey.appliances.apps  # MinIO + 汎用機能が混在
+```
+
+### After（改善後）
+```yaml
+roles:
+  - yamisskey.appliances.core     # 基盤準備
+  - yamisskey.appliances.minio    # MinIO構築
+  # 移行は別Playbookで実行
+```
+
+## 📁 ディレクトリ構造
+
+```
+ansible_collections/yamisskey/appliances/
+├── roles/
+│   ├── core/           # TrueNAS基盤
+│   ├── minio/          # MinIO構築（新規）
+│   ├── migrate_minio/  # MinIO移行
+│   └── apps/           # 汎用アプリ（MinIO機能除去済み）
+└── deploy/appliances/
+    └── playbooks/
+        ├── minio-deploy.yml    # 構築専用（新規）
+        ├── minio-migrate.yml   # 移行専用（新規）
+        └── minio-full.yml      # フルワークフロー（新規）
+```
+
+## 🏷️ タグ使用例
+
+```bash
+# 基盤のみ
+ansible-playbook minio-full.yml --tags core
+
+# MinIOデプロイのみ
+ansible-playbook minio-full.yml --tags minio
+
+# 移行のみ
+ansible-playbook minio-full.yml --tags migration
+```
+
+## 📝 ライセンス
+
+MIT

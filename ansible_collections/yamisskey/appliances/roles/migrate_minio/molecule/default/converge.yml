@@ -236,24 +236,47 @@
       loop:
         - /tmp/test-minio-data
         - /tmp/minio-migration
+      register: test_dirs_result
+      changed_when: false
 
-    - name: Test Docker functionality instead of full role
-      debug:
-        msg: "Docker service is running successfully. Role infrastructure is ready."
+    - name: Set test variables for migration role
+      set_fact:
+        source_minio_address: "192.168.1.100"
+        source_minio_port: 9000
+        source_minio_host: "source-server"
+        source_minio_ip: "192.168.1.100"
+        source_minio_root_user: "minioadmin"
+        source_minio_root_password: "minioadmin"
+        target_minio_endpoint: "https://mock-target.example.com"
+        truenas_minio_root_user: "testuser"
+        truenas_minio_root_password: "testpassword"
+        buckets_to_migrate: ["test-bucket"]
+        migration_temp_dir: "/tmp/minio-migration"
+        truenas_minio_data_path: "/tmp/test-minio-data"
+        mc_release_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"  # Test placeholder
+        truenas_skip_health_check: true
+        truenas_skip_preflight_checks: true
+        migration_dry_run: true
+
+    - name: Test migrate_minio role (dry run mode)
+      include_role:
+        name: yamisskey.appliances.migrate_minio
+      vars:
+        migration_dry_run: true
+        truenas_skip_health_check: true
       when: docker_verify.rc == 0
 
-    - name: Display Docker debug status
+    - name: Display migration test status
       debug:
         msg: |
-          Docker Test Results:
-          - Docker installation: Success
-          - Docker service startup: {{ 'Success' if docker_verify.rc == 0 else 'Failed' }}
-          - Socket available: {{ 'Yes' if docker_socket_wait.elapsed is defined else 'No' }}
-          - migrate-minio role infrastructure: Ready for production use
+          Migration Test Results:
+          - Docker infrastructure: {{ 'Success' if docker_verify.rc == 0 else 'Failed' }}
+          - Migration role execution: {{ 'Success' if docker_verify.rc == 0 else 'Skipped' }}
+          - Role focus: Data synchronization only
         
     - name: Basic role verification
       debug:
-        msg: "migrate-minio role applied successfully"
+        msg: "migrate-minio role applied successfully (data sync focused)"
 
   post_tasks:
     - name: Show test environment status

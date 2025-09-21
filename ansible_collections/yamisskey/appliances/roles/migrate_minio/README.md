@@ -1,50 +1,120 @@
-# yamisskey.appliances role: migrate-minio
+# yamisskey.appliances.migrate_minio
 
-TrueNAS 向け MinIO 移行をロール化したものです（Phase A/B どちらにも対応）。
+MinIOデータ移行専用ロール
 
-- tasks/main.yml: フル移行（00→05→10→20→40→50→90）
-- tasks/phase-a.yml: ウォームアップのみ（00→10→20）
-- tasks/cutover.yml: カットオーバー（00→10→40→50→90）
+## 概要
 
-## 実行方法（プレイブック経由）
+このロールは**MinIOデータの移行のみ**を担当します。MinIO環境の構築は別ロール（`yamisskey.appliances.minio`）で実行してください。
 
-- フェーズA（ウォームアップ）:
-  - `make run TARGET=appliances PLAYBOOK=migrate-minio-phase-a`
-- フル移行（TrueNAS特化の検証＋最終同期まで）:
-  - `make run TARGET=appliances PLAYBOOK=migrate-minio-truenas`
-- カットオーバー（最終同期＋設定反映＋検証）:
-  - `make run TARGET=appliances PLAYBOOK=migrate-minio-cutover`
+## 責任
 
-いずれも内部で本ロールを `include_role` で呼び出します。
+- ✅ **データ同期のみ** - 移行元から移行先へのデータ転送
+- ✅ ファイル整合性チェック
+- ✅ 移行検証
+- ❌ バケット作成（`yamisskey.appliances.minio`ロールの責任）
+- ❌ IAM設定（`yamisskey.appliances.minio`ロールの責任）
+- ❌ CORS設定（`yamisskey.appliances.minio`ロールの責任）
 
-## 代表変数（抜粋）
+## 前提条件
 
-移行元（Source）:
-- `source_minio_host`: 例 `source-host`
-- `source_minio_address`: 例 `source-host` または IP
-- `source_minio_port`: 例 `9000`
-- `source_minio_root_user` / `source_minio_root_password`（Vault 推奨）
+1. **移行先MinIO環境が構築済み**であること
+   ```bash
+   # 事前に実行必須
+   ansible-playbook minio-deploy.yml
+   ```
 
-移行先（Target: TrueNAS + Cloudflare Tunnel）:
-- `truenas_minio_root_user` / `truenas_minio_root_password`（Vault 必須）
-- `truenas_minio_kms_key`（KMS鍵、任意。指定時は KMS で暗号化）
-- `truenas_minio_domain`: 例 `minio.example.com`
-- `target_minio_endpoint`: 例 `https://{{ truenas_minio_domain }}`
-- `truenas_minio_data_path`: 例 `/mnt/tank/minio`
+2. 移行元・移行先の両方でMinIOが稼働中であること
+3. 必要な認証情報が設定済みであること
 
-移行動作:
-- `buckets_to_migrate`: 例 `["files"]`
-- `migration_temp_dir`: 例 `/tmp/truenas-minio-migration`
-- `mc_workers`: 同期並列数（既定 8）
-- `perform_incremental_sync`: 最終前の非破壊ミラー（既定 true）
-- `perform_final_remove`: `--remove` 同期を行うか（既定 false）
-- `cors_allowed_origins`: 例 `["https://<your-misskey-domain>"]`
-- `misskey_s3_access_key` / `misskey_s3_secret_key`（任意、IAM 作成時に使用）
+## 必要な変数
 
-セキュリティ（Vault 推奨）:
-- `truenas_api_key`, `source_minio_root_password`, `truenas_minio_root_password`, `misskey_s3_secret_key` など機微情報は Vault 管理してください。
+```yaml
+# 移行元設定
+source_minio_host: "raspberrypi"
+source_minio_ip: "192.168.1.100"  # オプション
+source_minio_port: 9000
 
-## 備考
+# 移行先設定
+target_minio_endpoint: "https://drive.example.com"
+truenas_minio_root_user: "{{ vault_minio_root_user }}"
+truenas_minio_root_password: "{{ vault_minio_root_password }}"
 
-- 本ロールは servers 側の命名とも互換になるように、必要箇所で変数マッピングを行います（`00_preamble.yml` 参照）。
-- 旧 `playbooks/tasks/` と `playbooks/templates/` は廃止し、ロール配下に集約しました。
+# 移行対象
+buckets_to_migrate:
+  - "files"
+  - "assets"
+```
+
+## 使用例
+
+### 基本的な使用方法
+
+```yaml
+---
+- hosts: truenas
+  vars:
+    source_minio_host: "raspberrypi"
+    buckets_to_migrate: ["files", "assets"]
+  roles:
+    - yamisskey.appliances.migrate_minio
+```
+
+### Playbookでの使用
+
+```bash
+# 移行専用Playbook
+ansible-playbook -i deploy/appliances/inventory \
+  deploy/appliances/playbooks/minio-migrate.yml \
+  -e "migration_source=raspberrypi"
+```
+
+## 移行プロセス
+
+1. **前提確認** - 移行元・移行先の接続性確認
+2. **エイリアス設定** - MinIO Clientの設定
+3. **ウォームアップ** - 初回データ同期
+4. **最終同期** - 増分データの同期
+5. **検証** - ファイル数・整合性確認
+6. **クリーンアップ** - 一時ファイル削除
+
+## 制限事項
+
+- **構築済み環境必須**: 移行先のMinIO環境が事前に構築されている必要があります
+- **データ同期のみ**: バケット・IAM・CORS設定は含まれません
+- **一方向のみ**: 移行元→移行先の単方向転送のみサポート
+
+## エラー対応
+
+### 「バケットが存在しない」エラー
+```
+Error: Bucket 'files' does not exist
+```
+**解決**: 事前に`yamisskey.appliances.minio`ロールでバケットを作成してください
+
+### 「IAMユーザーが存在しない」エラー
+```
+Error: User credentials invalid
+```
+**解決**: 事前に`yamisskey.appliances.minio`ロールでIAMユーザーを作成してください
+
+## 関連ロール
+
+- `yamisskey.appliances.minio` - MinIO環境構築（前提）
+- `yamisskey.appliances.core` - TrueNAS基盤準備（前提）
+
+## 正しい実行順序
+
+```bash
+# 1. MinIO環境構築
+ansible-playbook minio-deploy.yml
+
+# 2. データ移行（このロール）
+ansible-playbook minio-migrate.yml
+
+# または一括実行
+ansible-playbook minio-full.yml
+```
+
+## ライセンス
+
+MIT

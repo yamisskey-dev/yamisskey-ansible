@@ -19,6 +19,9 @@
     timeout: 10
   register: source_health
   failed_when: source_health.status != 200
+  when:
+    - not ansible_check_mode
+    - not truenas_skip_health_check | default(false)
 
 - name: Wait for TrueNAS MinIO via Cloudflare Tunnel
   uri:
@@ -30,6 +33,9 @@
   retries: 10
   delay: 15
   until: target_health.status == 200
+  when:
+    - not ansible_check_mode
+    - not truenas_skip_health_check | default(false)
 
 - name: Set source credentials from variables
   set_fact:
@@ -62,11 +68,19 @@
     path: "{{ migration_temp_dir }}"
     state: directory
     mode: '0700'
+  register: workspace_result
+  changed_when: workspace_result.changed and not (migration_dry_run | default(false))
 
-- name: Install MinIO client (mc) if not present (pinned)
+- name: Check if Minio Client exists
+  stat:
+    path: /usr/local/bin/mc
+  register: mc_check
+
+- name: Download Minio Client (architecture-aware)
   get_url:
-    url: "https://dl.min.io/client/mc/release/linux-amd64/mc.RELEASE.2025-07-18T00-00-00Z"
-    dest: "/usr/local/bin/mc"
+    url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
+    dest: /usr/local/bin/mc
     mode: '0755'
-    force: no
-  when: not ansible_check_mode
+  when:
+    - not mc_check.stat.exists
+    - not ansible_check_mode

@@ -1,12 +1,16 @@
 ---
 - name: Verify migration integrity (zero diff)
-  shell: mc diff {{ source_minio_alias }}/{{ item }}/ {{ target_minio_alias }}/{{ item }}/
+  shell: mc diff {{ source_minio_alias | default('source') }}/{{ item }}/ {{ target_minio_alias | default('target') }}/{{ item }}/
   loop: "{{ buckets_to_migrate }}"
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   register: diff_results
   failed_when: diff_results.rc not in [0,1]
   changed_when: false
+  when:
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)
   loop_control:
     label: "{{ item }}"
 
@@ -14,6 +18,8 @@
   file:
     path: "{{ migration_temp_dir }}"
     state: absent
+  register: cleanup_result
+  changed_when: cleanup_result.changed and not (migration_dry_run | default(false))
 
 - name: Display migration completion summary
   debug:

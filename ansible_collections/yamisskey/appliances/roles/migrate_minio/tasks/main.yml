@@ -6,16 +6,13 @@
   import_tasks: 05_preflight.yml
 
 - name: Include aliases and buckets
-  import_tasks: 10_aliases_and_buckets.yml
+  import_tasks: 10_aliases.yml
 
 - name: Include warmup mirror
   import_tasks: 20_warmup.yml
 
 - name: Include final mirror
   import_tasks: 40_final_mirror.yml
-
-- name: Include IAM and CORS
-  import_tasks: 50_iam_and_cors.yml
 
 - name: Include verify and cleanup
   import_tasks: 90_verify_and_cleanup.yml

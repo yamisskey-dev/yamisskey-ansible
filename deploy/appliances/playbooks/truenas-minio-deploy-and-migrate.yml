@@ -24,11 +24,12 @@
   roles:
     - role: yamisskey.appliances.core
       tags: [core]
-    - role: yamisskey.appliances.apps
-      tags: [apps]
+    - role: yamisskey.appliances.minio
+      tags: [minio]
 
   post_tasks:
     - name: Include migration tasks (Raspberry Pi → TrueNAS over Tunnel)
-      include_tasks: ../roles/migrate-minio/tasks/main.yml
+      include_role:
+        name: yamisskey.appliances.migrate_minio
       tags: [migration]
       when: perform_cutover | bool

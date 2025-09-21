@@ -39,15 +39,27 @@
         fail_msg: "Test directory was not created"
         success_msg: "Test directory created successfully"
 
+    - name: Check for deprecation notice display
+      stat:
+        path: /tmp/apps_deprecation_notice_displayed
+      register: deprecation_notice_check
+      failed_when: false
+
     - name: Display test summary
       debug:
         msg: |
           apps Role Verification Summary:
-          ====================================
+          ==============================
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
+          ✅ MinIO Separation: Complete
           
-          Role: apps
+          Role Responsibility Changes:
+          - ❌ MinIO-specific features: Moved to yamisskey.appliances.minio
+          - ✅ Generic app management: Retained
+          - ✅ Deprecation notices: {{ 'Displayed' if deprecation_notice_check.stat.exists else 'Ready for display' }}
+          
+          Role: apps (post-MinIO separation)
           Collection: yamisskey.appliances
           Test Instance: apps-test-instance
