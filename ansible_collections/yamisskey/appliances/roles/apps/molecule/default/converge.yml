@@ -133,11 +133,15 @@
       failed_when: false
 
     - name: Start Docker service with systemctl
-      shell: systemctl start docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+        daemon_reload: true
       register: docker_systemctl_start
       retries: 3
       delay: 5
-      until: docker_systemctl_start.rc == 0
+      until: docker_systemctl_start is succeeded
       failed_when: false
       changed_when: false  # Service management doesn't change system state for idempotence testing
 
@@ -147,7 +151,7 @@
         state: started
         enabled: true
       register: docker_service_start
-      when: docker_systemctl_start is failed
+      when: docker_systemctl_start is failed or docker_systemctl_start.failed | default(false)
       retries: 3
       delay: 10
       until: docker_service_start is succeeded
@@ -160,8 +164,8 @@
         pgrep dockerd
       register: docker_manual_start
       when:
-        - docker_systemctl_start is failed
-        - docker_service_start is failed
+        - docker_systemctl_start is failed or docker_systemctl_start.failed | default(false)
+        - docker_service_start is failed or docker_service_start.failed | default(false)
       failed_when: false
       changed_when: docker_manual_start.rc != 0
 
@@ -191,8 +195,8 @@
       debug:
         msg: |
           Docker Status Debug:
-          systemctl start result: {{ docker_systemctl_start.rc | default('not attempted') }}
-          service start result: {{ docker_service_start.rc | default('not attempted') }}
+          systemctl start result: {{ docker_systemctl_start.state | default('not attempted') }}
+          service start result: {{ docker_service_start.state | default('not attempted') }}
           manual start result: {{ docker_manual_start.rc | default('not attempted') }}
           socket available: {{ docker_socket_wait.elapsed | default('timeout') }}
           docker version check: {{ docker_verify.rc | default('failed') }}
