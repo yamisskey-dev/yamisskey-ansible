@@ -54,6 +54,18 @@
     mode: '0644'
   when: truenas_minio_domain is defined
 
+- name: Deploy MinIO Nginx main configuration
+  template:
+    src: minio-nginx-main.conf.j2
+    dest: "{{ truenas_apps_config_path }}/minio/nginx.conf"
+    mode: '0644'
+
+- name: Deploy MinIO Nginx server configuration
+  template:
+    src: minio-nginx.conf.j2
+    dest: "{{ truenas_apps_config_path }}/minio/minio.conf"
+    mode: '0644'
+
 - name: Deploy MinIO docker-compose.yml (Custom App YAML)
   when: truenas_manage_custom_compose | default(false)
   template:
@@ -226,3 +238,4 @@
         - mc alias set truenas https://{{ truenas_minio_domain }} {{ truenas_minio_root_user }} {{ truenas_minio_root_password }}
         - バケット作成/ポリシー適用/レプリケーション設定
       ==============================================
+
