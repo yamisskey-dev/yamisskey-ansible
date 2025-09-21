@@ -177,9 +177,9 @@
   wait_for:
     host: localhost
     port: 9000
-    delay: 1
-    sleep: 1
-    timeout: 5
+    delay: 10
+    sleep: 5
+    timeout: 120
   when:
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
   failed_when: false

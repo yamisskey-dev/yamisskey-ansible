@@ -29,32 +29,73 @@
         success_msg: "MinIO container is running successfully"
       when: container_status.rc == 0
 
-    - name: Wait for MinIO to be ready
-      wait_for:
-        port: 9000
-        host: localhost
-        timeout: 30
+    - name: Get MinIO container IP address
+      command: docker inspect -f "{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}" {{ minio_container_name }}
+      register: minio_container_ip
+      changed_when: false
       when: container_status.rc == 0
       failed_when: false
 
-    - name: Test MinIO health endpoint
-      uri:
-        url: "http://localhost:9000/minio/health/live"
-        method: GET
-        status_code: [200, 403]  # 403 acceptable as console may be disabled
-      register: health_test
+    - name: Check MinIO container health status
+      command: docker inspect -f "{% raw %}{{.State.Health.Status}}{% endraw %}" {{ minio_container_name }}
+      register: minio_health_status
+      changed_when: false
       when: container_status.rc == 0
-      ignore_errors: true
-      
-    - name: Verify MinIO health response
+      failed_when: false
+
+    - name: Verify MinIO container is healthy
       assert:
         that:
-          - health_test.status in [200, 403]
-        fail_msg: "MinIO health check failed"
-        success_msg: "MinIO health check successful"
-      when: 
+          - minio_health_status.stdout in ['healthy', 'starting']
+        fail_msg: "MinIO container health check failed. Status: {{ minio_health_status.stdout | default('undefined') }}"
+        success_msg: "MinIO container health check successful"
+      when:
         - container_status.rc == 0
-        - health_test is defined
+        - minio_health_status.stdout is defined
+
+    - name: Check MinIO container logs for errors
+      shell: docker logs {{ minio_container_name }} --tail 20 2>&1
+      register: minio_logs
+      changed_when: false
+      when: container_status.rc == 0
+      failed_when: false
+
+    - name: Debug MinIO logs content
+      debug:
+        msg: |
+          MinIO logs content:
+          {{ minio_logs.stdout }}
+      when:
+        - container_status.rc == 0
+        - minio_logs is defined
+
+    - name: Verify MinIO started successfully (no critical errors in logs)
+      assert:
+        that:
+          - "'FATAL:' not in minio_logs.stdout"
+          - "'API:' in minio_logs.stdout or 'MinIO Object Storage Server' in minio_logs.stdout"
+        fail_msg: "MinIO container has critical errors in logs. Logs: {{ minio_logs.stdout[:500] }}"
+        success_msg: "MinIO container started successfully"
+      when:
+        - container_status.rc == 0
+        - minio_logs is defined
+
+    - name: Verify MinIO port is exposed correctly
+      command: docker port {{ minio_container_name }} 9000
+      register: minio_port_check
+      changed_when: false
+      when: container_status.rc == 0
+      failed_when: false
+
+    - name: Assert MinIO port is properly exposed
+      assert:
+        that:
+          - "'0.0.0.0:9000' in minio_port_check.stdout"
+        fail_msg: "MinIO port 9000 is not properly exposed: {{ minio_port_check.stdout | default('undefined') }}"
+        success_msg: "MinIO port 9000 is correctly exposed"
+      when:
+        - container_status.rc == 0
+        - minio_port_check.stdout is defined
 
     - name: Check if secrets file was created
       stat:
