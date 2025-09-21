@@ -41,9 +41,11 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
+    depends_on: [minio-nginx]
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     volumes:
       - {{ truenas_cloudflared_config_path | default('/mnt/pool/apps/cloudflared') }}:/etc/cloudflared:ro
     networks: [appnet]
+    # Note: Cloudflare tunnel accesses minio-nginx:9000 internally
