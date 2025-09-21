@@ -115,7 +115,7 @@
   community.docker.docker_compose_v2:
     project_src: /opt/minio
     state: present
-    recreate: always
+    recreate: never
     pull: always
   register: minio_start_result
   retries: 3
