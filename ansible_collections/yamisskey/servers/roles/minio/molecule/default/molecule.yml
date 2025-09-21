@@ -40,7 +40,7 @@ provisioner:
         
         # Mock host services for testing
         host_services:
-          joseph:
+          minio-test-instance:
             minio_api: 9000
         
         # Override some complex operations for testing

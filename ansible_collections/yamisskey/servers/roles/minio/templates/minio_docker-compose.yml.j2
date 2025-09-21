@@ -14,7 +14,7 @@ services:
           cpus: '0.75'      # Guaranteed baseline performance
     # Enhanced healthcheck for stability
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:{{ host_services[inventory_hostname].minio_api }}/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:{{ host_services[inventory_hostname].minio_api | default(9000) }}/minio/health/live"]
       interval: 30s
       timeout: 30s
       retries: 5
