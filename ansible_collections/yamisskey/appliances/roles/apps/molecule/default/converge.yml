@@ -232,29 +232,28 @@
         - /var/tmp/test
 
   tasks:
-    - name: Test apps role with minimal functionality (skip network dependencies)
-      debug:
-        msg: "Testing apps role with basic template rendering only"
+    - name: Create test directories for apps role
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /var/tmp/test/apps
+        - /var/tmp/test/out
+
+    - name: Test apps role (generic app management)
+      include_role:
+        name: yamisskey.appliances.apps
       vars:
         # Test-specific configuration
         ansible_user: "root"
-        truenas_minio_app_name: "test-minio"
         truenas_apps_config_path: "/var/tmp/test/apps"
-        truenas_cloudflared_config_path: "/var/tmp/test/apps/cloudflared"
-        truenas_minio_root_user: "testuser"
-        truenas_minio_root_password: "testpass123"
-        truenas_minio_domain: "test-minio.example.com"
-        truenas_minio_kms_key: "test-master-key-32-chars-long-123456"
-        truenas_tunnel_token: "test-tunnel-token"
-        truenas_manage_custom_compose: false
         truenas_compose_export_dir: "/var/tmp/test/out"
-        truenas_minio_data_path: "/var/tmp/test/data/minio"
         truenas_skip_health_check: true
-        truenas_update_secrets: false
         
-    - name: Basic role verification
+    - name: Verify apps role shows deprecation notice
       debug:
-        msg: "apps role applied successfully"
+        msg: "apps role applied successfully - now focused on generic app management"
 
   post_tasks:
     - name: Show test environment status

@@ -4,9 +4,9 @@
     mc mirror \
       --overwrite \
       --preserve \
-      --workers {{ mc_workers | default(8) }} \
-      {{ source_minio_alias }}/{{ item }}/ \
-      {{ target_minio_alias }}/{{ item }}/
+      --max-workers {{ mc_workers | default(8) }} \
+      {{ source_minio_alias | default('source') }}/{{ item }}/ \
+      {{ target_minio_alias | default('target') }}/{{ item }}/
   loop: "{{ buckets_to_migrate }}"
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
@@ -17,3 +17,7 @@
   changed_when: false
   loop_control:
     label: "{{ item }}"
+  when:
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)

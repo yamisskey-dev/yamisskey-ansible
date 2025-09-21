@@ -1,13 +1,17 @@
 ---
 - name: Final incremental sync (non-destructive)
-  when: perform_incremental_sync | default(true)
+  when:
+    - perform_incremental_sync | default(true)
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)
   shell: |
     mc mirror \
       --overwrite \
       --preserve \
-      --workers {{ mc_workers | default(8) }} \
-      {{ source_minio_alias }}/{{ item }}/ \
-      {{ target_minio_alias }}/{{ item }}/
+      --max-workers {{ mc_workers | default(8) }} \
+      {{ source_minio_alias | default('source') }}/{{ item }}/ \
+      {{ target_minio_alias | default('target') }}/{{ item }}/
   loop: "{{ buckets_to_migrate }}"
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
@@ -19,15 +23,19 @@
     label: "{{ item }}"
 
 - name: Final mirror (destructive sync with --remove)
-  when: perform_final_remove | default(false)
+  when:
+    - perform_final_remove | default(false)
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)
   shell: |
     mc mirror \
       --overwrite \
       --remove \
       --preserve \
-      --workers {{ mc_workers | default(8) }} \
-      {{ source_minio_alias }}/{{ item }}/ \
-      {{ target_minio_alias }}/{{ item }}/
+      --max-workers {{ mc_workers | default(8) }} \
+      {{ source_minio_alias | default('source') }}/{{ item }}/ \
+      {{ target_minio_alias | default('target') }}/{{ item }}/
   loop: "{{ buckets_to_migrate }}"
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"

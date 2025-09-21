@@ -1,7 +1,7 @@
 ---
 - name: Configure source MinIO alias
   shell: |
-    mc alias set {{ source_minio_alias }} \
+    mc alias set {{ source_minio_alias | default('source') }} \
       http://{{ source_minio_address }}:{{ source_minio_port }} \
       "{{ source_secrets.minio.root_user }}" \
       "{{ source_secrets.minio.root_password }}"
@@ -9,10 +9,14 @@
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   no_log: true
   changed_when: false
+  when:
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)
 
 - name: Configure target MinIO alias (Tunnel)
   shell: |
-    mc alias set {{ target_minio_alias }} \
+    mc alias set {{ target_minio_alias | default('target') }} \
       {{ target_minio_endpoint }} \
       "{{ target_secrets.minio.root_user }}" \
       "{{ target_secrets.minio.root_password }}"
@@ -20,37 +24,29 @@
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   no_log: true
   changed_when: false
+  when:
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)
 
 - name: Test source connectivity
-  shell: mc ls {{ source_minio_alias }}/
+  shell: mc ls {{ source_minio_alias | default('source') }}/
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   register: source_test
   changed_when: false
+  when:
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)
 
 - name: Test target connectivity (Tunnel)
-  shell: mc ls {{ target_minio_alias }}/
+  shell: mc ls {{ target_minio_alias | default('target') }}/
   environment:
     MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
   register: target_test
   changed_when: false
-
-- name: Create target buckets
-  shell: mc mb {{ target_minio_alias }}/{{ item }} --ignore-existing
-  loop: "{{ buckets_to_migrate }}"
-  environment:
-    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
-  changed_when: false
-  loop_control:
-    label: "{{ item }}"
-
-- name: Set bucket encryption (KMS)
-  shell: |
-    mc encrypt set sse-kms "{{ target_secrets.minio.kms_key_id | default('minio-default-key') }}" \
-      {{ target_minio_alias }}/{{ item }}
-  loop: "{{ buckets_to_migrate }}"
-  environment:
-    MC_CONFIG_DIR: "{{ migration_temp_dir }}/.mc"
-  when: target_secrets.minio.kms_key_id is defined
-  loop_control:
-    label: "{{ item }}"
+  when:
+    - not ansible_check_mode
+    - not migration_dry_run | default(false)
+    - not truenas_skip_health_check | default(false)

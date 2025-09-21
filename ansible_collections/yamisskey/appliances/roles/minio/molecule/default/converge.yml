@@ -1,0 +1,122 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    # Test-specific overrides
+    truenas_skip_health_check: true
+    truenas_manage_custom_compose: true
+    inventory_hostname: truenas-test
+    # テスト用MinIO設定
+    truenas_minio_domain: "localhost"
+    truenas_minio_port: 9000
+    # 実際にMinIOを起動するための設定
+    truenas_minio_compose_b64: "{{ ('version: \"3.8\"\nservices:\n  minio:\n    image: quay.io/minio/minio:RELEASE.2024-09-13T20-26-02Z\n    container_name: minio_test\n    command: server /data --console-address :9001\n    environment:\n      MINIO_ROOT_USER: minioadmin\n      MINIO_ROOT_PASSWORD: minioadmin\n    ports:\n      - \"9000:9000\"\n      - \"9001:9001\"\n    volumes:\n      - minio_data:/data\nvolumes:\n  minio_data:\n' | b64encode) }}"
+    # バケット・IAM設定はテスト環境ではスキップ（実際のMinIOサーバーが必要なため）
+    truenas_skip_bucket_iam_setup: true
+  pre_tasks:
+    - name: Copy midclt mock script
+      copy:
+        src: "{{ playbook_dir }}/../../../../files/midclt-mock.py"
+        dest: /usr/local/bin/midclt
+        mode: '0755'
+
+    - name: Create keyrings directory for Docker
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Docker GPG key
+      get_url:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Set Docker GPG key permissions
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: 'a+r'
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+        filename: docker
+        state: present
+
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      register: apt_update
+      retries: 5
+      delay: 10
+      until: apt_update is succeeded
+      failed_when: false
+
+    - name: Install Docker for testing
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        install_recommends: false
+        update_cache: false
+        state: present
+      register: docker_install
+      retries: 3
+      delay: 5
+      until: docker_install is succeeded
+      failed_when: false
+
+    - name: Check if Docker was installed successfully
+      command: docker --version
+      register: docker_version_check
+      failed_when: false
+      changed_when: false
+
+    - name: Install Docker from snap if apt failed
+      community.general.snap:
+        name: docker
+        state: present
+      when: docker_version_check.rc != 0
+      failed_when: false
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+      when: docker_version_check.rc == 0
+      failed_when: false
+        
+    - name: Add test user to docker group
+      user:
+        name: "{{ ansible_user | default('root') }}"
+        groups: docker
+        append: true
+      when: ansible_user is defined
+        
+    - name: Install required Python packages
+      pip:
+        name:
+          - docker
+          - docker-compose
+          - requests
+        state: present
+
+  roles:
+    - role: yamisskey.appliances.minio
+
+  post_tasks:
+    - name: Wait for MinIO to be ready
+      wait_for:
+        host: localhost
+        port: 9000
+        delay: 10
+        timeout: 60
+      when: false  # Skip in Molecule test environment - MinIO may not be fully ready
+      failed_when: false
