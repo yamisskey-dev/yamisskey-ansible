@@ -208,6 +208,13 @@ def handle_app(state: Dict[str, Any], method: str, params: List[str]) -> Any:
             })
         return filter_rows(rows, filters)
 
+    if method == "app.config":
+        name = params[0] if params else ""
+        entry = apps.get(name)
+        if entry is None:
+            return {}
+        return entry
+
     if method == "app.create":
         payload = json.loads(params[0]) if params else {}
         name = payload.get("name")

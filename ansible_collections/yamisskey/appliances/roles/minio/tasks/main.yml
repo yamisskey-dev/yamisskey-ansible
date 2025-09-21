@@ -63,14 +63,15 @@
   register: compose_file_result
 
 # 3) Compose をbase64化（APIに流す用）
-- name: Read compose and b64-encode
-  shell: cat {{ truenas_apps_config_path }}/minio/docker-compose.yml | base64 -w 0
-  register: compose_b64_result
+- name: Read compose for encoding
+  slurp:
+    src: "{{ truenas_apps_config_path }}/minio/docker-compose.yml"
+  register: compose_slurp_result
   when: truenas_manage_custom_compose | default(true)
 
 - name: Set compose b64 fact
   set_fact:
-    truenas_minio_compose_b64: "{{ compose_b64_result.stdout }}"
+    truenas_minio_compose_b64: "{{ compose_slurp_result.content }}"
   when: truenas_manage_custom_compose | default(true)
 
 # 4) TrueNAS Custom App への貼り付け可能なcompose出力
@@ -104,10 +105,56 @@
       - app.query
       - "{{ ([['name', '=', truenas_minio_app_name]]) | to_json }}"
   register: app_query
+  changed_when: false
 
 - name: Set app_exists flag
   set_fact:
     truenas_minio_exists: "{{ (app_query.stdout | from_json | length) > 0 }}"
+
+- name: Gather current app configuration
+  when:
+    - truenas_minio_exists
+    - truenas_update_secrets | default(true)
+  command:
+    argv:
+      - midclt
+      - -j
+      - call
+      - app.config
+      - "{{ truenas_minio_app_name }}"
+  register: app_config_raw
+  changed_when: false
+
+- name: Parse current environment configuration
+  when:
+    - truenas_minio_exists
+    - truenas_update_secrets | default(true)
+    - app_config_raw.stdout | default('') | length > 0
+  set_fact:
+    truenas_minio_current_env: "{{ (app_config_raw.stdout | from_json).environment | default({}) }}"
+
+- name: Ensure current environment fact has default
+  when: truenas_update_secrets | default(true)
+  set_fact:
+    truenas_minio_current_env: "{{ truenas_minio_current_env | default({}) }}"
+
+- name: Build desired environment configuration
+  when: truenas_update_secrets | default(true)
+  set_fact:
+    truenas_minio_desired_env:
+      MINIO_ROOT_USER: "{{ truenas_minio_root_user | default(omit, true) }}"
+      MINIO_ROOT_PASSWORD: "{{ truenas_minio_root_password | default(omit, true) }}"
+      MINIO_KMS_SECRET_KEY: "{{ truenas_minio_kms_key | default(omit, true) }}"
+      MINIO_DOMAIN: "{{ truenas_minio_domain | default(omit, true) }}"
+      MINIO_SERVER_URL: "{{ ('https://' ~ truenas_minio_domain) if (truenas_minio_domain is defined) else omit }}"
+      TUNNEL_TOKEN: "{{ truenas_tunnel_token | default(omit, true) }}"
+
+- name: Determine if environment update is required
+  when: truenas_update_secrets | default(true)
+  set_fact:
+    truenas_minio_env_needs_update: >-
+      {{ (truenas_minio_current_env | default({}) | dictsort)
+         != (truenas_minio_desired_env | default({}) | dictsort) }}
 
 - name: Create MinIO Custom App (first time)
   when: not truenas_minio_exists
@@ -151,17 +198,11 @@
       - app.update
       - "{{ truenas_minio_app_name }}"
       - >-
-        {{ {
-             "environment": {
-               "MINIO_ROOT_USER": truenas_minio_root_user,
-               "MINIO_ROOT_PASSWORD": truenas_minio_root_password,
-               "MINIO_KMS_SECRET_KEY": truenas_minio_kms_key,
-               "MINIO_DOMAIN": truenas_minio_domain,
-               "MINIO_SERVER_URL": ("https://" ~ truenas_minio_domain),
-               "TUNNEL_TOKEN": truenas_tunnel_token
-             }
-           } | to_json }}
-  when: truenas_update_secrets | default(true)
+        {{ {"environment": truenas_minio_desired_env} | to_json }}
+  when:
+    - truenas_update_secrets | default(true)
+    - (truenas_minio_desired_env | default({}) | length) > 0
+    - truenas_minio_env_needs_update | default(false)
   no_log: true
   register: app_env_update
 
