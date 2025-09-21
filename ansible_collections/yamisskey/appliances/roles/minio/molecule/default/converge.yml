@@ -7,7 +7,6 @@
     # Test-specific overrides
     truenas_skip_health_check: true
     truenas_manage_custom_compose: true
-    inventory_hostname: truenas-test
     # テスト用MinIO設定
     truenas_minio_domain: "localhost"
     truenas_minio_port: 9000
@@ -18,9 +17,9 @@
   pre_tasks:
     - name: Copy midclt mock script
       copy:
-        src: "{{ playbook_dir }}/../../../../files/midclt-mock.py"
         dest: /usr/local/bin/midclt
         mode: '0755'
+        content: "{{ lookup('file', playbook_dir ~ '/../../../..' ~ '/files/midclt-mock.py') }}"
 
     - name: Create keyrings directory for Docker
       file:
