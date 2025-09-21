@@ -238,4 +238,3 @@
         - mc alias set truenas https://{{ truenas_minio_domain }} {{ truenas_minio_root_user }} {{ truenas_minio_root_password }}
         - バケット作成/ポリシー適用/レプリケーション設定
       ==============================================
-
