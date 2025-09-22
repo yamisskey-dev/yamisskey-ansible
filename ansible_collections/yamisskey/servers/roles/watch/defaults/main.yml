@@ -10,7 +10,6 @@
 watch_services:
   node_exporter: 9100
   cadvisor: 8085
-  blackbox_exporter: 9115
 
 # ==================================================
 # Node Exporter Configuration
@@ -36,16 +35,6 @@ cadvisor:
   container_name: cadvisor
   restart_policy: always
   
-# ==================================================
-# Blackbox Exporter Configuration
-# ==================================================
-blackbox_exporter:
-  enabled: true
-  image: "quay.io/prometheus/blackbox-exporter:latest"
-  port: "{{ watch_services.blackbox_exporter }}"
-  container_name: blackbox_exporter
-  restart_policy: always
-  config_dir: /etc/blackbox_exporter
 
 # ==================================================
 # Monitor Network Configuration

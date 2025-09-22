@@ -68,53 +68,6 @@
         success_msg: "cAdvisor is exposing container metrics correctly"
       when: cadvisor.enabled | default(true)
 
-    - name: Check if Blackbox Exporter container is running
-      community.docker.docker_container_info:
-        name: blackbox_exporter
-      register: blackbox_container
-      failed_when: false
-
-    - name: Verify Blackbox Exporter container status
-      assert:
-        that:
-          - blackbox_container.container.State.Status == "running"
-        fail_msg: "Blackbox Exporter container is not running"
-        success_msg: "Blackbox Exporter container is running correctly"
-      when: 
-        - blackbox_container.exists
-        - blackbox_exporter.enabled | default(true)
-
-    - name: Check Blackbox Exporter HTTP endpoint
-      uri:
-        url: "http://localhost:9115/metrics"
-        method: GET
-        status_code: 200
-      register: blackbox_metrics
-      retries: 3
-      delay: 5
-
-    - name: Verify Blackbox Exporter metrics content
-      assert:
-        that:
-          - "'blackbox_' in blackbox_metrics.content"
-        fail_msg: "Blackbox Exporter metrics do not contain expected content"
-        success_msg: "Blackbox Exporter is exposing metrics correctly"
-
-    - name: Test Blackbox Exporter probe functionality
-      uri:
-        url: "http://localhost:9115/probe?target=localhost&module=http_2xx"
-        method: GET
-        status_code: 200
-      register: blackbox_probe
-      retries: 3
-      delay: 5
-
-    - name: Verify Blackbox Exporter probe response
-      assert:
-        that:
-          - "'probe_success' in blackbox_probe.content"
-        fail_msg: "Blackbox Exporter probe is not working correctly"
-        success_msg: "Blackbox Exporter probe functionality is working"
 
     - name: Check Node Exporter configuration file exists
       stat:
@@ -128,19 +81,6 @@
         fail_msg: "Node Exporter configuration file does not exist"
         success_msg: "Node Exporter configuration file exists"
 
-    - name: Check Blackbox Exporter configuration file exists
-      stat:
-        path: "/etc/blackbox_exporter/blackbox.yml"
-      register: blackbox_config
-      when: blackbox_exporter.enabled | default(true)
-
-    - name: Verify Blackbox Exporter configuration file exists
-      assert:
-        that:
-          - blackbox_config.stat.exists
-        fail_msg: "Blackbox Exporter configuration file does not exist"
-        success_msg: "Blackbox Exporter configuration file exists"
-      when: blackbox_exporter.enabled | default(true)
 
     - name: Check if Node Exporter service is enabled
       systemd:
@@ -161,11 +101,6 @@
       register: node_exporter_process
       failed_when: false
 
-    - name: Check Blackbox Exporter container process
-      shell: "docker ps | grep blackbox_exporter"
-      register: blackbox_process_check
-      failed_when: false
-      when: blackbox_exporter.enabled | default(true)
 
     - name: Check cAdvisor container process
       shell: "docker ps | grep cadvisor"
@@ -187,11 +122,3 @@
           - node_exporter_process.rc == 0
         fail_msg: "Node Exporter process is not running"
         success_msg: "Node Exporter process is running"
-
-    - name: Verify Blackbox Exporter container process
-      assert:
-        that:
-          - blackbox_process_check.rc == 0
-        fail_msg: "Blackbox Exporter container process is not running"
-        success_msg: "Blackbox Exporter container process is running"
-      when: blackbox_exporter.enabled | default(true)
