@@ -133,18 +133,14 @@
   community.docker.docker_compose_v2:
     project_src: "{{ monitor_compose_dir }}"
     state: present
-    pull: true
+    pull: always
     remove_orphans: true
   register: compose_result
   retries: 3
   delay: 5
   until: compose_result is succeeded
   failed_when: false
-
-- name: Wait for services to be ready
-  pause:
-    seconds: 30
-  when: compose_result.changed
+  notify: Wait for monitoring services
 
 - name: Verify Docker monitoring services
   uri:
