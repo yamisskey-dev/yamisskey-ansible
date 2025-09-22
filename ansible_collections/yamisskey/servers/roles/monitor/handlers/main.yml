@@ -4,8 +4,11 @@
   community.docker.docker_compose_v2:
     project_src: "{{ monitor_compose_dir }}"
     state: present
-    restarted: true
+    recreate: always
   listen: "Restart monitoring stack"
+  failed_when: false
+  retries: 2
+  delay: 3
 
 # Wait for services handler
 - name: Wait for monitoring services
