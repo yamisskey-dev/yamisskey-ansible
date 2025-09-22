@@ -173,16 +173,21 @@
         - cadvisor_metrics.status != 200
 
 
-    - name: Check Node Exporter configuration file exists
+    - name: Check Node Exporter configuration file exists (systemd)
       stat:
-        path: "/etc/systemd/system/node_exporter.service"
-      register: node_exporter_config
+        path: "/lib/systemd/system/prometheus-node-exporter.service"
+      register: node_exporter_config_systemd
+
+    - name: Check Node Exporter configuration file exists (custom)
+      stat:
+        path: "/etc/systemd/system/prometheus-node-exporter.service"
+      register: node_exporter_config_custom
 
     - name: Verify Node Exporter configuration file exists
       assert:
         that:
-          - node_exporter_config.stat.exists
-        fail_msg: "Node Exporter configuration file does not exist"
+          - node_exporter_config_systemd.stat.exists or node_exporter_config_custom.stat.exists
+        fail_msg: "Node Exporter configuration file does not exist in /lib/systemd/system/ or /etc/systemd/system/"
         success_msg: "Node Exporter configuration file exists"
 
 
