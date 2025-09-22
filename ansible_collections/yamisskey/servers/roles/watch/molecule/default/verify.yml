@@ -115,6 +115,10 @@
       register: cadvisor_container
       failed_when: false
 
+    - name: Debug cAdvisor container status
+      debug:
+        var: cadvisor_container
+
     - name: Verify cAdvisor container status
       assert:
         that:
@@ -133,15 +137,24 @@
       register: cadvisor_metrics
       retries: 3
       delay: 5
+      failed_when: false
       when: cadvisor.enabled | default(true)
 
     - name: Verify cAdvisor metrics content
       assert:
         that:
+          - cadvisor_metrics.status == 200
           - "'container_' in cadvisor_metrics.content"
-        fail_msg: "cAdvisor metrics do not contain expected content"
+        fail_msg: "cAdvisor metrics do not contain expected content or endpoint is not accessible"
         success_msg: "cAdvisor is exposing container metrics correctly"
-      when: cadvisor.enabled | default(true)
+      when: 
+        - cadvisor.enabled | default(true)
+        - cadvisor_metrics.status is defined
+
+    - name: Skip cAdvisor checks (disabled)
+      debug:
+        msg: "cAdvisor is disabled in test environment, skipping container and metrics checks"
+      when: not (cadvisor.enabled | default(true))
 
 
     - name: Check Node Exporter configuration file exists
