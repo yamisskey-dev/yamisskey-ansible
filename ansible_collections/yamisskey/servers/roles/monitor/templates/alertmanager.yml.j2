@@ -24,6 +24,7 @@ route:
   group_interval: {{ alertmanager_group_interval | default('10s') }}
   repeat_interval: {{ alertmanager_repeat_interval | default('1h') }}
   receiver: 'default'
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   routes:
     # Critical alerts go to critical channels
     - match:
@@ -41,10 +42,17 @@ route:
     - match:
         category: security
       receiver: 'security-alerts'
+{% endif %}
 
 # Receivers configuration
 receivers:
   - name: 'default'
+{% if primary_domain == 'test.local' or primary_domain == 'localhost.localdomain' %}
+    # Test environment: simple console output
+    webhook_configs:
+      - url: 'http://localhost:9093/api/v1/alerts'
+        send_resolved: true
+{% else %}
 {% if alertmanager_slack_webhook_url %}
     slack_configs:
       - api_url: '{{ alertmanager_slack_webhook_url }}'
@@ -58,7 +66,9 @@ receivers:
         title: 'Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
         message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
+{% endif %}
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   - name: 'critical-alerts'
 {% if alertmanager_slack_webhook_url %}
     slack_configs:
@@ -74,7 +84,9 @@ receivers:
         title: '🚨 CRITICAL: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
         message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
+{% endif %}
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   - name: 'misskey-alerts'
 {% if alertmanager_slack_webhook_url %}
     slack_configs:
@@ -89,7 +101,9 @@ receivers:
         title: '🐈 Misskey Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
         message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
+{% endif %}
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   - name: 'infra-alerts'
 {% if alertmanager_slack_webhook_url %}
     slack_configs:
@@ -119,6 +133,7 @@ receivers:
       - webhook_url: '{{ alertmanager_discord_webhook_url }}'
         title: '🔒 Security Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
         message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
+{% endif %}
 {% endif %}
 
 # Inhibit rules (to prevent alert spam)
