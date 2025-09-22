@@ -163,9 +163,13 @@ status:
 			BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); \
 			CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); \
 			JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); \
+			RASPBERRY_IP=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
+			LINODE_IP=$$(tailscale ip -4 linode-prox 2>/dev/null); \
 			[ -n "$$BALTHASAR_IP" ] && echo "   ✅ balthasar: $$BALTHASAR_IP" || echo "   ❌ balthasar: offline"; \
 			[ -n "$$CASPAR_IP" ] && echo "   ✅ caspar: $$CASPAR_IP" || echo "   ❌ caspar: offline"; \
 			[ -n "$$JOSEPH_IP" ] && echo "   ✅ joseph: $$JOSEPH_IP" || echo "   ❌ joseph: offline"; \
+			[ -n "$$RASPBERRY_IP" ] && echo "   ✅ raspberrypi: $$RASPBERRY_IP" || echo "   ❌ raspberrypi: offline"; \
+			[ -n "$$LINODE_IP" ] && echo "   ✅ linode-prox: $$LINODE_IP" || echo "   ❌ linode-prox: offline"; \
 		else echo "   ❌ Tailscale disconnected"; fi \
 	else echo "   ⚠️  Tailscale not installed"; fi
 	@echo ""
