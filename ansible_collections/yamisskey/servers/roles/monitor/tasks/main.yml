@@ -25,6 +25,8 @@
     path: '{{ monitor_compose_dir }}/config/{{ item }}'
     state: directory
     mode: '0755'
+    owner: '65534'
+    group: '65534'
   loop: "{{ config_directories }}"
 
 - name: Create Docker network for monitoring
@@ -36,6 +38,8 @@
     src: prometheus.yml.j2
     dest: '{{ monitor_compose_dir }}/config/prometheus/prometheus.yml'
     mode: '0644'
+    owner: '65534'
+    group: '65534'
   register: prometheus_config
   notify: Restart monitoring stack
 
@@ -44,6 +48,8 @@
     src: alertmanager.yml.j2
     dest: '{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml'
     mode: '0644'
+    owner: '65534'
+    group: '65534'
   register: alertmanager_config
 
 - name: Deploy Blackbox Exporter configuration
@@ -132,11 +138,10 @@
       - prometheus
       - grafana
 
-- name: Stop existing containers if config changed
-  community.docker.docker_container:
-    name: "{{ item }}"
+- name: Stop monitoring stack if config changed
+  community.docker.docker_compose)v2:
+    project_src: "{{ monitor_compose_dir }}"
     state: absent
-  loop: "{{ containers_to_stop }}"
   when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed or (blackbox_config.changed if primary_domain not in ['test.local', 'localhost.localdomain'] else false)
 
 - name: Set config files list for checking
@@ -159,87 +164,26 @@
   when: not item.stat.exists
   loop: "{{ config_files_check.results }}"
 
-- name: Start Prometheus container
-  community.docker.docker_container:
-    name: prometheus
-    image: "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
-    state: started
-    restart_policy: unless-stopped
-    ports:
-      - "{{ monitor_services.prometheus }}:9090"
-    volumes:
-      - "{{ monitor_compose_dir }}/config/prometheus:/etc/prometheus"
-    networks:
-      - name: monitor
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    comparisons:
-      image: strict
-      networks: strict
-  register: prometheus_container
+- name: Start monitoring stack with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitor_compose_dir }}"
+    state: present
+    build: false
+    nocache: false
+    pull: true
+    remove_orphans: true
+  register: compose_result
 
-- name: Start Grafana container
-  community.docker.docker_container:
-    name: grafana
-    image: "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
-    state: started
-    restart_policy: unless-stopped
-    ports:
-      - "{{ monitor_services.grafana }}:3000"
-    env:
-      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password }}"
-    networks:
-      - name: monitor
-    comparisons:
-      image: strict
-      networks: strict
-  register: grafana_container
-
-- name: Start AlertManager container
-  community.docker.docker_container:
-    name: alertmanager
-    image: "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
-    state: started
-    restart_policy: unless-stopped
-    ports:
-      - "{{ monitor_services.alertmanager }}:9093"
-    volumes:
-      - "{{ monitor_compose_dir }}/config/alertmanager:/etc/alertmanager"
-    networks:
-      - name: monitor
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:{{ monitor_services.alertmanager }}'
-    comparisons:
-      image: strict
-      networks: strict
-  register: alertmanager_container
-
-- name: Start Blackbox Exporter container
-  community.docker.docker_container:
-    name: blackbox
-    image: "prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}"
-    state: started
-    restart_policy: unless-stopped
-    ports:
-      - "{{ monitor_services.blackbox | default('9115') }}:9115"
-    volumes:
-      - "{{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter"
-    networks:
-      - name: monitor
-    command:
-      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
-    comparisons:
-      image: strict
-      networks: strict
-  register: blackbox_container
-  when: primary_domain not in ['test.local', 'localhost.localdomain']
+- name: Set container status for later checks
+  set_fact:
+    prometheus_container:
+      changed: "{{ compose_result.changed }}"
+    grafana_container:
+      changed: "{{ compose_result.changed }}"
+    alertmanager_container:
+      changed: "{{ compose_result.changed }}"
+    blackbox_container:
+      changed: "{{ compose_result.changed if primary_domain not in ['test.local', 'localhost.localdomain'] else false }}"
 
 - name: Wait for services to be ready
   pause:
