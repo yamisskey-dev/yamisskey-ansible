@@ -37,10 +37,15 @@ cadvisor:
   
 
 # ==================================================
-# Monitor Network Configuration
+# Network Configuration for Monitor/Watch Coupling
 # ==================================================
+# Each role manages its own network but can reference the other
 monitor_network:
   name: monitor
+  create: true
+
+watch_network:
+  name: watch
   create: true
 
 # ==================================================

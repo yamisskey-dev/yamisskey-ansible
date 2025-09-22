@@ -7,10 +7,20 @@
 # ==================================================
 # Prerequisites Setup
 # ==================================================
-- name: Create monitoring network for watch components
+- name: Create monitor network (for monitor role compatibility)
   community.docker.docker_network:
     name: "{{ monitor_network.name }}"
   when: monitor_network.create | default(true)
+
+- name: Create watch network (for watch role components)
+  community.docker.docker_network:
+    name: "{{ watch_network.name }}"
+  when: watch_network.create | default(true)
+
+- name: Wait for networks to be ready
+  pause:
+    seconds: 5
+  when: monitor_network.create | default(true) or watch_network.create | default(true)
 
 # ==================================================
 # Node Exporter Setup
@@ -72,6 +82,16 @@
 # ==================================================
 - name: cAdvisor container setup
   block:
+    - name: Ensure watch network exists for cAdvisor
+      community.docker.docker_network:
+        name: "{{ watch_network.name }}"
+      when: cadvisor.enabled | default(true)
+
+    - name: Wait for network to be fully ready
+      pause:
+        seconds: 3
+      when: cadvisor.enabled | default(true)
+
     - name: Deploy cAdvisor container
       community.docker.docker_container:
         name: "{{ cadvisor.container_name }}"
@@ -81,7 +101,7 @@
         ports:
           - "{{ cadvisor.port }}:8080"
         networks:
-          - name: "{{ monitor_network.name }}"
+          - name: "{{ watch_network.name }}"
         volumes:
           - "/:/rootfs:ro"
           - "/var/run:/var/run:ro"
@@ -134,6 +154,7 @@
       Watch Role Deployment Summary:
       - Node Exporter: {{ node_exporter_status }}
       - cAdvisor: {{ cadvisor_status }}
-      - Monitoring Network: {{ monitor_network.name }}
+      - Monitor Network: {{ monitor_network.name }}
+      - Watch Network: {{ watch_network.name }}
   tags:
     - always
