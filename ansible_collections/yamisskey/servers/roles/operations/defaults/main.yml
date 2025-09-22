@@ -16,7 +16,8 @@ known_services:
   - minio
   - modsecurity-nginx
   - cloudflared
-  - monitoring
+  - monitor
+  - watch
   - ai
   - cryptpad
   - lemmy

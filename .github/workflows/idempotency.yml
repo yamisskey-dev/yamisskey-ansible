@@ -119,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        playbook: [misskey, minio, monitoring]
+        playbook: [misskey, minio, monitor]
       fail-fast: false
     steps:
       - name: Checkout

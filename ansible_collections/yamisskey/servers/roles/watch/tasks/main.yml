@@ -1,0 +1,191 @@
+---
+# ==================================================
+# Watch Role - System-level Monitoring Components
+# ==================================================
+# This role manages monitoring agents that run directly on host systems
+
+# ==================================================
+# Prerequisites Setup
+# ==================================================
+- name: Create monitoring network for watch components
+  community.docker.docker_network:
+    name: "{{ monitor_network.name }}"
+  when: monitor_network.create | default(true)
+
+# ==================================================
+# Node Exporter Setup
+# ==================================================
+- name: Node Exporter setup
+  block:
+    - name: Install Node Exporter (Debian/Ubuntu)
+      apt:
+        name: "{{ node_exporter.package_name }}"
+        state: present
+        update_cache: yes
+      when: 
+        - node_exporter.enabled | default(true)
+        - ansible_os_family == "Debian"
+        - not (skip_system_checks | select() | list)
+      tags: 
+        - node_exporter
+
+    - name: Install Node Exporter (Gentoo)
+      portage:
+        package: "{{ node_exporter_gentoo.package_name }}"
+        state: present
+      when:
+        - node_exporter.enabled | default(true) 
+        - ansible_os_family == "Gentoo"
+        - not (skip_system_checks | select() | list)
+      tags:
+        - node_exporter
+
+    - name: Start and enable Node Exporter service
+      systemd:
+        name: "{{ node_exporter.service_name }}"
+        state: started
+        enabled: yes
+      when:
+        - node_exporter.enabled | default(true)
+        - ansible_service_mgr | default('') == 'systemd'
+        - not (skip_system_checks | select() | list)
+      tags:
+        - node_exporter
+
+    - name: Verify Node Exporter metrics endpoint
+      uri:
+        url: "http://localhost:{{ node_exporter.port }}/metrics"
+        method: GET
+        status_code: 200
+        timeout: "{{ watch_health_checks.timeout }}"
+      retries: "{{ watch_health_checks.retries }}"
+      delay: "{{ watch_health_checks.delay }}"
+      when:
+        - node_exporter.enabled | default(true)
+        - watch_health_checks.enabled | default(true)
+        - not (skip_system_checks | select() | list)
+      tags:
+        - node_exporter
+
+# ==================================================
+# cAdvisor Setup
+# ==================================================
+- name: cAdvisor container setup
+  block:
+    - name: Deploy cAdvisor container
+      community.docker.docker_container:
+        name: "{{ cadvisor.container_name }}"
+        image: "{{ cadvisor.image }}"
+        state: started
+        restart_policy: "{{ cadvisor.restart_policy }}"
+        ports:
+          - "{{ cadvisor.port }}:8080"
+        networks:
+          - name: "{{ monitor_network.name }}"
+        volumes:
+          - "/:/rootfs:ro"
+          - "/var/run:/var/run:ro"
+          - "/sys:/sys:ro"
+          - "/var/lib/docker/:/var/lib/docker:ro"
+          - "/dev/disk/:/dev/disk:ro"
+        privileged: yes
+        comparisons:
+          image: strict
+          networks: strict
+      when:
+        - cadvisor.enabled | default(true)
+      tags:
+        - cadvisor
+
+  - name: Wait for cAdvisor to be ready
+    pause:
+      seconds: 15
+    when:
+      - cadvisor.enabled | default(true)
+    tags:
+      - cadvisor
+
+  - name: Verify cAdvisor metrics endpoint
+    uri:
+      url: "http://localhost:{{ cadvisor.port }}/metrics"
+      method: GET
+      status_code: 200
+      timeout: "{{ watch_health_checks.timeout }}"
+    retries: "{{ watch_health_checks.retries }}"
+    delay: "{{ watch_health_checks.delay }}"
+    when:
+      - cadvisor.enabled | default(true)
+      - watch_health_checks.enabled | default(true)
+    tags:
+      - cadvisor
+
+# ==================================================
+# Blackbox Exporter Setup
+# ==================================================
+- name: Blackbox Exporter setup
+  block:
+    - name: Create Blackbox Exporter config directory
+      file:
+        path: "{{ blackbox_exporter.config_dir }}"
+        state: directory
+        mode: '0755'
+      when:
+        - blackbox_exporter.enabled | default(true)
+      tags:
+        - blackbox_exporter
+
+    - name: Deploy Blackbox Exporter configuration
+      template:
+        src: blackbox.yml.j2
+        dest: "{{ blackbox_exporter.config_dir }}/blackbox.yml"
+        mode: '0644'
+      register: blackbox_config
+      when:
+        - blackbox_exporter.enabled | default(true)
+      tags:
+        - blackbox_exporter
+
+    - name: Deploy Blackbox Exporter container
+      community.docker.docker_container:
+        name: "{{ blackbox_exporter.container_name }}"
+        image: "{{ blackbox_exporter.image }}"
+        state: started
+        restart_policy: "{{ blackbox_exporter.restart_policy }}"
+        network_mode: host
+        volumes:
+          - "{{ blackbox_exporter.config_dir }}:/config:ro"
+        command: "--config.file=/config/blackbox.yml"
+        comparisons:
+          image: strict
+      when:
+        - blackbox_exporter.enabled | default(true)
+      tags:
+        - blackbox_exporter
+
+    - name: Verify Blackbox Exporter endpoint
+      uri:
+        url: "http://localhost:{{ blackbox_exporter.port }}/probe?target=localhost&module=http_2xx"
+        method: GET
+        status_code: 200
+        timeout: "{{ watch_health_checks.timeout }}"
+      retries: "{{ watch_health_checks.retries }}"
+      delay: "{{ watch_health_checks.delay }}"
+      when:
+        - blackbox_exporter.enabled | default(true)
+        - watch_health_checks.enabled | default(true)
+      tags:
+        - blackbox_exporter
+
+# ==================================================
+# Final Health Summary
+# ==================================================
+- name: Report watch components status
+  debug:
+    msg: |
+      Watch Role Deployment Summary:
+      - Node Exporter: {{ 'ENABLED' if node_exporter.enabled | default(true) else 'DISABLED' }} (Port: {{ node_exporter.port }})
+      - cAdvisor: {{ 'ENABLED' if cadvisor.enabled | default(true) else 'DISABLED' }} (Port: {{ cadvisor.port }})
+      - Blackbox Exporter: {{ 'ENABLED' if blackbox_exporter.enabled | default(true) else 'DISABLED' }} (Port: {{ blackbox_exporter.port }})
+      - Monitoring Network: {{ monitor_network.name }}
+  tags:
+    - always

@@ -22,7 +22,7 @@
     - role: yamisskey.servers.misskey
       tags: [misskey, social]
       
-    - role: yamisskey.servers.monitoring
+    - role: yamisskey.servers.monitor
       tags: [monitoring, observability]
       when: "'monitoring' in group_names or enable_monitoring | default(true) | bool"
       

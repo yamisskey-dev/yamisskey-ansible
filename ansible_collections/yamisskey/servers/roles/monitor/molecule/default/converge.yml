@@ -1,0 +1,42 @@
+---
+- name: Converge Monitor Role
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    # Simplified Docker setup for testing - Docker is already available in the container
+    - name: Install Python pip
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: true
+
+    - name: Install Docker Python packages
+      pip:
+        name:
+          - docker
+          - docker-compose
+
+    - name: Install Docker CLI and Compose
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker socket is accessible
+      file:
+        path: /var/run/docker.sock
+        mode: '0666'
+      ignore_errors: true
+
+  tasks:
+    - name: Apply monitor role
+      include_role:
+        name: yamisskey.servers.monitor
+
+    - name: Debug role application
+      debug:
+        msg: "Monitor role applied successfully"

@@ -397,7 +397,7 @@ make run PLAYBOOK=minio TARGET=appliances
 
 # 4. アプリケーション復旧
 make run PLAYBOOK=misskey
-make run PLAYBOOK=monitoring
+make run PLAYBOOK=monitor
 
 # 5. 外部接続復旧
 make run PLAYBOOK=cloudflared

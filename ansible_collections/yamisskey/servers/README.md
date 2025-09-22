@@ -46,7 +46,7 @@ ansible-galaxy collection install -r requirements.yml
 ### Services & Applications
 - **`misskey`** - Misskey social media platform
 - **`misskey-proxy`** - Reverse proxy configuration for Misskey
-- **`monitoring`** - Prometheus and Grafana monitoring stack
+- **`monitor`** - Prometheus and Grafana monitoring stack
 
 ## 🚀 Usage Examples
 
@@ -73,7 +73,7 @@ ansible-galaxy collection install -r requirements.yml
     - yamisskey.servers.security
     - yamisskey.servers.minio
     - yamisskey.servers.misskey
-    - yamisskey.servers.monitoring
+    - yamisskey.servers.monitor
 ```
 
 ### Using Collection Playbooks

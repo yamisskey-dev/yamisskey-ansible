@@ -23,7 +23,8 @@ tags:
   - minio
   - docker
   - security
-  - monitoring
+  - monitor
+  - watch
   - backup
   - social
   - storage

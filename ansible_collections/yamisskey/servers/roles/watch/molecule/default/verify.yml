@@ -1,0 +1,174 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Check if Node Exporter service is running
+      systemd:
+        name: node_exporter
+        state: started
+      register: node_exporter_service
+      failed_when: false
+
+    - name: Verify Node Exporter service status
+      assert:
+        that:
+          - node_exporter_service.status.ActiveState == "active"
+        fail_msg: "Node Exporter service is not running"
+        success_msg: "Node Exporter service is running correctly"
+
+    - name: Check Node Exporter HTTP endpoint
+      uri:
+        url: "http://localhost:9100/metrics"
+        method: GET
+        status_code: 200
+      register: node_exporter_metrics
+      retries: 3
+      delay: 5
+
+    - name: Verify Node Exporter metrics content
+      assert:
+        that:
+          - "'node_' in node_exporter_metrics.content"
+        fail_msg: "Node Exporter metrics do not contain expected content"
+        success_msg: "Node Exporter is exposing metrics correctly"
+
+    - name: Check if cAdvisor container is running
+      community.docker.docker_container_info:
+        name: cadvisor
+      register: cadvisor_container
+      failed_when: false
+
+    - name: Verify cAdvisor container status
+      assert:
+        that:
+          - cadvisor_container.container.State.Status == "running"
+        fail_msg: "cAdvisor container is not running"
+        success_msg: "cAdvisor container is running correctly"
+      when: cadvisor_container.exists
+
+    - name: Check cAdvisor HTTP endpoint
+      uri:
+        url: "http://localhost:8085/metrics"
+        method: GET
+        status_code: 200
+      register: cadvisor_metrics
+      retries: 3
+      delay: 5
+
+    - name: Verify cAdvisor metrics content
+      assert:
+        that:
+          - "'container_' in cadvisor_metrics.content"
+        fail_msg: "cAdvisor metrics do not contain expected content"
+        success_msg: "cAdvisor is exposing container metrics correctly"
+
+    - name: Check if Blackbox Exporter service is running
+      systemd:
+        name: blackbox_exporter
+        state: started
+      register: blackbox_service
+      failed_when: false
+
+    - name: Verify Blackbox Exporter service status
+      assert:
+        that:
+          - blackbox_service.status.ActiveState == "active"
+        fail_msg: "Blackbox Exporter service is not running"
+        success_msg: "Blackbox Exporter service is running correctly"
+
+    - name: Check Blackbox Exporter HTTP endpoint
+      uri:
+        url: "http://localhost:9115/metrics"
+        method: GET
+        status_code: 200
+      register: blackbox_metrics
+      retries: 3
+      delay: 5
+
+    - name: Verify Blackbox Exporter metrics content
+      assert:
+        that:
+          - "'blackbox_' in blackbox_metrics.content"
+        fail_msg: "Blackbox Exporter metrics do not contain expected content"
+        success_msg: "Blackbox Exporter is exposing metrics correctly"
+
+    - name: Test Blackbox Exporter probe functionality
+      uri:
+        url: "http://localhost:9115/probe?target=localhost&module=http_2xx"
+        method: GET
+        status_code: 200
+      register: blackbox_probe
+      retries: 3
+      delay: 5
+
+    - name: Verify Blackbox Exporter probe response
+      assert:
+        that:
+          - "'probe_success' in blackbox_probe.content"
+        fail_msg: "Blackbox Exporter probe is not working correctly"
+        success_msg: "Blackbox Exporter probe functionality is working"
+
+    - name: Check configuration files exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - "/etc/systemd/system/node_exporter.service"
+        - "/etc/systemd/system/blackbox_exporter.service"
+        - "/etc/blackbox_exporter/blackbox.yml"
+      register: config_files
+
+    - name: Verify all configuration files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Configuration file {{ item.item }} does not exist"
+        success_msg: "Configuration file {{ item.item }} exists"
+      loop: "{{ config_files.results }}"
+
+    - name: Check if services are enabled
+      systemd:
+        name: "{{ item }}"
+        enabled: true
+      loop:
+        - node_exporter
+        - blackbox_exporter
+      register: service_enabled
+      failed_when: false
+
+    - name: Verify services are enabled
+      assert:
+        that:
+          - item.enabled
+        fail_msg: "Service {{ item.item }} is not enabled"
+        success_msg: "Service {{ item.item }} is enabled"
+      loop: "{{ service_enabled.results }}"
+
+    - name: Check process existence
+      shell: "pgrep -f {{ item }}"
+      loop:
+        - node_exporter
+        - blackbox_exporter
+      register: process_check
+      failed_when: false
+
+    - name: Check cAdvisor container process
+      shell: "docker ps | grep cadvisor"
+      register: cadvisor_process_check
+      failed_when: false
+
+    - name: Verify cAdvisor container process
+      assert:
+        that:
+          - cadvisor_process_check.rc == 0
+        fail_msg: "cAdvisor container process is not running"
+        success_msg: "cAdvisor container process is running"
+
+    - name: Verify processes are running
+      assert:
+        that:
+          - item.rc == 0
+        fail_msg: "Process {{ item.item }} is not running"
+        success_msg: "Process {{ item.item }} is running"
+      loop: "{{ process_check.results }}"

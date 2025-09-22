@@ -117,7 +117,7 @@ inventory:
 		if [ -f "$$INV_PATH" ]; then echo "⚠️  Inventory already exists. Creating backup..."; cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-local-$(TIMESTAMP).bak"; fi; \
 		CURRENT_HOST=$$(hostname); CURRENT_USER=$$(whoami); \
 		HOST_IP=$$(ip route get 1.1.1.1 | awk '{print $$7; exit}' 2>/dev/null || hostname -i 2>/dev/null | awk '{print $$1}' || echo "127.0.0.1"); \
-		DOMAIN="$${DOMAIN:-yami.ski}"; NETWORK="$${INTERNAL_NETWORK:-192.168.0.0/24}"; HOST_ROLE="$${HOST_ROLE:-monitoring}"; \
+		DOMAIN="$${DOMAIN:-yami.ski}"; NETWORK="$${INTERNAL_NETWORK:-192.168.0.0/24}"; HOST_ROLE="$${HOST_ROLE:-monitor}"; \
 		echo "🖥️  Detected system information:"; \
 		echo "   - Hostname: $$CURRENT_HOST"; echo "   - User: $$CURRENT_USER"; echo "   - IP: $$HOST_IP"; echo "   - Role: $$HOST_ROLE"; echo "   - Domain: $$DOMAIN"; \
 		echo "📄 Processing local template..."; \

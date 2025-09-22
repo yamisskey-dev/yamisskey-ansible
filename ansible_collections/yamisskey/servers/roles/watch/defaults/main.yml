@@ -1,0 +1,73 @@
+---
+# ==================================================
+# Watch Role - Default Configuration
+# ==================================================
+# System-level monitoring components and exporters
+
+# ==================================================
+# Service Ports Configuration  
+# ==================================================
+watch_services:
+  node_exporter: 9100
+  cadvisor: 8085
+  blackbox_exporter: 9115
+
+# ==================================================
+# Node Exporter Configuration
+# ==================================================
+node_exporter:
+  enabled: true
+  package_name: prometheus-node-exporter  # Ubuntu/Debian
+  service_name: prometheus-node-exporter
+  port: "{{ watch_services.node_exporter }}"
+  
+# Gentoo-specific package names
+node_exporter_gentoo:
+  package_name: prometheus-node_exporter
+  service_name: prometheus-node_exporter
+
+# ==================================================
+# cAdvisor Configuration
+# ==================================================
+cadvisor:
+  enabled: true
+  image: "gcr.io/cadvisor/cadvisor:v0.49.1"
+  port: "{{ watch_services.cadvisor }}"
+  container_name: cadvisor
+  restart_policy: always
+  
+# ==================================================
+# Blackbox Exporter Configuration
+# ==================================================
+blackbox_exporter:
+  enabled: true
+  image: "quay.io/prometheus/blackbox-exporter:latest"
+  port: "{{ watch_services.blackbox_exporter }}"
+  container_name: blackbox_exporter
+  restart_policy: always
+  config_dir: /etc/blackbox_exporter
+
+# ==================================================
+# Monitor Network Configuration
+# ==================================================
+monitor_network:
+  name: monitor
+  create: true
+
+# ==================================================
+# Health Check Configuration
+# ==================================================
+watch_health_checks:
+  enabled: true
+  timeout: 30
+  retries: 3
+  delay: 10
+
+# ==================================================
+# Environment Detection
+# ==================================================
+# Skip certain checks in test environments
+skip_system_checks:
+  - "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined }}"
+  - "{{ ansible_virtualization_type | default('') in ['docker', 'container'] }}"
+  - "{{ ansible_service_mgr | default('') != 'systemd' }}"

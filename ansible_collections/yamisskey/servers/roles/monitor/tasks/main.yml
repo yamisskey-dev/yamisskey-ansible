@@ -1,0 +1,149 @@
+---
+# Docker-based Monitoring Stack for Gentoo/Universal Compatibility
+# This role provides Prometheus, Grafana, and AlertManager as Docker containers
+
+- name: Create monitoring compose directory
+  file:
+    path: '{{ monitor_compose_dir }}'
+    state: directory
+    mode: '0755'
+
+- name: Create monitoring config directories
+  file:
+    path: '{{ monitor_compose_dir }}/config/{{ item }}'
+    state: directory
+    mode: '0755'
+  loop:
+    - prometheus
+    - alertmanager
+    - rules
+
+- name: Create Docker network for monitoring
+  community.docker.docker_network:
+    name: monitor
+
+- name: Deploy Prometheus configuration
+  template:
+    src: prometheus.yml.j2
+    dest: '{{ monitor_compose_dir }}/config/prometheus/prometheus.yml'
+    mode: '0644'
+  register: prometheus_config
+  notify: Restart monitoring stack
+
+- name: Deploy AlertManager configuration
+  template:
+    src: alertmanager.yml.j2
+    dest: '{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml'
+    mode: '0644'
+  register: alertmanager_config
+  notify: Restart monitoring stack
+
+- name: Deploy monitoring Docker Compose
+  template:
+    src: docker-compose.yml.j2
+    dest: '{{ monitor_compose_dir }}/docker-compose.yml'
+    mode: '0644'
+  register: compose_config
+  notify: Restart monitoring stack
+
+- name: Create .env file for Docker Compose
+  copy:
+    content: |
+      DOMAIN={{ primary_domain }}
+      GRAFANA_PASSWORD={{ grafana_admin_password }}
+    dest: '{{ monitor_compose_dir }}/.env'
+    mode: '0600'
+
+- name: Pull Docker images for monitoring stack
+  community.docker.docker_image:
+    name: "{{ item }}"
+    source: pull
+  loop:
+    - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
+    - "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
+    - "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+
+- name: Start Prometheus container
+  community.docker.docker_container:
+    name: prometheus
+    image: "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "{{ monitor_services.prometheus }}:9090"
+    volumes:
+      - "{{ monitor_compose_dir }}/config/prometheus:/etc/prometheus"
+    networks:
+      - name: monitor
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    comparisons:
+      image: strict
+      networks: strict
+  register: prometheus_container
+
+- name: Start Grafana container
+  community.docker.docker_container:
+    name: grafana
+    image: "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "{{ monitor_services.grafana }}:3000"
+    env:
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password }}"
+    networks:
+      - name: monitor
+    comparisons:
+      image: strict
+      networks: strict
+  register: grafana_container
+
+- name: Start AlertManager container
+  community.docker.docker_container:
+    name: alertmanager
+    image: "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "{{ monitor_services.alertmanager }}:9093"
+    volumes:
+      - "{{ monitor_compose_dir }}/config/alertmanager:/etc/alertmanager"
+    networks:
+      - name: monitor
+    comparisons:
+      image: strict
+      networks: strict
+  register: alertmanager_container
+
+- name: Wait for services to be ready
+  pause:
+    seconds: 30
+  when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed
+
+- name: Verify Docker monitoring services
+  uri:
+    url: "http://localhost:{{ item.port }}{{ item.path }}"
+    method: GET
+    status_code: 200
+  loop:
+    - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
+    - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
+    - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
+  register: service_health_checks
+  retries: 5
+  delay: 10
+  failed_when: false
+
+- name: Report service health status
+  debug:
+    msg: |
+      Monitoring Stack Health Status:
+      {% for check in service_health_checks.results %}
+      - {{ check.item.name }}: {{ 'HEALTHY' if check.status == 200 else 'UNHEALTHY (' + (check.status | string) + ')' }}
+      {% endfor %}
