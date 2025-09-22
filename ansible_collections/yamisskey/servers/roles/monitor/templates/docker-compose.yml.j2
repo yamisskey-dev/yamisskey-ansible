@@ -29,7 +29,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
-      - '--web.external-url=https://prometheus.{{ primary_domain }}'
+      - '--web.external-url=http://localhost:{{ monitor_services.prometheus }}'
       - '--web.route-prefix=/'
     networks:
       - monitor
@@ -48,10 +48,10 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=https://grafana.{{ primary_domain }}
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - GF_SECURITY_COOKIE_SECURE=true
-      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
+      - GF_SERVER_ROOT_URL=http://localhost:{{ monitor_services.grafana }}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
+      - GF_SECURITY_COOKIE_SECURE=false
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=false
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       - GF_LOG_LEVEL={{ grafana_log_level | default('info') }}
@@ -73,7 +73,7 @@ services:
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
-      - '--web.external-url=https://alert.{{ primary_domain }}'
+      - '--web.external-url=http://localhost:{{ monitor_services.alertmanager | default("9093") }}'
       - '--web.route-prefix=/'
       - '--cluster.listen-address='
     networks:

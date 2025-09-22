@@ -40,18 +40,17 @@ provisioner:
           alertmanager: 9093
           blackbox: 9115
         
-        # Test monitoring targets
+        # Test monitoring targets (simplified for testing)
         monitor_targets:
           - name: "localhost"
-            host: "host.docker.internal"
+            host: "localhost"
             port: 9100
             role: "test-server"
             cadvisor_port: 8085
         
-        # External endpoints for testing
+        # External endpoints for testing (simplified)
         monitor_external_endpoints:
-          - "https://httpbin.org/status/200"
-          - "https://www.google.com"
+          - "http://localhost:3000"
         
         # Enable health checks
         health_check_timeout: 60
