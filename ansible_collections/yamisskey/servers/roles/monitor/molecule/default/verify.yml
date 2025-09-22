@@ -46,17 +46,20 @@
           - monitor_network.exists
         fail_msg: "Monitor Docker network does not exist"
 
+    - name: Set containers list for verification
+      set_fact:
+        containers_to_verify: "{{ containers_base + (['blackbox'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
+      vars:
+        containers_base:
+          - prometheus
+          - grafana
+          - alertmanager
+
     - name: Check running containers
       community.docker.docker_container_info:
         name: "{{ item }}"
       register: container_info
-      loop:
-        - prometheus
-        - grafana
-        - alertmanager
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
-        - blackbox
-{% endif %}
+      loop: "{{ containers_to_verify }}"
 
     - name: Verify all containers are running
       assert:
