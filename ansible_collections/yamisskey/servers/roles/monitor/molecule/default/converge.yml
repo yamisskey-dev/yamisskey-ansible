@@ -82,6 +82,13 @@
           - docker
           - docker-compose
 
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+      failed_when: false
+
     - name: Ensure Docker CLI plugin directory exists
       file:
         path: /usr/local/lib/docker/cli-plugins
