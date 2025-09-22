@@ -97,27 +97,27 @@
       tags:
         - cadvisor
 
-  - name: Wait for cAdvisor to be ready
-    pause:
-      seconds: 15
-    when:
-      - cadvisor.enabled | default(true)
-    tags:
-      - cadvisor
+    - name: Wait for cAdvisor to be ready
+      pause:
+        seconds: 15
+      when:
+        - cadvisor.enabled | default(true)
+      tags:
+        - cadvisor
 
-  - name: Verify cAdvisor metrics endpoint
-    uri:
-      url: "http://localhost:{{ cadvisor.port }}/metrics"
-      method: GET
-      status_code: 200
-      timeout: "{{ watch_health_checks.timeout }}"
-    retries: "{{ watch_health_checks.retries }}"
-    delay: "{{ watch_health_checks.delay }}"
-    when:
-      - cadvisor.enabled | default(true)
-      - watch_health_checks.enabled | default(true)
-    tags:
-      - cadvisor
+    - name: Verify cAdvisor metrics endpoint
+      uri:
+        url: "http://localhost:{{ cadvisor.port }}/metrics"
+        method: GET
+        status_code: 200
+        timeout: "{{ watch_health_checks.timeout }}"
+      retries: "{{ watch_health_checks.retries }}"
+      delay: "{{ watch_health_checks.delay }}"
+      when:
+        - cadvisor.enabled | default(true)
+        - watch_health_checks.enabled | default(true)
+      tags:
+        - cadvisor
 
 # ==================================================
 # Blackbox Exporter Setup

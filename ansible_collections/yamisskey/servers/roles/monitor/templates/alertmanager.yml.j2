@@ -1,139 +1,131 @@
 # ==================================================
-# Yamisskey Provision - AlertManager Configuration (Test Mode)
+# Yamisskey Provision - AlertManager Configuration
 # ==================================================
-# Minimal configuration for testing
+# Production-ready configuration with Slack and Discord notifications
 
 global:
-  smtp_smarthost: 'localhost:587'
-  smtp_from: 'alertmanager@localhost'
+  smtp_smarthost: '{{ alertmanager_smtp_host }}'
+  smtp_from: '{{ alertmanager_smtp_from }}'
+{% if alertmanager_smtp_username %}
+  smtp_auth_username: '{{ alertmanager_smtp_username }}'
+{% endif %}
+{% if alertmanager_smtp_password %}
+  smtp_auth_password: '{{ alertmanager_smtp_password }}'
+{% endif %}
 
-# Simple routing configuration
+# Routing configuration
 route:
-  group_by: ['alertname']
-  group_wait: 10s
-  group_interval: 10s
-  repeat_interval: 1h
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: {{ alertmanager_group_wait }}
+  group_interval: {{ alertmanager_group_interval }}
+  repeat_interval: {{ alertmanager_repeat_interval }}
   receiver: 'default'
+  routes:
+    # Critical alerts go to critical channels
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+    # Misskey-specific alerts
+    - match:
+        service: misskey
+      receiver: 'misskey-alerts'
+    # Infrastructure alerts
+    - match:
+        category: infrastructure
+      receiver: 'infra-alerts'
+    # Security alerts
+    - match:
+        category: security
+      receiver: 'security-alerts'
 
-# Simple receivers configuration
+# Receivers configuration
 receivers:
   - name: 'default'
-    # No external notifications for testing
-
-  - name: 'critical-alerts'
+{% if alertmanager_slack_webhook_url %}
     slack_configs:
-{% if alertmanager_slack_webhook_url is defined and alertmanager_slack_webhook_url != "" %}
       - api_url: '{{ alertmanager_slack_webhook_url }}'
-        channel: '{{ alertmanager_slack_critical_channel | default("#critical-alerts") }}'
-        username: 'AlertManager - CRITICAL'
-        icon_emoji: ':rotating_light:'
-        title: ':fire: CRITICAL ALERT: {{ "{{ .GroupLabels.alertname }}" }}'
-        text: >-
-          {{ "{{ range .Alerts }}" }}
-          *:fire: CRITICAL ALERT :fire:*
-          *Alert:* {{ "{{ .Annotations.summary }}" }}
-          *Description:* {{ "{{ .Annotations.description }}" }}
-          *Instance:* {{ "{{ .Labels.instance }}" }}
-          *Started:* {{ "{{ .StartsAt }}" }}
-          {{ "{{ end }}" }}
-        color: 'danger'
+        channel: '{{ alertmanager_slack_channel }}'
+        title: 'Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        text: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
-{% if alertmanager_discord_webhook_url is defined and alertmanager_discord_webhook_url != "" %}
+{% if alertmanager_discord_webhook_url %}
     discord_configs:
       - webhook_url: '{{ alertmanager_discord_webhook_url }}'
-        username: 'AlertManager - CRITICAL'
-        title: ':fire: CRITICAL ALERT: {{ "{{ .GroupLabels.alertname }}" }}'
-        message: >-
-          {{ "{{ range .Alerts }}" }}
-          **:fire: CRITICAL ALERT :fire:**
-          **Alert:** {{ "{{ .Annotations.summary }}" }}
-          **Description:** {{ "{{ .Annotations.description }}" }}
-          **Instance:** {{ "{{ .Labels.instance }}" }}
-          **Started:** {{ "{{ .StartsAt }}" }}
-          {{ "{{ end }}" }}
+        title: 'Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
+{% endif %}
+
+  - name: 'critical-alerts'
+{% if alertmanager_slack_webhook_url %}
+    slack_configs:
+      - api_url: '{{ alertmanager_slack_webhook_url }}'
+        channel: '{{ alertmanager_slack_critical_channel }}'
+        title: '🚨 CRITICAL: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        text: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
+        color: 'danger'
+{% endif %}
+{% if alertmanager_discord_webhook_url %}
+    discord_configs:
+      - webhook_url: '{{ alertmanager_discord_webhook_url }}'
+        title: '🚨 CRITICAL: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
 
   - name: 'misskey-alerts'
+{% if alertmanager_slack_webhook_url %}
     slack_configs:
-{% if alertmanager_slack_webhook_url is defined and alertmanager_slack_webhook_url != "" %}
       - api_url: '{{ alertmanager_slack_webhook_url }}'
-        channel: '{{ alertmanager_slack_misskey_channel | default("#misskey-alerts") }}'
-        username: 'AlertManager - Misskey'
-        icon_emoji: ':bird:'
-        title: 'Misskey Alert: {{ "{{ .GroupLabels.alertname }}" }}'
-        text: >-
-          {{ "{{ range .Alerts }}" }}
-          *Misskey Service Alert*
-          *Alert:* {{ "{{ .Annotations.summary }}" }}
-          *Description:* {{ "{{ .Annotations.description }}" }}
-          *Service:* {{ "{{ .Labels.service }}" }}
-          *Instance:* {{ "{{ .Labels.instance }}" }}
-          {{ "{{ end }}" }}
-        color: 'warning'
+        channel: '{{ alertmanager_slack_misskey_channel }}'
+        title: '🐈 Misskey Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        text: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
-{% if alertmanager_discord_webhook_url is defined and alertmanager_discord_webhook_url != "" %}
+{% if alertmanager_discord_webhook_url %}
     discord_configs:
       - webhook_url: '{{ alertmanager_discord_webhook_url }}'
-        username: 'AlertManager - Misskey'
-        title: ':bird: Misskey Alert: {{ "{{ .GroupLabels.alertname }}" }}'
-        message: >-
-          {{ "{{ range .Alerts }}" }}
-          **Misskey Service Alert**
-          **Alert:** {{ "{{ .Annotations.summary }}" }}
-          **Description:** {{ "{{ .Annotations.description }}" }}
-          **Service:** {{ "{{ .Labels.service }}" }}
-          **Instance:** {{ "{{ .Labels.instance }}" }}
-          {{ "{{ end }}" }}
+        title: '🐈 Misskey Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
 
-  - name: 'infrastructure-alerts'
+  - name: 'infra-alerts'
+{% if alertmanager_slack_webhook_url %}
     slack_configs:
-{% if alertmanager_slack_webhook_url is defined and alertmanager_slack_webhook_url != "" %}
       - api_url: '{{ alertmanager_slack_webhook_url }}'
-        channel: '{{ alertmanager_slack_infra_channel | default("#infrastructure") }}'
-        username: 'AlertManager - Infrastructure'
-        icon_emoji: ':gear:'
-        title: 'Infrastructure Alert: {{ "{{ .GroupLabels.alertname }}" }}'
-        text: >-
-          {{ "{{ range .Alerts }}" }}
-          *Infrastructure Alert*
-          *Alert:* {{ "{{ .Annotations.summary }}" }}
-          *Description:* {{ "{{ .Annotations.description }}" }}
-          *Component:* {{ "{{ .Labels.job }}" }}
-          *Instance:* {{ "{{ .Labels.instance }}" }}
-          {{ "{{ end }}" }}
-        color: 'good'
+        channel: '{{ alertmanager_slack_infra_channel }}'
+        title: '🏗️ Infrastructure Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        text: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
+{% endif %}
+{% if alertmanager_discord_webhook_url %}
+    discord_configs:
+      - webhook_url: '{{ alertmanager_discord_webhook_url }}'
+        title: '🏗️ Infrastructure Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
 
   - name: 'security-alerts'
+{% if alertmanager_slack_webhook_url %}
     slack_configs:
-{% if alertmanager_slack_webhook_url is defined and alertmanager_slack_webhook_url != "" %}
       - api_url: '{{ alertmanager_slack_webhook_url }}'
-        channel: '{{ alertmanager_slack_security_channel | default("#security-alerts") }}'
-        username: 'AlertManager - SECURITY'
-        icon_emoji: ':shield:'
-        title: ':shield: SECURITY ALERT: {{ "{{ .GroupLabels.alertname }}" }}'
-        text: >-
-          {{ "{{ range .Alerts }}" }}
-          *:shield: SECURITY ALERT :shield:*
-          *Alert:* {{ "{{ .Annotations.summary }}" }}
-          *Description:* {{ "{{ .Annotations.description }}" }}
-          *Source:* {{ "{{ .Labels.instance }}" }}
-          *Started:* {{ "{{ .StartsAt }}" }}
-          {{ "{{ end }}" }}
-        color: 'danger'
+        channel: '{{ alertmanager_slack_security_channel }}'
+        title: '🔒 Security Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        text: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
+        color: 'warning'
 {% endif %}
-{% if alertmanager_discord_webhook_url is defined and alertmanager_discord_webhook_url != "" %}
+{% if alertmanager_discord_webhook_url %}
     discord_configs:
       - webhook_url: '{{ alertmanager_discord_webhook_url }}'
-        username: 'AlertManager - SECURITY'
-        title: ':shield: SECURITY ALERT: {{ "{{ .GroupLabels.alertname }}" }}'
-        message: >-
-          {{ "{{ range .Alerts }}" }}
-          **:shield: SECURITY ALERT :shield:**
-          **Alert:** {{ "{{ .Annotations.summary }}" }}
-          **Description:** {{ "{{ .Annotations.description }}" }}
-          **Source:** {{ "{{ .Labels.instance }}" }}
-          **Started:** {{ "{{ .StartsAt }}" }}
-          {{ "{{ end }}" }}
+        title: '🔒 Security Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
+        message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
+
+# Inhibit rules (to prevent alert spam)
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+  - source_match:
+      alertname: 'NodeDown'
+    target_match_re:
+      alertname: 'Node.*'
+    equal: ['instance']
