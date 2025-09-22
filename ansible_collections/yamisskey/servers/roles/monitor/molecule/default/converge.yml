@@ -30,7 +30,7 @@
       file:
         path: /var/run/docker.sock
         mode: '0666'
-      ignore_errors: true
+      failed_when: false
 
   tasks:
     - name: Apply monitor role

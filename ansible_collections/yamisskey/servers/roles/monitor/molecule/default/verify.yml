@@ -35,7 +35,7 @@
 
     # Docker Container Tests
     - name: Check if Docker network exists
-      docker_network_info:
+      community.docker.docker_network_info:
         name: "monitor"
       register: monitor_network
 
@@ -46,7 +46,7 @@
         fail_msg: "Monitor Docker network does not exist"
 
     - name: Check running containers
-      docker_container_info:
+      community.docker.docker_container_info:
         name: "{{ item }}"
       register: container_info
       loop:
