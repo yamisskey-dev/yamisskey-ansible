@@ -156,6 +156,7 @@
         - cadvisor.enabled | default(true)
         - cadvisor_metrics is defined
         - cadvisor_metrics.status is defined
+        - cadvisor_metrics.status == 200
 
     - name: Skip cAdvisor checks (disabled)
       debug:
@@ -167,7 +168,9 @@
         msg: "cAdvisor metrics endpoint is not accessible, skipping metrics content verification"
       when: 
         - cadvisor.enabled | default(true)
-        - cadvisor_metrics is not defined
+        - cadvisor_metrics is defined
+        - cadvisor_metrics.status is defined
+        - cadvisor_metrics.status != 200
 
 
     - name: Check Node Exporter configuration file exists
