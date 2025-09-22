@@ -1,5 +1,5 @@
 .PHONY: help install inventory run check list logs backup deploy test
-.PHONY: build publish sanity
+.PHONY: build publish sanity vault
 
 ## Configuration - Modern Collections Architecture
 COLLECTION_NS := yamisskey
@@ -254,6 +254,135 @@ test:
 		for r in $$ROLES; do role_name=$$(basename "$$r"); echo "📋 Testing $$role_name..."; (cd "$$r" && $(MOLECULE) $$SUBCMD); if [ -n "$$EXTRA" ]; then (cd "$$r" && $(MOLECULE) $$EXTRA); fi; done; \
 	fi
 
+# === Enterprise Vault Management ===
+vault: ## Enterprise vault management with OPERATION parameter
+	@OPERATION_EFF="$(OPERATION)"; \
+	if [ -z "$$OPERATION_EFF" ]; then \
+		echo "🔐 Enterprise Ansible Vault Management"; \
+		echo "==========================================="; \
+		echo "Usage: make vault OPERATION=<operation> [TARGET=servers]"; \
+		echo ""; \
+		echo "Available Operations:"; \
+		echo "  create      Create new vault from template"; \
+		echo "  edit        Edit encrypted vault (secure)"; \
+		echo "  encrypt     Encrypt vault.yml"; \
+		echo "  decrypt     Decrypt vault.yml (temporary)"; \
+		echo "  rekey       Change vault password"; \
+		echo "  view        View vault contents (safe)"; \
+		echo "  status      Check vault encryption status"; \
+		echo "  backup      Create encrypted vault backup"; \
+		echo "  validate    Validate vault structure"; \
+		echo ""; \
+		echo "Examples:"; \
+		echo "  make vault OPERATION=create TARGET=servers"; \
+		echo "  make vault OPERATION=edit TARGET=appliances"; \
+		echo "  make vault OPERATION=status"; \
+		exit 0; \
+	fi; \
+	case "$$OPERATION_EFF" in \
+		create) \
+			if [ -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "⚠️  vault.yml already exists. Use 'make vault OPERATION=edit' instead."; \
+				exit 1; \
+			fi; \
+			echo "🔧 Creating new vault from template..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml.example" ]; then \
+				echo "❌ Template not found: $(DEPLOY_DIR)/group_vars/vault.yml.example"; \
+				exit 1; \
+			fi; \
+			cp "$(DEPLOY_DIR)/group_vars/vault.yml.example" "$(DEPLOY_DIR)/group_vars/vault.yml"; \
+			echo "✅ Vault template created for $(TARGET). Edit with: make vault OPERATION=edit TARGET=$(TARGET)"; \
+			;; \
+		edit) \
+			echo "🔐 Opening $(TARGET) vault for editing..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "❌ vault.yml not found. Create with: make vault OPERATION=create TARGET=$(TARGET)"; \
+				exit 1; \
+			fi; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" edit group_vars/vault.yml; \
+			;; \
+		encrypt) \
+			echo "🔒 Encrypting $(TARGET) vault..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "❌ vault.yml not found"; \
+				exit 1; \
+			fi; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" encrypt group_vars/vault.yml; \
+			echo "✅ Vault encrypted successfully"; \
+			;; \
+		decrypt) \
+			echo "⚠️  WARNING: This will decrypt $(TARGET) vault.yml in place!"; \
+			echo "Press Enter to continue or Ctrl+C to abort..."; \
+			read; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" decrypt group_vars/vault.yml; \
+			echo "🔓 Vault decrypted. Remember to re-encrypt!"; \
+			;; \
+		rekey) \
+			echo "🔑 Changing $(TARGET) vault password..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "❌ vault.yml not found"; \
+				exit 1; \
+			fi; \
+			echo "Creating backup of current vault..."; \
+			cp "$(DEPLOY_DIR)/group_vars/vault.yml" "$(BACKUP_DIR)/$(TARGET)-vault-$(TIMESTAMP).bak"; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" rekey group_vars/vault.yml; \
+			echo "✅ Vault password changed successfully"; \
+			;; \
+		view) \
+			echo "👁️  Viewing $(TARGET) vault contents..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "❌ vault.yml not found"; \
+				exit 1; \
+			fi; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" view group_vars/vault.yml; \
+			;; \
+		status) \
+			echo "📊 $(TARGET) Vault Status Check"; \
+			echo "================================"; \
+			if [ -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				if head -n 1 "$(DEPLOY_DIR)/group_vars/vault.yml" | grep -q '$$ANSIBLE_VAULT'; then \
+					echo "✅ vault.yml: ENCRYPTED"; \
+				else \
+					echo "⚠️  vault.yml: UNENCRYPTED (SECURITY RISK!)"; \
+				fi; \
+			else \
+				echo "❌ vault.yml: NOT FOUND"; \
+				echo "💡 Create with: make vault OPERATION=create TARGET=$(TARGET)"; \
+			fi; \
+			if [ -f "$(DEPLOY_DIR)/group_vars/vault.yml.example" ]; then \
+				echo "✅ vault.yml.example: AVAILABLE"; \
+			else \
+				echo "⚠️  vault.yml.example: MISSING"; \
+			fi; \
+			;; \
+		backup) \
+			echo "💾 Creating $(TARGET) vault backup..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "❌ vault.yml not found"; \
+				exit 1; \
+			fi; \
+			cp "$(DEPLOY_DIR)/group_vars/vault.yml" "$(BACKUP_DIR)/$(TARGET)-vault-$(TIMESTAMP).yml"; \
+			echo "✅ Backup created: $(BACKUP_DIR)/$(TARGET)-vault-$(TIMESTAMP).yml"; \
+			;; \
+		validate) \
+			echo "🔍 Validating $(TARGET) vault structure..."; \
+			if [ ! -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+				echo "❌ vault.yml not found"; \
+				exit 1; \
+			fi; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" view group_vars/vault.yml | \
+			python3 -c "import yaml,sys; yaml.safe_load(sys.stdin); print('✅ Valid YAML structure')"; \
+			echo "🔍 Checking required vault variables..."; \
+			cd $(DEPLOY_DIR) && "$(SHIM_DIR)/ansible-vault" view group_vars/vault.yml | \
+			python3 -c "import yaml,sys; data=yaml.safe_load(sys.stdin); required=['vault_cloudflare_api_token','vault_minio_root_user']; missing=[k for k in required if k not in data]; print('✅ All required variables present' if not missing else f'❌ Missing: {missing}')"; \
+			;; \
+		*) \
+			echo "❌ Invalid operation: $$OPERATION_EFF"; \
+			echo "Available operations: create, edit, encrypt, decrypt, rekey, view, status, backup, validate"; \
+			exit 1; \
+			;; \
+	esac
+
 help:
 	@echo "🚀 yamisskey-provision: Unified Ansible Infrastructure Management"
 	@echo "================================================================="
@@ -261,6 +390,12 @@ help:
 	@echo "📦 Setup & Installation"
 	@echo "  make install                         Install uv toolchain + Galaxy collections"
 	@echo "  make inventory [TARGET=servers]      Create inventory from template"
+	@echo ""
+	@echo "🔐 Vault Management"
+	@echo "  make vault                           Show vault operations"
+	@echo "  make vault OPERATION=create          Create vault from template"
+	@echo "  make vault OPERATION=edit            Edit encrypted vault securely"
+	@echo "  make vault OPERATION=status          Check encryption status"
 	@echo ""
 	@echo "🔍 Discovery & Status"
 	@echo "  make status                          Health check (Tailscale, DNS, services)"
@@ -281,10 +416,12 @@ help:
 	@echo "  make logs                            View recent log files"
 	@echo ""
 	@echo "⚙️ Common Usage Examples"
-	@echo "  make run PLAYBOOK=common LIMIT=caspar          # Run common setup on caspar"
-	@echo "  make secure PLAYBOOK=monitor LIMIT=caspar      # Secure monitor deployment"
-	@echo "  make check PLAYBOOK=security TARGET=servers    # Preview security changes"
-	@echo "  make deploy PLAYBOOKS='common security'        # Multi-stage deployment"
+	@echo "  make vault OPERATION=create TARGET=servers   # Create servers vault"
+	@echo "  make vault OPERATION=edit TARGET=appliances  # Edit appliances vault"
+	@echo "  make run PLAYBOOK=common LIMIT=caspar        # Run common setup on caspar"
+	@echo "  make secure PLAYBOOK=monitor LIMIT=caspar    # Secure monitor deployment"
+	@echo "  make check PLAYBOOK=security TARGET=servers  # Preview security changes"
+	@echo "  make deploy PLAYBOOKS='common security'      # Multi-stage deployment"
 	@echo ""
 	@echo "📋 Environment Variables"
 	@echo "  TARGET     servers|appliances (default: servers)"
