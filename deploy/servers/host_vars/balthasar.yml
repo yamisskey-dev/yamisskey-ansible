@@ -5,9 +5,3 @@
 # Service-specific configurations
 modsecurity_nginx_port: "{{ host_services.balthasar.modsecurity_nginx }}"
 misskey_port: "{{ host_services.balthasar.misskey }}"
-
-# Environment-specific settings
-ansible_become_password: "{{ vault_balthasar_sudo_password | default('changeme') }}"
-
-# Vault-encrypted secrets (use ansible-vault encrypt for production)
-# vault_balthasar_sudo_password: "actual_password_here"
