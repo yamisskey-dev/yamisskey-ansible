@@ -118,7 +118,9 @@ receivers:
         title: '🏗️ Infrastructure Alert: {% raw %}{{ .GroupLabels.alertname }}{% endraw %}'
         message: '{% raw %}{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}{% endraw %}'
 {% endif %}
+{% endif %}
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   - name: 'security-alerts'
 {% if alertmanager_slack_webhook_url %}
     slack_configs:

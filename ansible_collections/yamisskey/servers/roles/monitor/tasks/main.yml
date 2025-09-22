@@ -129,82 +129,32 @@
     source: pull
   loop: "{{ docker_images }}"
 
-- name: Set containers list for stopping
-  set_fact:
-    containers_to_stop: "{{ containers_base + (['blackbox'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
-  vars:
-    containers_base:
-      - alertmanager
-      - prometheus
-      - grafana
-
-- name: Stop monitoring stack if config changed
-  community.docker.docker_compose_v2:
-    project_src: "{{ monitor_compose_dir }}"
-    state: absent
-  when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed or (blackbox_config.changed if primary_domain not in ['test.local', 'localhost.localdomain'] else false)
-
-- name: Set config files list for checking
-  set_fact:
-    config_files_to_check: "{{ config_files_base + ([monitor_compose_dir + '/config/blackbox/blackbox.yml'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
-  vars:
-    config_files_base:
-      - "{{ monitor_compose_dir }}/config/prometheus/prometheus.yml"
-      - "{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml"
-
-- name: Ensure config files exist before starting containers
-  stat:
-    path: "{{ item }}"
-  register: config_files_check
-  loop: "{{ config_files_to_check }}"
-
-- name: Verify all config files exist
-  fail:
-    msg: "Missing configuration file: {{ item.item }}"
-  when: not item.stat.exists
-  loop: "{{ config_files_check.results }}"
-
 - name: Start monitoring stack with Docker Compose
   community.docker.docker_compose_v2:
     project_src: "{{ monitor_compose_dir }}"
     state: present
-    build: false
-    nocache: false
     pull: true
     remove_orphans: true
   register: compose_result
-
-- name: Set container status for later checks
-  set_fact:
-    prometheus_container:
-      changed: "{{ compose_result.changed }}"
-    grafana_container:
-      changed: "{{ compose_result.changed }}"
-    alertmanager_container:
-      changed: "{{ compose_result.changed }}"
-    blackbox_container:
-      changed: "{{ compose_result.changed if primary_domain not in ['test.local', 'localhost.localdomain'] else false }}"
+  retries: 3
+  delay: 5
+  until: compose_result is succeeded
+  failed_when: false
 
 - name: Wait for services to be ready
   pause:
     seconds: 30
-  when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed or (blackbox_container.changed if primary_domain not in ['test.local', 'localhost.localdomain'] else false)
-
-- name: Set health check services list
-  set_fact:
-    health_check_services: "{{ health_check_base + ([{'port': monitor_services.blackbox | default('9115'), 'name': 'blackbox', 'path': '/-/healthy'}] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
-  vars:
-    health_check_base:
-      - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
-      - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
-      - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
+  when: compose_result.changed
 
 - name: Verify Docker monitoring services
   uri:
     url: "http://localhost:{{ item.port }}{{ item.path }}"
     method: GET
     status_code: 200
-  loop: "{{ health_check_services }}"
+  loop:
+    - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
+    - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
+    - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
   register: service_health_checks
   retries: 5
   delay: 10
