@@ -30,7 +30,7 @@
         - node_exporter
 
     - name: Install Node Exporter (Gentoo)
-      portage:
+      community.general.portage:
         package: "{{ node_exporter_gentoo.package_name }}"
         state: present
       when:
