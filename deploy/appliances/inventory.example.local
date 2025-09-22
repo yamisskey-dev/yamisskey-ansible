@@ -1,0 +1,190 @@
+# ========================================
+# TrueNAS Scale Local Self-Provisioning Inventory Template
+# Generated: TIMESTAMP_PLACEHOLDER
+# Hostname: HOSTNAME_PLACEHOLDER (TrueNAS Scale)
+# ========================================
+
+[truenas]
+localhost ansible_connection=local ansible_become=true
+
+[joseph]
+localhost ansible_connection=local ansible_become=true
+
+[storage_appliances:children]
+truenas
+joseph
+
+[local]
+localhost ansible_connection=local ansible_become=true
+
+# ========================================
+# Global Variables - ローカル実行用設定
+# ========================================
+[all:vars]
+# --- Basic Connection Settings ---
+ansible_user=USER_PLACEHOLDER
+ansible_python_interpreter=/usr/bin/python3
+ansible_become=true
+ansible_become_method=sudo
+ansible_become_user=root
+
+# --- TrueNAS API Configuration (ローカル実行用) ---
+truenas_api_url="http://localhost"
+truenas_api_key="{{ vault_truenas_api_key }}"
+truenas_api_timeout=10
+truenas_health_check_timeout=30
+truenas_health_check_retries=10
+truenas_health_check_delay=15
+
+# --- Storage Pool Configuration ---
+truenas_pool_name=tank
+truenas_minio_data_path="/mnt/{{ truenas_pool_name }}/minio"
+truenas_cloudflared_config_path="/mnt/{{ truenas_pool_name }}/cloudflared"
+truenas_apps_config_path="/mnt/{{ truenas_pool_name }}/apps-config"
+truenas_backup_path="/mnt/{{ truenas_pool_name }}/backups"
+
+# --- Domain & Network Configuration ---
+primary_domain=DOMAIN_PLACEHOLDER
+truenas_minio_domain="drive.DOMAIN_PLACEHOLDER"
+internal_network=NETWORK_PLACEHOLDER
+truenas_internal_ip=HOST_IP_PLACEHOLDER
+
+# --- Cloudflare Tunnel Configuration ---
+cloudflare_account_id="{{ vault_cloudflare_account_id }}"
+cloudflare_api_token="{{ vault_cloudflare_api_token }}"
+cloudflare_zone_id="{{ vault_cloudflare_zone_id }}"
+truenas_tunnel_id="{{ vault_truenas_tunnel_id }}"
+truenas_tunnel_token="{{ vault_truenas_tunnel_token }}"
+truenas_tunnel_credentials="{{ vault_truenas_tunnel_credentials }}"
+
+# --- MinIO Configuration ---
+truenas_minio_root_user="{{ vault_minio_root_user }}"
+truenas_minio_root_password="{{ vault_minio_root_password }}"
+truenas_minio_kms_key="{{ vault_minio_kms_secret_key }}"
+minio_region="ap-northeast-3"
+minio_api_port=9000
+minio_console_port=9001
+
+# --- Security & Backup Configuration ---
+truenas_backup_config=true
+truenas_update_secrets=true
+truenas_manage_custom_compose=true
+enable_bucket_versioning=true
+enable_minimal_ilm=true
+
+# --- Application Deployment Settings ---
+truenas_minio_app_name="minio-cloudflared"
+truenas_minio_version="RELEASE.2025-01-01T00-00-00Z"
+truenas_cloudflared_version="latest"
+truenas_app_deploy_retries=12
+truenas_app_deploy_delay=10
+
+# ========================================
+# TrueNAS-Specific Configuration (ローカル実行)
+# ========================================
+
+[truenas:vars]
+# --- Platform Identification ---
+minio_platform=truenas
+ansible_connection=local
+
+# --- ZFS Configuration ---
+truenas_zfs_compression=lz4
+truenas_zfs_atime=off
+truenas_zfs_recordsize_minio=1M
+
+# --- Snapshot Configuration ---
+truenas_snapshot_retention_days=30
+truenas_snapshot_hour=2
+
+# --- Security Settings ---
+truenas_file_mode_config="0644"
+truenas_file_mode_secrets="0600"
+truenas_directory_mode="0755"
+
+# --- Resource Limits ---
+truenas_minio_memory_limit="4G"
+truenas_minio_cpu_limit="2.0"
+truenas_minio_memory_reservation="1G"
+
+# --- Health Check Configuration ---
+truenas_compose_healthcheck_interval="30s"
+truenas_compose_healthcheck_timeout="20s"
+truenas_compose_healthcheck_retries=3
+truenas_compose_healthcheck_start_period="60s"
+
+# --- Migration Settings (ローカル実行用) ---
+target_minio_alias="truenas-local"
+target_minio_endpoint="http://localhost:{{ minio_api_port }}"
+mc_workers=8
+perform_cutover=false
+
+# --- CORS Configuration ---
+cors_allowed_origins=["https://{{ primary_domain }}", "https://*.{{ primary_domain }}"]
+minio_bucket_name_for_misskey="files"
+minio_bucket_name_for_outline="assets"
+
+# --- Dataset Management ---
+truenas_datasets:
+  - name: "minio"
+    owner: "root"
+    group: "root" 
+    mode: "0755"
+  - name: "cloudflared"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  - name: "apps-config"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+
+# ========================================
+# Environment-Specific Overrides (ローカル実行)
+# ========================================
+
+# --- Local Production Settings ---
+environment=production
+debug_mode=false
+truenas_cloudflared_log_level="info"
+truenas_cloudflared_protocol="http2"
+truenas_cloudflared_connect_timeout="2s"
+truenas_cloudflared_keep_alive_timeout="15s"
+
+# ========================================
+# Local Self-Provisioning Settings
+# ========================================
+
+# --- Host Information ---
+host_hostname=HOSTNAME_PLACEHOLDER
+host_ip=HOST_IP_PLACEHOLDER
+auto_generated=true
+generated_date=GENERATED_DATE_PLACEHOLDER
+
+# --- Execution Mode ---
+deployment_mode=self_provisioning
+ansible_host_key_checking=false
+ansible_ssh_host_key_checking=false
+
+# ========================================
+# 必須変数チェック用コメント (ローカル実行)
+# ========================================
+# 以下の Ansible Vault 暗号化変数が group_vars/vault.yml に必須:
+#
+# TrueNAS API:
+# - vault_truenas_api_key
+#
+# Cloudflare:
+# - vault_cloudflare_account_id
+# - vault_cloudflare_api_token
+# - vault_cloudflare_zone_id
+# - vault_truenas_tunnel_id
+# - vault_truenas_tunnel_token
+# - vault_truenas_tunnel_credentials
+#
+# MinIO:
+# - vault_minio_root_user
+# - vault_minio_root_password
+# - vault_minio_kms_secret_key
+#
+# Note: ローカル実行時はTrueNAS APIはlocalhostで接続されます
