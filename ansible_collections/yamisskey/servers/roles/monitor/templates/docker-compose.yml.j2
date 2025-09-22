@@ -94,3 +94,6 @@ services:
       - monitor
     restart: unless-stopped
     user: "65534:65534"
+    depends_on:
+      - prometheus
+      - grafana

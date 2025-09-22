@@ -89,14 +89,14 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          # Core Services Health Checks
-          - http://grafana:3000/api/health
-          - http://alertmanager:9093/-/healthy
 {% if monitor_external_endpoints is defined %}
           # External Service Health Checks
 {% for endpoint in monitor_external_endpoints %}
           - {{ endpoint }}
 {% endfor %}
+{% else %}
+          # Default test endpoint
+          - http://localhost:3000
 {% endif %}
 {% if primary_domain != 'localhost.localdomain' and primary_domain != 'test.local' %}
           # Domain Health Checks
