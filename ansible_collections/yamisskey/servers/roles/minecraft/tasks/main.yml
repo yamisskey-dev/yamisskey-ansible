@@ -65,7 +65,7 @@
         minecraft_existing_secrets: '{{ minecraft_secrets_raw.content | b64decode | from_yaml }}'
       when:
         - minecraft_secrets_raw is defined
-        - minecraft_secrets_raw.failed | default(false) | bool == false
+        - not (minecraft_secrets_raw.failed | default(false) | bool)
         - minecraft_secrets_raw.content is defined
       failed_when: false
 

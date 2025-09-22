@@ -47,7 +47,7 @@
       when:
         - synapse_secrets_file_stat.stat.exists
         - synapse_existing_secrets_raw is defined
-        - synapse_existing_secrets_raw.failed | default(false) | bool == false
+        - not (synapse_existing_secrets_raw.failed | default(false) | bool)
         - synapse_existing_secrets_raw.content is defined
       failed_when: false
 
