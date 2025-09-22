@@ -66,7 +66,6 @@ run:
 	"$(SHIM_DIR)/ansible-playbook" -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		$(if $(TAGS),--tags $(TAGS)) \
-		--ask-become-pass
 
 check:
 	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make check PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
