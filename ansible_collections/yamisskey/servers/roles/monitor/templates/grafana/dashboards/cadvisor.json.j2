@@ -92,7 +92,7 @@
         {
           "expr": "rate(container_cpu_usage_seconds_total{name!=\"\"}[5m]) * 100",
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{ '{{name}}' }}",
           "refId": "A"
         }
       ],
@@ -173,7 +173,7 @@
         {
           "expr": "container_memory_usage_bytes{name!=\"\"}",
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{ '{{name}}' }}",
           "refId": "A"
         }
       ],

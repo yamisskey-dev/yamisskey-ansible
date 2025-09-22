@@ -25,7 +25,7 @@
       when: 
         - node_exporter.enabled | default(true)
         - ansible_os_family == "Debian"
-        - not (skip_system_checks | select() | list)
+        - not (skip_system_checks | default(false) | bool)
       tags: 
         - node_exporter
 
@@ -36,7 +36,7 @@
       when:
         - node_exporter.enabled | default(true) 
         - ansible_os_family == "Gentoo"
-        - not (skip_system_checks | select() | list)
+        - not (skip_system_checks | default(false) | bool)
       tags:
         - node_exporter
 
@@ -48,7 +48,7 @@
       when:
         - node_exporter.enabled | default(true)
         - ansible_service_mgr | default('') == 'systemd'
-        - not (skip_system_checks | select() | list)
+        - not (skip_system_checks | default(false) | bool)
       tags:
         - node_exporter
 
@@ -63,7 +63,7 @@
       when:
         - node_exporter.enabled | default(true)
         - watch_health_checks.enabled | default(true)
-        - not (skip_system_checks | select() | list)
+        - not (skip_system_checks | default(false) | bool)
       tags:
         - node_exporter
 

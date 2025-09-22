@@ -2,10 +2,74 @@
 - name: Converge Monitor Role
   hosts: all
   become: true
-  gather_facts: true
+  gather_facts: false
 
   pre_tasks:
-    # Simplified Docker setup for testing - Docker is already available in the container
+    - name: Ensure remote Ansible temporary directory exists
+      raw: mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp
+      changed_when: false
+
+    - name: Gather facts
+      setup:
+
+    - name: Update apt cache safely
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      retries: 3
+      delay: 10
+      register: apt_update_result
+      failed_when: false
+
+    - name: Create keyrings directory for Docker
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: apt_update_result is not failed
+
+    - name: Add Docker GPG key
+      get_url:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+      when: apt_update_result is not failed
+
+    - name: Set Docker GPG key permissions
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: 'a+r'
+      when: apt_update_result is not failed
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+        filename: docker
+        state: present
+      when: apt_update_result is not failed
+
+    - name: Install Docker for testing
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: apt_update_result is not failed
+
+    - name: Install Docker for testing (fallback - use system packages)
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: false
+        allow_unauthenticated: true
+      when: apt_update_result is failed
+
     - name: Install Python pip
       apt:
         name: python3-pip
@@ -18,13 +82,27 @@
           - docker
           - docker-compose
 
-    - name: Install Docker CLI and Compose
-      apt:
-        name:
-          - docker.io
-          - docker-compose
-        state: present
-        update_cache: yes
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+      failed_when: false
+
+    - name: Ensure Docker CLI plugin directory exists
+      file:
+        path: /usr/local/lib/docker/cli-plugins
+        state: directory
+        mode: '0755'
+
+    - name: Provide docker compose CLI shim
+      copy:
+        dest: /usr/local/lib/docker/cli-plugins/docker-compose
+        mode: '0755'
+        force: false
+        content: |
+          #!/usr/bin/env bash
+          /usr/bin/docker-compose "$@"
 
     - name: Ensure Docker socket is accessible
       file:

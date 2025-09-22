@@ -6,10 +6,16 @@
     # テスト用の設定値（cAdvisorはDocker-in-Dockerでテスト困難なため無効化）
     node_exporter:
       enabled: true
+      package_name: prometheus-node-exporter
+      service_name: prometheus-node-exporter
+      port: "{{ watch_services.node_exporter }}"
     cadvisor:
       enabled: false
     
     # テスト用のポート設定（デフォルトと異なるポートを使用してコンフリクトを避ける）
+    watch_services:
+      node_exporter: 9100
+      cadvisor: 8085
     watch_node_exporter_port: 9100
     watch_cadvisor_port: 8085
     
@@ -17,6 +23,9 @@
     monitor_network:
       name: monitor
       create: true
+    
+    # テスト環境でもシステムチェックを有効化
+    skip_system_checks: false
     
   pre_tasks:
     # 基本的な依存関係とDockerライブラリをインストール
@@ -38,6 +47,12 @@
           - docker
           - requests
         state: present
+
+    - name: Install Node Exporter package for testing
+      apt:
+        name: prometheus-node-exporter
+        state: present
+        update_cache: true
 
   tasks:
     - name: Include watch role

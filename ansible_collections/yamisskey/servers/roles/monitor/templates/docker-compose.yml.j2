@@ -20,8 +20,8 @@ services:
       - "{{ monitor_services.prometheus }}:9090"
     volumes:
       - prometheus_data:/prometheus
-      - {{ monitor_compose_dir }}/config/prometheus:/etc/prometheus:ro
-      - {{ monitor_compose_dir }}/config/rules:/etc/prometheus/rules:ro
+      - {{ monitor_compose_dir }}/config/prometheus:/etc/prometheus
+      - {{ monitor_compose_dir }}/config/rules:/etc/prometheus/rules
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -35,8 +35,6 @@ services:
       - monitor
     restart: unless-stopped
     user: "65534:65534"
-    depends_on:
-      - alertmanager
 
   grafana:
     image: grafana/grafana:{{ monitor_grafana_version | default('latest') }}
@@ -45,8 +43,8 @@ services:
       - "{{ monitor_services.grafana }}:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - {{ monitor_compose_dir }}/config/grafana/provisioning:/etc/grafana/provisioning:ro
-      - {{ monitor_compose_dir }}/config/grafana/dashboards:/etc/grafana/dashboards:ro
+      - {{ monitor_compose_dir }}/config/grafana/provisioning:/etc/grafana/provisioning
+      - {{ monitor_compose_dir }}/config/grafana/dashboards:/etc/grafana/dashboards
     environment:
       - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
       - GF_USERS_ALLOW_SIGN_UP=false
@@ -61,8 +59,6 @@ services:
       - monitor
     restart: unless-stopped
     user: "472:472"
-    depends_on:
-      - prometheus
 
   alertmanager:
     image: prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}
@@ -71,7 +67,7 @@ services:
       - "{{ monitor_services.alertmanager | default('9093') }}:9093"
     volumes:
       - alertmanager_data:/alertmanager
-      - {{ monitor_compose_dir }}/config/alertmanager:/etc/alertmanager:ro
+      - {{ monitor_compose_dir }}/config/alertmanager:/etc/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
@@ -83,14 +79,16 @@ services:
     restart: unless-stopped
     user: "65534:65534"
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   blackbox:
     image: prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}
     container_name: blackbox
     ports:
       - "{{ monitor_services.blackbox | default('9115') }}:9115"
     volumes:
-      - {{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter:ro
+      - {{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter
     networks:
       - monitor
     restart: unless-stopped
     user: "65534:65534"
+{% endif %}

@@ -19,6 +19,11 @@ platforms:
       - name: molecule-test-network
 provisioner:
   name: ansible
+  inventory:
+    group_vars:
+      all:
+        cadvisor:
+          enabled: false
   config_options:
     defaults:
       host_key_checking: false

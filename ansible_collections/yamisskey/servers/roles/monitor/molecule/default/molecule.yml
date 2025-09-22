@@ -51,6 +51,7 @@ provisioner:
         # External endpoints for testing (simplified)
         monitor_external_endpoints:
           - "http://localhost:3000"
+          - "http://localhost:9090"
         
         # Enable health checks
         health_check_timeout: 60
