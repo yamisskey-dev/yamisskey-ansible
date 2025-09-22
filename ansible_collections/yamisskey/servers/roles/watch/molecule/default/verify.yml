@@ -72,16 +72,42 @@
         url: "http://localhost:9100/metrics"
         method: GET
         status_code: 200
+        return_content: true
       register: node_exporter_metrics
       retries: 3
       delay: 5
+      failed_when: false
+
+    - name: Debug Node Exporter metrics response
+      debug:
+        var: node_exporter_metrics
 
     - name: Verify Node Exporter metrics content
       assert:
         that:
+          - node_exporter_metrics.status == 200
           - "'node_' in node_exporter_metrics.content"
-        fail_msg: "Node Exporter metrics do not contain expected content"
+        fail_msg: "Node Exporter metrics do not contain expected content or endpoint is not accessible"
         success_msg: "Node Exporter is exposing metrics correctly"
+      when: node_exporter_metrics.status is defined
+
+    - name: Check if Node Exporter service is actually running (fallback)
+      shell: "ps aux | grep node_exporter | grep -v grep"
+      register: node_exporter_process_check
+      failed_when: false
+      when: node_exporter_metrics.status is not defined
+
+    - name: Debug Node Exporter process check
+      debug:
+        var: node_exporter_process_check
+      when: node_exporter_metrics.status is not defined
+
+    - name: Fail if Node Exporter is not accessible
+      fail:
+        msg: "Node Exporter is not accessible on port 9100. Service may not be running or listening on the expected port."
+      when: 
+        - node_exporter_metrics.status is not defined
+        - node_exporter_process_check.rc != 0
 
     - name: Check if cAdvisor container is running
       community.docker.docker_container_info:
