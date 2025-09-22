@@ -48,7 +48,7 @@
         mcaptcha_existing_secrets: '{{ mcaptcha_secrets_raw.content | b64decode | from_yaml }}'
       when:
         - mcaptcha_secrets_raw is defined
-        - mcaptcha_secrets_raw.failed | default(false) | bool == false
+        - not (mcaptcha_secrets_raw.failed | default(false) | bool)
         - mcaptcha_secrets_raw.content is defined
       failed_when: false
 

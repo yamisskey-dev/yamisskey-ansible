@@ -59,7 +59,7 @@
         lemmy_secrets: "{{ lemmy_secrets_raw.content | b64decode | from_yaml }}"
       when:
         - lemmy_secrets_raw is defined
-        - lemmy_secrets_raw.failed | default(false) | bool == false
+        - not (lemmy_secrets_raw.failed | default(false) | bool)
         - lemmy_secrets_raw.content is defined
       failed_when: false
 
