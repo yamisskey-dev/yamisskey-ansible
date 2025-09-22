@@ -38,6 +38,7 @@ provisioner:
           prometheus: 9090
           grafana: 3000
           alertmanager: 9093
+          blackbox: 9115
         
         # Test monitoring targets
         monitor_targets:
@@ -55,5 +56,10 @@ provisioner:
         # Enable health checks
         health_check_timeout: 60
         health_check_retries: 3
+        
+        # Alertmanager configuration for testing
+        alertmanager_group_wait: "10s"
+        alertmanager_group_interval: "10s"
+        alertmanager_repeat_interval: "1h"
 verifier:
   name: ansible

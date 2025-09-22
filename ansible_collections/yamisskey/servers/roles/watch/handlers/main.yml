@@ -16,12 +16,6 @@
     daemon_reload: true
   listen: "restart watch services"
 
-- name: restart blackbox_exporter
-  systemd:
-    name: blackbox_exporter
-    state: restarted
-    daemon_reload: true
-  listen: "restart watch services"
 
 - name: reload systemd
   systemd:
@@ -36,11 +30,5 @@
 - name: restart cadvisor
   systemd:
     name: cadvisor
-    state: restarted
-    enabled: true
-
-- name: restart blackbox_exporter
-  systemd:
-    name: blackbox_exporter
     state: restarted
     enabled: true

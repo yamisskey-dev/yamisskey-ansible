@@ -1,0 +1,98 @@
+# ==================================================
+# Yamisskey Monitor - Blackbox Exporter Configuration
+# ==================================================
+# Configuration for HTTP/HTTPS monitoring
+
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202, 203, 204, 205, 206, 207, 208, 226]
+      method: GET
+      headers:
+        User-Agent: "Blackbox Exporter/{{ monitor_blackbox_version | default('latest') }}"
+      no_follow_redirects: false
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4" # ip4, ip6, ip4,ip6
+      ip_protocol_fallback: true
+
+  http_post_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202, 203, 204, 205, 206, 207, 208, 226]
+      method: POST
+      headers:
+        Content-Type: application/json
+        User-Agent: "Blackbox Exporter/{{ monitor_blackbox_version | default('latest') }}"
+      body: '{}'
+      no_follow_redirects: false
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4" # ip4, ip6, ip4,ip6
+      ip_protocol_fallback: true
+
+  dns_tcp:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: "{{ primary_domain | default('example.com') }}"
+      query_type: "A"
+      valid_rcodes:
+        - NOERROR
+      validate_answer_rrs:
+        fail_if_matches_regexp:
+          - ".*\\.internal\\."
+        fail_if_not_matches_regexp:
+          - ".*\\.{{ primary_domain | default('example.com') }}\\."
+      validate_authority_rrs:
+        fail_if_matches_regexp:
+          - ".*\\.internal\\."
+      validate_additional_rrs:
+        fail_if_matches_regexp:
+          - ".*\\.internal\\."
+      fail_if_none_of_the_rcodes:
+        - NOERROR
+        - NXDOMAIN
+      preferred_ip_protocol: "ip4" # ip4, ip6, ip4,ip6
+      ip_protocol_fallback: true
+
+  dns_udp:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: "{{ primary_domain | default('example.com') }}"
+      query_type: "A"
+      valid_rcodes:
+        - NOERROR
+      validate_answer_rrs:
+        fail_if_matches_regexp:
+          - ".*\\.internal\\."
+        fail_if_not_matches_regexp:
+          - ".*\\.{{ primary_domain | default('example.com') }}\\."
+      validate_authority_rrs:
+        fail_if_matches_regexp:
+          - ".*\\.internal\\."
+      validate_additional_rrs:
+        fail_if_matches_regexp:
+          - ".*\\.internal\\."
+      fail_if_none_of_the_rcodes:
+        - NOERROR
+        - NXDOMAIN
+      preferred_ip_protocol: "ip4" # ip4, ip6, ip4,ip6
+      ip_protocol_fallback: true

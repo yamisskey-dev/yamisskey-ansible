@@ -4,21 +4,25 @@
 # Production-ready configuration with Slack and Discord notifications
 
 global:
+{% if alertmanager_smtp_host is defined %}
   smtp_smarthost: '{{ alertmanager_smtp_host }}'
+{% endif %}
+{% if alertmanager_smtp_from is defined %}
   smtp_from: '{{ alertmanager_smtp_from }}'
-{% if alertmanager_smtp_username %}
+{% endif %}
+{% if alertmanager_smtp_username is defined %}
   smtp_auth_username: '{{ alertmanager_smtp_username }}'
 {% endif %}
-{% if alertmanager_smtp_password %}
+{% if alertmanager_smtp_password is defined %}
   smtp_auth_password: '{{ alertmanager_smtp_password }}'
 {% endif %}
 
 # Routing configuration
 route:
   group_by: ['alertname', 'cluster', 'service']
-  group_wait: {{ alertmanager_group_wait }}
-  group_interval: {{ alertmanager_group_interval }}
-  repeat_interval: {{ alertmanager_repeat_interval }}
+  group_wait: {{ alertmanager_group_wait | default('10s') }}
+  group_interval: {{ alertmanager_group_interval | default('10s') }}
+  repeat_interval: {{ alertmanager_repeat_interval | default('1h') }}
   receiver: 'default'
   routes:
     # Critical alerts go to critical channels

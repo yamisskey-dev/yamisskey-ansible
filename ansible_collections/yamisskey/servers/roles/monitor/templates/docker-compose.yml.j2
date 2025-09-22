@@ -80,3 +80,15 @@ services:
       - monitor
     restart: unless-stopped
     user: "65534:65534"
+
+  blackbox:
+    image: prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}
+    container_name: blackbox
+    ports:
+      - "{{ monitor_services.blackbox | default('9115') }}:9115"
+    volumes:
+      - {{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter:ro
+    networks:
+      - monitor
+    restart: unless-stopped
+    user: "65534:65534"

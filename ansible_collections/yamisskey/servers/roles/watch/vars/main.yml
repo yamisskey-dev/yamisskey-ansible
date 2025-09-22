@@ -5,7 +5,6 @@
 # Download URLs for monitoring components
 watch_node_exporter_download_url: "https://github.com/prometheus/node_exporter/releases/download/v{{ watch_node_exporter_version }}/node_exporter-{{ watch_node_exporter_version }}.linux-amd64.tar.gz"
 watch_cadvisor_download_url: "https://github.com/google/cadvisor/releases/download/v{{ watch_cadvisor_version }}/cadvisor-v{{ watch_cadvisor_version }}-linux-amd64"
-watch_blackbox_exporter_download_url: "https://github.com/prometheus/blackbox_exporter/releases/download/v{{ watch_blackbox_exporter_version }}/blackbox_exporter-{{ watch_blackbox_exporter_version }}.linux-amd64.tar.gz"
 
 # Installation paths
 watch_install_dir: "/opt"
@@ -51,22 +50,6 @@ watch_cadvisor_service_template: |
   [Install]
   WantedBy=multi-user.target
 
-watch_blackbox_exporter_service_template: |
-  [Unit]
-  Description=Blackbox Exporter
-  Wants=network-online.target
-  After=network-online.target
-
-  [Service]
-  User={{ watch_service_user }}
-  Group={{ watch_service_group }}
-  Type=simple
-  ExecStart={{ watch_bin_dir }}/blackbox_exporter --config.file={{ watch_config_dir }}/blackbox_exporter/blackbox.yml --web.listen-address=:{{ watch_blackbox_exporter_port }}
-  Restart=always
-  RestartSec=5
-
-  [Install]
-  WantedBy=multi-user.target
 
 # Package manager mappings
 watch_package_managers:

@@ -4,20 +4,19 @@
   become: true
   vars:
     # テスト用の設定値（cAdvisorはDocker-in-Dockerでテスト困難なため無効化）
-    watch_node_exporter_enabled: true
-    watch_cadvisor_enabled: false
-    watch_blackbox_exporter_enabled: true
+    node_exporter:
+      enabled: true
+    cadvisor:
+      enabled: false
     
     # テスト用のポート設定（デフォルトと異なるポートを使用してコンフリクトを避ける）
     watch_node_exporter_port: 9100
     watch_cadvisor_port: 8085
-    watch_blackbox_exporter_port: 9115
     
-    # テスト用の最小限設定
-    watch_blackbox_targets:
-      - name: "localhost"
-        url: "http://localhost"
-        module: "http_2xx"
+    # テスト用のネットワーク設定
+    monitor_network:
+      name: monitor
+      create: true
     
   pre_tasks:
     # 基本的な依存関係とDockerライブラリをインストール

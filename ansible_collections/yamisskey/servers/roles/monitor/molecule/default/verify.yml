@@ -26,6 +26,7 @@
       loop:
         - prometheus/prometheus.yml
         - alertmanager/alertmanager.yml
+        - blackbox/blackbox.yml
 
     - name: Verify .env file exists
       stat:
@@ -53,6 +54,7 @@
         - prometheus
         - grafana
         - alertmanager
+        - blackbox
 
     - name: Verify all containers are running
       assert:
@@ -91,6 +93,15 @@
         method: GET
         status_code: 200
       register: alertmanager_health
+      retries: 5
+      delay: 10
+
+    - name: Test Blackbox Exporter health endpoint
+      uri:
+        url: "http://localhost:{{ monitor_services.blackbox | default('9115') }}/-/healthy"
+        method: GET
+        status_code: 200
+      register: blackbox_health
       retries: 5
       delay: 10
 
@@ -176,6 +187,7 @@
           ✅ Prometheus: {{ 'HEALTHY' if prometheus_health.status == 200 else 'FAILED' }}
           ✅ Grafana: {{ 'HEALTHY' if grafana_health.status == 200 else 'FAILED' }}
           ✅ AlertManager: {{ 'HEALTHY' if alertmanager_health.status == 200 else 'FAILED' }}
+          ✅ Blackbox Exporter: {{ 'HEALTHY' if blackbox_health.status == 200 else 'FAILED' }}
           ✅ Docker Compose: PASSED
           
           🐳 Active Containers: {{ compose_services | length }}

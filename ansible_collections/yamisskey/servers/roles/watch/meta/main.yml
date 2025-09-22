@@ -22,7 +22,6 @@ galaxy_info:
     - prometheus
     - node_exporter
     - cadvisor
-    - blackbox_exporter
     - system
     - metrics
     - observability

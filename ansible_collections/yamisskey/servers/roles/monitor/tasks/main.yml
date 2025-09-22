@@ -17,6 +17,7 @@
     - prometheus
     - alertmanager
     - rules
+    - blackbox
 
 - name: Create Docker network for monitoring
   community.docker.docker_network:
@@ -36,6 +37,13 @@
     dest: '{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml'
     mode: '0644'
   register: alertmanager_config
+
+- name: Deploy Blackbox Exporter configuration
+  template:
+    src: blackbox.yml.j2
+    dest: '{{ monitor_compose_dir }}/config/blackbox/blackbox.yml'
+    mode: '0644'
+  register: blackbox_config
 
 - name: Deploy monitoring Docker Compose
   template:
@@ -60,6 +68,7 @@
     - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
     - "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
     - "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+    - "prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}"
 
 - name: Stop existing containers if config changed
   community.docker.docker_container:
@@ -69,7 +78,8 @@
     - alertmanager
     - prometheus
     - grafana
-  when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed
+    - blackbox
+  when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed or blackbox_config.changed
 
 - name: Ensure config files exist before starting containers
   stat:
@@ -78,6 +88,7 @@
   loop:
     - "{{ monitor_compose_dir }}/config/prometheus/prometheus.yml"
     - "{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml"
+    - "{{ monitor_compose_dir }}/config/blackbox/blackbox.yml"
 
 - name: Verify all config files exist
   fail:
@@ -147,10 +158,29 @@
       networks: strict
   register: alertmanager_container
 
+- name: Start Blackbox Exporter container
+  community.docker.docker_container:
+    name: blackbox
+    image: "prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}"
+    state: started
+    restart_policy: unless-stopped
+    ports:
+      - "{{ monitor_services.blackbox | default('9115') }}:9115"
+    volumes:
+      - "{{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter"
+    networks:
+      - name: monitor
+    command:
+      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
+    comparisons:
+      image: strict
+      networks: strict
+  register: blackbox_container
+
 - name: Wait for services to be ready
   pause:
     seconds: 30
-  when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed
+  when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed or blackbox_container.changed
 
 - name: Verify Docker monitoring services
   uri:
@@ -161,6 +191,7 @@
     - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
     - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
     - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
+    - { port: "{{ monitor_services.blackbox | default('9115') }}", name: 'blackbox', path: '/-/healthy' }
   register: service_health_checks
   retries: 5
   delay: 10

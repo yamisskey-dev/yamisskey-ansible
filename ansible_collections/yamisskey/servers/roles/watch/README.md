@@ -21,10 +21,6 @@ This role handles monitoring agents and exporters that require:
 - **Installation**: Docker container with privileged access
 - **Port**: 8085
 
-### Blackbox Exporter
-- **Purpose**: External service monitoring (HTTP, DNS, TCP, ICMP)
-- **Installation**: Docker container
-- **Port**: 9115
 
 ## Usage
 
@@ -40,11 +36,10 @@ See `defaults/main.yml` for configuration options.
 
 ## Dependencies
 
-- Docker (for cAdvisor and Blackbox Exporter)
+- Docker (for cAdvisor)
 - systemd (for Node Exporter service management)
 
 ## Tags
 
 - `node_exporter`: Node Exporter specific tasks
 - `cadvisor`: cAdvisor specific tasks
-- `blackbox_exporter`: Blackbox Exporter specific tasks
