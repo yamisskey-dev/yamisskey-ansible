@@ -30,11 +30,6 @@ ansible-vault create deploy/servers/group_vars/vault.yml --vault-password-file .
 Add these encrypted variables to your vault files:
 
 ```yaml
-vault_balthasar_sudo_password: "secure_password_here"
-vault_caspar_sudo_password: "secure_password_here"
-vault_joseph_sudo_password: "secure_password_here"
-vault_raspberrypi_sudo_password: "secure_password_here"
-vault_linode_prox_sudo_password: "secure_password_here"
 minio_root_user: "admin"
 minio_root_password: "secure_minio_password"
 minio_kms_master_key: "minio-master-key:base64-encoded-key"
