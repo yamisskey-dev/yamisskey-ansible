@@ -7,16 +7,33 @@
     - name: Check if Node Exporter service is running
       systemd:
         name: node_exporter
-        state: started
       register: node_exporter_service
       failed_when: false
 
     - name: Verify Node Exporter service status
       assert:
         that:
+          - node_exporter_service.status is defined
           - node_exporter_service.status.ActiveState == "active"
         fail_msg: "Node Exporter service is not running"
         success_msg: "Node Exporter service is running correctly"
+      when: node_exporter_service.status is defined
+
+    - name: Alternative check - Node Exporter service status
+      shell: "systemctl is-active node_exporter"
+      register: node_exporter_status_check
+      failed_when: false
+      when: node_exporter_service.status is not defined
+
+    - name: Verify Node Exporter service status (alternative)
+      assert:
+        that:
+          - node_exporter_status_check.stdout == "active"
+        fail_msg: "Node Exporter service is not running (alternative check)"
+        success_msg: "Node Exporter service is running correctly (alternative check)"
+      when: 
+        - node_exporter_service.status is not defined
+        - node_exporter_status_check is defined
 
     - name: Check Node Exporter HTTP endpoint
       uri:
