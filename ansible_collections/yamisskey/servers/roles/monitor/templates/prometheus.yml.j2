@@ -58,7 +58,7 @@ scrape_configs:
 {% endfor %}
 {% else %}
       # Default localhost target for testing
-      - targets: ['host.docker.internal:9100']
+      - targets: ['localhost:9100']
         labels:
           instance: 'localhost'
           role: 'test'
@@ -76,7 +76,7 @@ scrape_configs:
           role: 'cadvisor'
 {% endfor %}
 {% else %}
-      - targets: ['host.docker.internal:8085']
+      - targets: ['localhost:8085']
         labels:
           instance: 'localhost'
           role: 'cadvisor'
@@ -98,7 +98,7 @@ scrape_configs:
           - {{ endpoint }}
 {% endfor %}
 {% endif %}
-{% if primary_domain != 'localhost.localdomain' %}
+{% if primary_domain != 'localhost.localdomain' and primary_domain != 'test.local' %}
           # Domain Health Checks
           - https://{{ primary_domain }}
           - https://grafana.{{ primary_domain }}
