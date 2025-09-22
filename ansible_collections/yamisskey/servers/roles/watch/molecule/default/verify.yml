@@ -6,9 +6,13 @@
   tasks:
     - name: Check if Node Exporter service is running
       systemd:
-        name: node_exporter
+        name: prometheus-node-exporter
       register: node_exporter_service
       failed_when: false
+
+    - name: Debug Node Exporter service status
+      debug:
+        var: node_exporter_service
 
     - name: Verify Node Exporter service status
       assert:
@@ -20,9 +24,14 @@
       when: node_exporter_service.status is defined
 
     - name: Alternative check - Node Exporter service status
-      shell: "systemctl is-active node_exporter"
+      shell: "systemctl is-active prometheus-node-exporter"
       register: node_exporter_status_check
       failed_when: false
+      when: node_exporter_service.status is not defined
+
+    - name: Debug alternative service check
+      debug:
+        var: node_exporter_status_check
       when: node_exporter_service.status is not defined
 
     - name: Verify Node Exporter service status (alternative)
@@ -34,6 +43,29 @@
       when: 
         - node_exporter_service.status is not defined
         - node_exporter_status_check is defined
+
+    - name: Check if Node Exporter service exists at all
+      shell: "systemctl list-unit-files | grep prometheus-node-exporter"
+      register: node_exporter_exists_check
+      failed_when: false
+      when: 
+        - node_exporter_service.status is not defined
+        - node_exporter_status_check is not defined
+
+    - name: Debug service existence check
+      debug:
+        var: node_exporter_exists_check
+      when: 
+        - node_exporter_service.status is not defined
+        - node_exporter_status_check is not defined
+
+    - name: Fail if Node Exporter service does not exist
+      fail:
+        msg: "Node Exporter service (prometheus-node-exporter) does not exist on the system"
+      when: 
+        - node_exporter_service.status is not defined
+        - node_exporter_status_check is not defined
+        - node_exporter_exists_check.rc != 0
 
     - name: Check Node Exporter HTTP endpoint
       uri:
