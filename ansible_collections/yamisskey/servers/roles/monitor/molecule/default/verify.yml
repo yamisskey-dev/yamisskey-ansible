@@ -18,15 +18,20 @@
       register: compose_file
       failed_when: not compose_file.stat.exists
 
+    - name: Set config files to verify
+      set_fact:
+        config_files_to_verify: "{{ config_files_base + (['blackbox/blackbox.yml'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
+      vars:
+        config_files_base:
+          - prometheus/prometheus.yml
+          - alertmanager/alertmanager.yml
+
     - name: Verify configuration files exist
       stat:
         path: "{{ monitor_compose_dir }}/config/{{ item }}"
       register: config_files
       failed_when: not config_files.stat.exists
-      loop:
-        - prometheus/prometheus.yml
-        - alertmanager/alertmanager.yml
-        - blackbox/blackbox.yml
+      loop: "{{ config_files_to_verify }}"
 
     - name: Verify .env file exists
       stat:

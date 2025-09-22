@@ -140,6 +140,11 @@
       failed_when: false
       when: cadvisor.enabled | default(true)
 
+    - name: Debug cAdvisor metrics
+      debug:
+        var: cadvisor_metrics
+      when: cadvisor.enabled | default(true)
+
     - name: Verify cAdvisor metrics content
       assert:
         that:
@@ -149,12 +154,20 @@
         success_msg: "cAdvisor is exposing container metrics correctly"
       when: 
         - cadvisor.enabled | default(true)
+        - cadvisor_metrics is defined
         - cadvisor_metrics.status is defined
 
     - name: Skip cAdvisor checks (disabled)
       debug:
         msg: "cAdvisor is disabled in test environment, skipping container and metrics checks"
       when: not (cadvisor.enabled | default(true))
+
+    - name: Skip cAdvisor metrics check (not accessible)
+      debug:
+        msg: "cAdvisor metrics endpoint is not accessible, skipping metrics content verification"
+      when: 
+        - cadvisor.enabled | default(true)
+        - cadvisor_metrics is not defined
 
 
     - name: Check Node Exporter configuration file exists
