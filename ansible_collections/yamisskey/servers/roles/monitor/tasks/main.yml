@@ -36,7 +36,6 @@
     dest: '{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml'
     mode: '0644'
   register: alertmanager_config
-  notify: Restart monitoring stack
 
 - name: Deploy monitoring Docker Compose
   template:
@@ -44,7 +43,6 @@
     dest: '{{ monitor_compose_dir }}/docker-compose.yml'
     mode: '0644'
   register: compose_config
-  notify: Restart monitoring stack
 
 - name: Create .env file for Docker Compose
   copy:
@@ -62,6 +60,30 @@
     - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
     - "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
     - "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+
+- name: Stop existing containers if config changed
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - alertmanager
+    - prometheus
+    - grafana
+  when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed
+
+- name: Ensure config files exist before starting containers
+  stat:
+    path: "{{ item }}"
+  register: config_files_check
+  loop:
+    - "{{ monitor_compose_dir }}/config/prometheus/prometheus.yml"
+    - "{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml"
+
+- name: Verify all config files exist
+  fail:
+    msg: "Missing configuration file: {{ item.item }}"
+  when: not item.stat.exists
+  loop: "{{ config_files_check.results }}"
 
 - name: Start Prometheus container
   community.docker.docker_container:
@@ -116,6 +138,10 @@
       - "{{ monitor_compose_dir }}/config/alertmanager:/etc/alertmanager"
     networks:
       - name: monitor
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:{{ monitor_services.alertmanager }}'
     comparisons:
       image: strict
       networks: strict
