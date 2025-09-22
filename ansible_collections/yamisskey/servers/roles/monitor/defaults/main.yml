@@ -1,0 +1,59 @@
+---
+# Docker-based Monitoring Stack Configuration
+# Optimized for Gentoo compatibility and universal deployment
+
+# Base configuration
+monitor_compose_dir: "/opt/monitor"
+monitor_network_name: "monitor"
+
+# Docker image versions
+monitor_prometheus_version: "latest"
+monitor_grafana_version: "latest"
+monitor_alertmanager_version: "latest"
+
+# Prometheus configuration
+prometheus_retention: "200h"
+
+# Grafana configuration
+grafana_admin_password: "{{ vault_grafana_password | default('admin') }}"
+grafana_log_level: "info"
+
+# AlertManager configuration
+alertmanager_group_wait: "10s"
+alertmanager_group_interval: "10s"
+alertmanager_repeat_interval: "1h"
+
+# Notification settings
+alertmanager_slack_webhook_url: "{{ vault_slack_webhook_url | default('') }}"
+alertmanager_slack_channel: "#alerts"
+alertmanager_slack_critical_channel: "#critical-alerts"
+alertmanager_slack_misskey_channel: "#misskey-alerts"
+alertmanager_slack_infra_channel: "#infrastructure"
+alertmanager_slack_security_channel: "#security-alerts"
+
+alertmanager_discord_webhook_url: "{{ vault_discord_webhook_url | default('') }}"
+
+# SMTP settings for email alerts
+alertmanager_smtp_host: "{{ vault_smtp_host | default('localhost:587') }}"
+alertmanager_smtp_from: "{{ vault_smtp_from | default('alertmanager@' + primary_domain) }}"
+alertmanager_smtp_username: "{{ vault_smtp_username | default('') }}"
+alertmanager_smtp_password: "{{ vault_smtp_password | default('') }}"
+
+# Domain settings
+primary_domain: "{{ domain | default('localhost.localdomain') }}"
+
+# Default service ports
+default_monitor_ports:
+  prometheus: 9090
+  grafana: 3000
+  alertmanager: 9093
+
+# Host services with fallback to defaults for dynamic inventory support
+monitor_services:
+  prometheus: "{{ host_services[inventory_hostname].prometheus | default(default_monitor_ports.prometheus) }}"
+  grafana: "{{ host_services[inventory_hostname].grafana | default(default_monitor_ports.grafana) }}"
+  alertmanager: "{{ host_services[inventory_hostname].alertmanager | default(default_monitor_ports.alertmanager) }}"
+
+# Service health check configuration
+health_check_timeout: 30
+health_check_retries: 5

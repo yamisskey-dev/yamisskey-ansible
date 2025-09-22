@@ -1,0 +1,187 @@
+---
+- name: Verify Monitor Role Deployment
+  hosts: all
+  gather_facts: false
+  become: true
+
+  tasks:
+    # Directory and File Structure Tests
+    - name: Verify monitor directory exists
+      stat:
+        path: "{{ monitor_compose_dir }}"
+      register: monitor_dir
+      failed_when: not monitor_dir.stat.exists
+
+    - name: Verify docker-compose.yml exists
+      stat:
+        path: "{{ monitor_compose_dir }}/docker-compose.yml"
+      register: compose_file
+      failed_when: not compose_file.stat.exists
+
+    - name: Verify configuration files exist
+      stat:
+        path: "{{ monitor_compose_dir }}/config/{{ item }}"
+      register: config_files
+      failed_when: not config_files.stat.exists
+      loop:
+        - prometheus/prometheus.yml
+        - alertmanager/alertmanager.yml
+
+    - name: Verify .env file exists
+      stat:
+        path: "{{ monitor_compose_dir }}/.env"
+      register: env_file
+      failed_when: not env_file.stat.exists
+
+    # Docker Container Tests
+    - name: Check if Docker network exists
+      docker_network_info:
+        name: "monitor"
+      register: monitor_network
+
+    - name: Verify monitor network exists
+      assert:
+        that:
+          - monitor_network.exists
+        fail_msg: "Monitor Docker network does not exist"
+
+    - name: Check running containers
+      docker_container_info:
+        name: "{{ item }}"
+      register: container_info
+      loop:
+        - prometheus
+        - grafana
+        - alertmanager
+
+    - name: Verify all containers are running
+      assert:
+        that:
+          - item.exists
+          - item.container.State.Status == "running"
+        fail_msg: "Container {{ item.item }} is not running"
+      loop: "{{ container_info.results }}"
+
+    # Service Health Tests
+    - name: Wait for services to be fully ready
+      pause:
+        seconds: 45
+
+    - name: Test Prometheus health endpoint
+      uri:
+        url: "http://localhost:{{ monitor_services.prometheus }}/-/healthy"
+        method: GET
+        status_code: 200
+      register: prometheus_health
+      retries: 5
+      delay: 10
+
+    - name: Test Grafana health endpoint
+      uri:
+        url: "http://localhost:{{ monitor_services.grafana }}/api/health"
+        method: GET
+        status_code: 200
+      register: grafana_health
+      retries: 5
+      delay: 10
+
+    - name: Test AlertManager health endpoint
+      uri:
+        url: "http://localhost:{{ monitor_services.alertmanager }}/-/healthy"
+        method: GET
+        status_code: 200
+      register: alertmanager_health
+      retries: 5
+      delay: 10
+
+    # Prometheus Configuration Tests
+    - name: Test Prometheus configuration reload
+      uri:
+        url: "http://localhost:{{ monitor_services.prometheus }}/-/reload"
+        method: POST
+        status_code: 200
+
+    - name: Query Prometheus targets
+      uri:
+        url: "http://localhost:{{ monitor_services.prometheus }}/api/v1/targets"
+        method: GET
+        status_code: 200
+      register: prometheus_targets
+
+    - name: Verify Prometheus has targets configured
+      assert:
+        that:
+          - prometheus_targets.json.data.activeTargets | length > 0
+        fail_msg: "Prometheus has no active targets"
+
+    # Grafana Access Tests
+    - name: Test Grafana login page
+      uri:
+        url: "http://localhost:{{ monitor_services.grafana }}/login"
+        method: GET
+        status_code: 200
+
+    - name: Verify Grafana API access
+      uri:
+        url: "http://localhost:{{ monitor_services.grafana }}/api/datasources"
+        method: GET
+        user: admin
+        password: "{{ grafana_admin_password }}"
+        force_basic_auth: true
+        status_code: 200
+      register: grafana_datasources
+
+    # AlertManager Configuration Tests
+    - name: Test AlertManager configuration
+      uri:
+        url: "http://localhost:{{ monitor_services.alertmanager }}/api/v1/status"
+        method: GET
+        status_code: 200
+      register: alertmanager_status
+
+    - name: Verify AlertManager configuration is valid
+      assert:
+        that:
+          - "'configYAML' in alertmanager_status.json.data"
+        fail_msg: "AlertManager configuration is invalid"
+
+    # Docker Compose Tests
+    - name: Verify Docker Compose project status
+      command: docker compose -f {{ monitor_compose_dir }}/docker-compose.yml ps --format json
+      register: compose_status
+      changed_when: false
+
+    - name: Parse compose status
+      set_fact:
+        compose_services: "{{ compose_status.stdout | from_json }}"
+
+    - name: Verify all services are running in compose
+      assert:
+        that:
+          - item.State == "running"
+        fail_msg: "Service {{ item.Service }} is not running"
+      loop: "{{ compose_services }}"
+
+    # Final Verification Report
+    - name: Generate verification report
+      debug:
+        msg: |
+          🎉 Monitor Role Verification Summary:
+          ====================================
+          
+          ✅ Directory Structure: PASSED
+          ✅ Configuration Files: PASSED
+          ✅ Docker Containers: PASSED
+          ✅ Service Health: PASSED
+          ✅ Prometheus: {{ 'HEALTHY' if prometheus_health.status == 200 else 'FAILED' }}
+          ✅ Grafana: {{ 'HEALTHY' if grafana_health.status == 200 else 'FAILED' }}
+          ✅ AlertManager: {{ 'HEALTHY' if alertmanager_health.status == 200 else 'FAILED' }}
+          ✅ Docker Compose: PASSED
+          
+          🐳 Active Containers: {{ compose_services | length }}
+          📊 Prometheus Targets: {{ prometheus_targets.json.data.activeTargets | length }}
+          
+          Role: monitor
+          Collection: yamisskey.servers
+          Test Instance: monitor-test-instance
+          Status: ALL TESTS PASSED ✅

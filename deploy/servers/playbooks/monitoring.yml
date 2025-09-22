@@ -1,5 +1,0 @@
-- name: Setup monitoring tools
-  hosts: all
-  become: true
-  roles:
-    - yamisskey.servers.monitoring

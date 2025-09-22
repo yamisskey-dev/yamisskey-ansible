@@ -1,0 +1,59 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../requirements.yml
+driver:
+  name: docker
+platforms:
+  - name: monitor-test-instance
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+    cgroupns_mode: host
+    tmpfs:
+      - /run
+      - /tmp
+    capabilities:
+      - SYS_ADMIN
+    command: /lib/systemd/systemd
+    networks:
+      - name: molecule-test-network
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      monitor-test-instance:
+        # Test configuration for Docker-based monitoring
+        domain: "test.local"
+        primary_domain: "test.local"
+        monitor_compose_dir: "/opt/monitor"
+        grafana_admin_password: "testpassword123"
+        
+        # Service port configuration for testing
+        monitor_services:
+          prometheus: 9090
+          grafana: 3000
+          alertmanager: 9093
+        
+        # Test monitoring targets
+        monitor_targets:
+          - name: "localhost"
+            host: "host.docker.internal"
+            port: 9100
+            role: "test-server"
+            cadvisor_port: 8085
+        
+        # External endpoints for testing
+        monitor_external_endpoints:
+          - "https://httpbin.org/status/200"
+          - "https://www.google.com"
+        
+        # Enable health checks
+        health_check_timeout: 60
+        health_check_retries: 3
+verifier:
+  name: ansible

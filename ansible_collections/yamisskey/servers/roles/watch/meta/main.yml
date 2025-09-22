@@ -1,0 +1,32 @@
+---
+galaxy_info:
+  author: yamisskey-dev
+  description: System-level monitoring components for distributed monitoring setup
+  company: yamisskey
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - "20.04"
+        - "22.04"
+    - name: Debian
+      versions:
+        - "11"
+        - "12"
+    - name: Gentoo
+      versions:
+        - all
+  galaxy_tags:
+    - monitoring
+    - prometheus
+    - node_exporter
+    - cadvisor
+    - blackbox_exporter
+    - system
+    - metrics
+    - observability
+
+dependencies: []
+
+collections: []

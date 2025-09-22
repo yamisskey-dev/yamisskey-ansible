@@ -173,7 +173,7 @@ Add these parameters to any `run`, `check`, or `deploy` command:
 
 3. **Service Installation**
    ```bash
-   make run PLAYBOOK=monitoring
+   make run PLAYBOOK=monitor
    make run PLAYBOOK=minio
    make run PLAYBOOK=misskey
    ```
@@ -183,7 +183,7 @@ Add these parameters to any `run`, `check`, or `deploy` command:
 Complete Misskey setup workflow:
 
 ```bash
-make deploy PLAYBOOKS='common security modsecurity-nginx monitoring minio misskey'
+make deploy PLAYBOOKS='common security modsecurity-nginx monitor minio misskey'
 make check PLAYBOOK=common
 make run PLAYBOOK=common
 make check PLAYBOOK=misskey

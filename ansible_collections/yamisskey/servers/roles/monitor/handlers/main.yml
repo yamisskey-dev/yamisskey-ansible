@@ -1,0 +1,12 @@
+---
+# Restart monitoring stack handler
+- name: Restart monitoring stack
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: started
+    restart: yes
+  loop:
+    - prometheus
+    - grafana
+    - alertmanager
+  listen: "Restart monitoring stack"

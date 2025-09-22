@@ -1,0 +1,5 @@
+- name: Configure watch
+  hosts: all
+  become: true
+  roles:
+    - yamisskey.servers.watch

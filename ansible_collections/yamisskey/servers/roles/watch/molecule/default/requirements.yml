@@ -1,0 +1,6 @@
+---
+# Molecule test requirements for watch role
+# This file specifies any additional collections or roles needed for testing
+
+collections: []
+roles: []

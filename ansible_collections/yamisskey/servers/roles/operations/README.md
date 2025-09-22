@@ -78,7 +78,7 @@ ansible-playbook -i inventory playbooks/operations.yml -e op=logs -e service=min
 
 - `misskey` - Misskey SNS
 - `minio` - オブジェクトストレージ
-- `monitoring` - Prometheus/Grafana
+- `monitor` - Prometheus/Grafana
 - `cloudflared` - Cloudflare Tunnel
 - `ai` - AI サービス
 - `cryptpad` - CryptPad
