@@ -139,7 +139,7 @@
       - grafana
 
 - name: Stop monitoring stack if config changed
-  community.docker.docker_compose)v2:
+  community.docker.docker_compose_v2:
     project_src: "{{ monitor_compose_dir }}"
     state: absent
   when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed or (blackbox_config.changed if primary_domain not in ['test.local', 'localhost.localdomain'] else false)
