@@ -18,6 +18,9 @@
     - alertmanager
     - rules
     - blackbox
+    - grafana/provisioning/datasources
+    - grafana/provisioning/dashboards
+    - grafana/dashboards
 
 - name: Create Docker network for monitoring
   community.docker.docker_network:
@@ -44,6 +47,44 @@
     dest: '{{ monitor_compose_dir }}/config/blackbox/blackbox.yml'
     mode: '0644'
   register: blackbox_config
+
+# ==================================================
+# Grafana Configuration
+# ==================================================
+- name: Deploy Grafana datasource configuration
+  template:
+    src: grafana/provisioning/datasources/prometheus.yml.j2
+    dest: '{{ monitor_compose_dir }}/config/grafana/provisioning/datasources/prometheus.yml'
+    mode: '0644'
+  register: grafana_datasource_config
+
+- name: Deploy Grafana dashboard configuration
+  template:
+    src: grafana/provisioning/dashboards/dashboard.yml.j2
+    dest: '{{ monitor_compose_dir }}/config/grafana/provisioning/dashboards/dashboard.yml'
+    mode: '0644'
+  register: grafana_dashboard_config
+
+- name: Deploy cAdvisor dashboard
+  template:
+    src: grafana/dashboards/cadvisor.json.j2
+    dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/cadvisor.json'
+    mode: '0644'
+  register: grafana_cadvisor_dashboard
+
+- name: Deploy Node Exporter dashboard
+  template:
+    src: grafana/dashboards/node-exporter.json.j2
+    dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/node-exporter.json'
+    mode: '0644'
+  register: grafana_node_dashboard
+
+- name: Deploy Blackbox Exporter dashboard
+  template:
+    src: grafana/dashboards/blackbox.json.j2
+    dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/blackbox.json'
+    mode: '0644'
+  register: grafana_blackbox_dashboard
 
 - name: Deploy monitoring Docker Compose
   template:
