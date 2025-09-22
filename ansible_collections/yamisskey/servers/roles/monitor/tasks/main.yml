@@ -8,21 +8,25 @@
     state: directory
     mode: '0755'
 
+- name: Set config directories list
+  set_fact:
+    config_directories:
+      - prometheus
+      - alertmanager
+      - rules
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+      - blackbox
+{% endif %}
+      - grafana/provisioning/datasources
+      - grafana/provisioning/dashboards
+      - grafana/dashboards
+
 - name: Create monitoring config directories
   file:
     path: '{{ monitor_compose_dir }}/config/{{ item }}'
     state: directory
     mode: '0755'
-  loop:
-    - prometheus
-    - alertmanager
-    - rules
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
-    - blackbox
-{% endif %}
-    - grafana/provisioning/datasources
-    - grafana/provisioning/dashboards
-    - grafana/dashboards
+  loop: "{{ config_directories }}"
 
 - name: Create Docker network for monitoring
   community.docker.docker_network:
@@ -107,41 +111,53 @@
     dest: '{{ monitor_compose_dir }}/.env'
     mode: '0600'
 
+- name: Set Docker images list
+  set_fact:
+    docker_images:
+      - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
+      - "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
+      - "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+      - "prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}"
+{% endif %}
+
 - name: Pull Docker images for monitoring stack
   community.docker.docker_image:
     name: "{{ item }}"
     source: pull
-  loop:
-    - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
-    - "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
-    - "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+  loop: "{{ docker_images }}"
+
+- name: Set containers list for stopping
+  set_fact:
+    containers_to_stop:
+      - alertmanager
+      - prometheus
+      - grafana
 {% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
-    - "prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}"
+      - blackbox
 {% endif %}
 
 - name: Stop existing containers if config changed
   community.docker.docker_container:
     name: "{{ item }}"
     state: absent
-  loop:
-    - alertmanager
-    - prometheus
-    - grafana
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
-    - blackbox
-{% endif %}
+  loop: "{{ containers_to_stop }}"
   when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %} or blackbox_config.changed{% endif %}
+
+- name: Set config files list for checking
+  set_fact:
+    config_files_to_check:
+      - "{{ monitor_compose_dir }}/config/prometheus/prometheus.yml"
+      - "{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml"
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+      - "{{ monitor_compose_dir }}/config/blackbox/blackbox.yml"
+{% endif %}
 
 - name: Ensure config files exist before starting containers
   stat:
     path: "{{ item }}"
   register: config_files_check
-  loop:
-    - "{{ monitor_compose_dir }}/config/prometheus/prometheus.yml"
-    - "{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml"
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
-    - "{{ monitor_compose_dir }}/config/blackbox/blackbox.yml"
-{% endif %}
+  loop: "{{ config_files_to_check }}"
 
 - name: Verify all config files exist
   fail:
@@ -237,18 +253,22 @@
     seconds: 30
   when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %} or blackbox_container.changed{% endif %}
 
+- name: Set health check services list
+  set_fact:
+    health_check_services:
+      - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
+      - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
+      - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+      - { port: "{{ monitor_services.blackbox | default('9115') }}", name: 'blackbox', path: '/-/healthy' }
+{% endif %}
+
 - name: Verify Docker monitoring services
   uri:
     url: "http://localhost:{{ item.port }}{{ item.path }}"
     method: GET
     status_code: 200
-  loop:
-    - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
-    - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
-    - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
-    - { port: "{{ monitor_services.blackbox | default('9115') }}", name: 'blackbox', path: '/-/healthy' }
-{% endif %}
+  loop: "{{ health_check_services }}"
   register: service_health_checks
   retries: 5
   delay: 10
