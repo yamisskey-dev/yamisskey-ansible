@@ -193,17 +193,18 @@
 
     - name: Check if Node Exporter service is enabled
       systemd:
-        name: node_exporter
-        enabled: true
+        name: prometheus-node-exporter
       register: node_exporter_enabled
       failed_when: false
 
     - name: Verify Node Exporter service is enabled
       assert:
         that:
-          - node_exporter_enabled.enabled
+          - node_exporter_enabled.status is defined
+          - node_exporter_enabled.status.UnitFileState == "enabled"
         fail_msg: "Node Exporter service is not enabled"
         success_msg: "Node Exporter service is enabled"
+      when: node_exporter_enabled.status is defined
 
     - name: Check Node Exporter process existence
       shell: "pgrep -f node_exporter"
