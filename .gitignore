@@ -8,7 +8,10 @@ deploy/appliances/inventory
 
 # Ansible secrets
 .vault_pass
+.vault_pass.backup
+.env.secure
 deploy/**/group_vars/vault.yml
+deploy/**/ansible.cfg.debug
 
 # Runtime directories created by Makefile
 backups/
@@ -37,3 +40,4 @@ Thumbs.db
 # Environment files
 .env
 .env.local
+logs/secure/

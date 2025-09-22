@@ -78,6 +78,34 @@ check:
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		--check --diff
 
+secure:
+	@test -n "$(PLAYBOOK)" || (echo "❌ Usage: make secure PLAYBOOK=<name> [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
+	@test -f "$(PLAY)/$(PLAYBOOK).yml" || (echo "❌ Playbook $(PLAYBOOK).yml not found in $(PLAY)/" && exit 1)
+	@echo "🔒 Secure execution: $(COLLECTION): $(PLAYBOOK)"
+	@ulimit -c 0; \
+	export ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)"; \
+	export ANSIBLE_CONFIG="$(CONFIG_ABS)"; \
+	export ANSIBLE_NO_LOG=true; \
+	export ANSIBLE_FORCE_COLOR=false; \
+	"$(SHIM_DIR)/ansible-playbook" -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
+		$(if $(LIMIT),--limit $(LIMIT)) \
+		$(if $(TAGS),--tags $(TAGS)) \
+		--ask-vault-pass \
+		--ask-become-pass
+
+rotate:
+	@echo "🔄 Rotating vault password..."
+	@if [ -f "$(DEPLOY_DIR)/group_vars/vault.yml" ]; then \
+		echo "Creating backup of current vault..."; \
+		cp "$(DEPLOY_DIR)/group_vars/vault.yml" "$(BACKUP_DIR)/vault-$(TIMESTAMP).bak"; \
+		echo "Rotating vault password..."; \
+		ansible-vault rekey "$(DEPLOY_DIR)/group_vars/vault.yml"; \
+		echo "✅ Vault password rotated successfully"; \
+	else \
+		echo "❌ vault.yml not found"; \
+		exit 1; \
+	fi
+
 deploy:
 	@test -n "$(PLAYBOOKS)" || (echo "❌ Usage: make deploy PLAYBOOKS='<p1> <p2>' [TARGET=servers|appliances] [LIMIT=<hosts>]" && exit 1)
 	@echo "🚀 Deploying $(TARGET): $(PLAYBOOKS)"
@@ -228,29 +256,40 @@ test:
 	fi
 
 help:
-	@echo "🚀 Unified Ansible Wrapper (uv-only)"
-	@echo "==================================="
+	@echo "🚀 yamisskey-provision: Unified Ansible Infrastructure Management"
+	@echo "================================================================="
 	@echo ""
-	@echo "Setup"
-	@echo "  make install                         # Install uv toolchain + Galaxy deps"
+	@echo "📦 Setup & Installation"
+	@echo "  make install                         Install uv toolchain + Galaxy collections"
+	@echo "  make inventory [TARGET=servers]      Create inventory from template"
 	@echo ""
-	@echo "Inventory & Discovery"
-	@echo "  make inventory [TARGET=servers]      # Materialise inventory from template"
-	@echo "  make list [TARGET=servers]           # List available playbooks"
-	@echo "  make status                          # Quick infra health probes (tailscale, DNS, MinIO, Grafana)"
+	@echo "🔍 Discovery & Status"
+	@echo "  make status                          Health check (Tailscale, DNS, services)"
+	@echo "  make list [TARGET=servers]           List available playbooks"
 	@echo ""
-	@echo "Playbook Execution"
-	@echo "  make run PLAYBOOK=common [LIMIT=...] # Execute playbook with privilege escalation"
-	@echo "  make check PLAYBOOK=security         # Dry-run (ansible-playbook --check --diff)"
-	@echo "  make deploy PLAYBOOKS='core apps'    # Sequentially run multiple playbooks"
+	@echo "🚀 Playbook Execution"
+	@echo "  make run PLAYBOOK=<name>             Standard execution with sudo"
+	@echo "  make secure PLAYBOOK=<name>          Secure execution (memory protection)"
+	@echo "  make deploy PLAYBOOKS='p1 p2'        Sequential multi-playbook deployment"
 	@echo ""
-	@echo "Testing"
-	@echo "  make test ROLE=minio MODE=syntax     # Run Molecule (syntax|converge|test|cleanup) via uvx"
+	@echo "🧪 Testing & Validation"
+	@echo "  make check PLAYBOOK=<name>           Dry-run with diff preview"
+	@echo "  make test ROLE=<name> MODE=syntax    Molecule testing (syntax|converge|test)"
 	@echo ""
-	@echo "Housekeeping"
-	@echo "  make logs                            # Tail recent log files"
-	@echo "  make backup [TARGET=servers]         # Snapshot current inventory"
+	@echo "🗄️ Maintenance"
+	@echo "  make backup [TARGET=servers]         Backup current inventory"
+	@echo "  make rotate [TARGET=servers]         Rotate vault password with backup"
+	@echo "  make logs                            View recent log files"
 	@echo ""
-	@echo "Environment variables"
-	@echo "  TARGET=servers|appliances (default: servers)"
-	@echo "  PLAYBOOK=<name>, PLAYBOOKS='<p1> <p2>', LIMIT=<hosts>, TAGS=<tags>, ROLE=<name>, MODE=<molecule step>"
+	@echo "⚙️ Common Usage Examples"
+	@echo "  make run PLAYBOOK=common LIMIT=caspar          # Run common setup on caspar"
+	@echo "  make secure PLAYBOOK=monitor LIMIT=caspar      # Secure monitor deployment"
+	@echo "  make check PLAYBOOK=security TARGET=servers    # Preview security changes"
+	@echo "  make deploy PLAYBOOKS='common security'        # Multi-stage deployment"
+	@echo ""
+	@echo "📋 Environment Variables"
+	@echo "  TARGET     servers|appliances (default: servers)"
+	@echo "  LIMIT      Restrict to specific hosts (e.g., caspar,balthasar)"
+	@echo "  TAGS       Run specific tags only (e.g., install,config)"
+	@echo "  PLAYBOOK   Single playbook name"
+	@echo "  PLAYBOOKS  Space-separated playbook list for deploy"
