@@ -25,7 +25,7 @@
       create: true
     
     # テスト環境でもシステムチェックを有効化
-    skip_system_checks: []
+    skip_system_checks: false
     
   pre_tasks:
     # 基本的な依存関係とDockerライブラリをインストール
