@@ -62,7 +62,7 @@
       when: enable_security | bool
       tags: ['security', 'cloudflared']
       
-    - role: yamisskey.servers.monitoring
+    - role: yamisskey.servers.monitor
       when: enable_monitoring | bool
       tags: ['monitoring', 'observability']
       
