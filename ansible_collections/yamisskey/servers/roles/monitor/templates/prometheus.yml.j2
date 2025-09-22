@@ -82,6 +82,7 @@ scrape_configs:
           role: 'cadvisor'
 {% endif %}
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   # --- Blackbox HTTP/HTTPS Monitoring ---
   - job_name: 'blackbox-http'
     metrics_path: /probe
@@ -110,6 +111,7 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: 'blackbox:9115'
+{% endif %}
 
   # --- Application-specific monitoring can be added here ---
 {% if custom_monitor_jobs is defined %}

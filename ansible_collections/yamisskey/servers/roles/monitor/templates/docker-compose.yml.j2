@@ -83,6 +83,7 @@ services:
     restart: unless-stopped
     user: "65534:65534"
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
   blackbox:
     image: prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}
     container_name: blackbox
@@ -94,6 +95,4 @@ services:
       - monitor
     restart: unless-stopped
     user: "65534:65534"
-    depends_on:
-      - prometheus
-      - grafana
+{% endif %}

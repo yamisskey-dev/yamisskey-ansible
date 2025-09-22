@@ -17,7 +17,9 @@
     - prometheus
     - alertmanager
     - rules
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
     - blackbox
+{% endif %}
     - grafana/provisioning/datasources
     - grafana/provisioning/dashboards
     - grafana/dashboards
@@ -41,12 +43,14 @@
     mode: '0644'
   register: alertmanager_config
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
 - name: Deploy Blackbox Exporter configuration
   template:
     src: blackbox.yml.j2
     dest: '{{ monitor_compose_dir }}/config/blackbox/blackbox.yml'
     mode: '0644'
   register: blackbox_config
+{% endif %}
 
 # ==================================================
 # Grafana Configuration
@@ -79,12 +83,14 @@
     mode: '0644'
   register: grafana_node_dashboard
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
 - name: Deploy Blackbox Exporter dashboard
   template:
     src: grafana/dashboards/blackbox.json.j2
     dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/blackbox.json'
     mode: '0644'
   register: grafana_blackbox_dashboard
+{% endif %}
 
 - name: Deploy monitoring Docker Compose
   template:
@@ -109,7 +115,9 @@
     - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"
     - "grafana/grafana:{{ monitor_grafana_version | default('latest') }}"
     - "prom/alertmanager:{{ monitor_alertmanager_version | default('latest') }}"
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
     - "prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}"
+{% endif %}
 
 - name: Stop existing containers if config changed
   community.docker.docker_container:
@@ -119,8 +127,10 @@
     - alertmanager
     - prometheus
     - grafana
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
     - blackbox
-  when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed or blackbox_config.changed
+{% endif %}
+  when: alertmanager_config.changed or prometheus_config.changed or compose_config.changed{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %} or blackbox_config.changed{% endif %}
 
 - name: Ensure config files exist before starting containers
   stat:
@@ -129,7 +139,9 @@
   loop:
     - "{{ monitor_compose_dir }}/config/prometheus/prometheus.yml"
     - "{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml"
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
     - "{{ monitor_compose_dir }}/config/blackbox/blackbox.yml"
+{% endif %}
 
 - name: Verify all config files exist
   fail:
@@ -199,6 +211,7 @@
       networks: strict
   register: alertmanager_container
 
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
 - name: Start Blackbox Exporter container
   community.docker.docker_container:
     name: blackbox
@@ -217,11 +230,12 @@
       image: strict
       networks: strict
   register: blackbox_container
+{% endif %}
 
 - name: Wait for services to be ready
   pause:
     seconds: 30
-  when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed or blackbox_container.changed
+  when: prometheus_container.changed or grafana_container.changed or alertmanager_container.changed{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %} or blackbox_container.changed{% endif %}
 
 - name: Verify Docker monitoring services
   uri:
@@ -232,7 +246,9 @@
     - { port: "{{ monitor_services.prometheus }}", name: 'prometheus', path: '/-/healthy' }
     - { port: "{{ monitor_services.grafana }}", name: 'grafana', path: '/api/health' }
     - { port: "{{ monitor_services.alertmanager }}", name: 'alertmanager', path: '/-/healthy' }
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
     - { port: "{{ monitor_services.blackbox | default('9115') }}", name: 'blackbox', path: '/-/healthy' }
+{% endif %}
   register: service_health_checks
   retries: 5
   delay: 10

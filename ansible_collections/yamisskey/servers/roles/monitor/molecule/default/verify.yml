@@ -54,7 +54,9 @@
         - prometheus
         - grafana
         - alertmanager
+{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
         - blackbox
+{% endif %}
 
     - name: Verify all containers are running
       assert:
