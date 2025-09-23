@@ -10,19 +10,10 @@
         chmod 1777 /tmp/.ansible-tmp
         chown root:root /tmp/.ansible-tmp
 
-    - name: Install prerequisites for Nix
-      apt:
-        name:
-          - curl
-          - ca-certificates
-          - xz-utils
-        state: present
-        update_cache: true
-
     - name: Install Nix (single-user)
       raw: |
         if ! command -v /root/.nix-profile/bin/nix >/dev/null 2>&1; then
-          curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+          curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
         fi
 
     - name: Ensure Nix profile is sourced for future shells
