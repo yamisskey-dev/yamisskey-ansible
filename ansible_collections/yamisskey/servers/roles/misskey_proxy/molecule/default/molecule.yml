@@ -5,21 +5,28 @@ driver:
   name: docker
 platforms:
   - name: misskey-proxy-test-instance
-    image: "{{ env.MOLECULE_IMAGE | default('nixos/nix:2.21.5') }}"
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
     pre_build_image: true
+    cgroupns_mode: host
     privileged: true
+    security_opts:
+      - seccomp=unconfined
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /var/run/docker.sock:/var/run/docker.sock
     tmpfs:
       - /run
-    capabilities:
-      - SYS_ADMIN
-    command: bash -c "mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
+      - /run/lock
+      - /tmp
+    command: /lib/systemd/systemd
+    environment:
+      container: docker
     networks:
       - name: molecule-test-network
 provisioner:
   name: ansible
+  playbooks:
+    prepare: prepare.yml
   config_options:
     defaults:
       callbacks_enabled: profile_tasks,timer
@@ -32,6 +39,7 @@ provisioner:
       misskey-proxy-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+        ansible_python_interpreter: /usr/bin/python3
 verifier:
   name: ansible
 scenario:
@@ -41,6 +49,7 @@ scenario:
     - destroy
     - syntax
     - create
+    - prepare
     - converge
     - idempotence
     - verify

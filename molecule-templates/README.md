@@ -18,8 +18,11 @@
 direnv allow
 ```
 
-Molecule テストは既定で `nixos/nix:2.21.5` イメージを使用します。別のベースイメージを試したい場合は
-`MOLECULE_IMAGE` を上書きしてください。
+Molecule テストは既定で `geerlingguy/docker-ubuntu2204-ansible:latest` イメージを使用します。
+`prepare.yml` では apt で Nix インストーラの前提パッケージを導入し、公式インストーラ
+(`curl -L https://nixos.org/nix/install | sh -s -- --no-daemon`) を実行して Nix を追加します。
+Nix は必要なロールで選択的に利用しつつ、システムの Python や systemd は Ubuntu 標準の
+ものを使用する形に戻しています。
 
 ### 2. Moleculeテスト設定の追加
 
