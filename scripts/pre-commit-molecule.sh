@@ -31,7 +31,7 @@ if ! command -v molecule >/dev/null 2>&1; then
     exit 1
 fi
 
-# Always use the Nix-enabled base image for local Molecule runs (can override)
+# Always use the Nix-based Molecule image for local runs (override via MOLECULE_IMAGE if needed)
 export MOLECULE_IMAGE="${MOLECULE_IMAGE:-nixos/nix:2.21.5}"
 
 # Set up environment

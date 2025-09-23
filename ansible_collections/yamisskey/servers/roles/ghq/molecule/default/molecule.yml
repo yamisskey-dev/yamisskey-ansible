@@ -5,12 +5,12 @@ driver:
   name: docker
 platforms:
   - name: ghq-test-instance
-    image: ubuntu:22.04
-    pre_build_image: false
+    image: nixos/nix:2.21.5
+    pre_build_image: true
     privileged: false
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
-    command: sleep infinity
+    command: ["/bin/sh", "-c", "if ! command -v /root/.nix-profile/bin/python3 >/dev/null 2>&1; then nix profile install --accept-flake-config --profile /root/.nix-profile nixpkgs#python312 >/dev/null 2>&1; fi; while true; do sleep 30; done"]
     env:
       container: docker
     user: root

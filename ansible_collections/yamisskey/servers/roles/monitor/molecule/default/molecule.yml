@@ -19,7 +19,7 @@ platforms:
       - /tmp
     capabilities:
       - SYS_ADMIN
-    command: /lib/systemd/systemd
+    command: ["/bin/sh", "-c", "if ! command -v /root/.nix-profile/bin/python3 >/dev/null 2>&1; then nix profile install --accept-flake-config --profile /root/.nix-profile nixpkgs#python312 >/dev/null 2>&1; fi; while true; do sleep 30; done"]
     networks:
       - name: molecule-test-network
 provisioner:

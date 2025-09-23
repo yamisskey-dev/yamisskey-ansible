@@ -14,7 +14,7 @@ platforms:
       - /run
     capabilities:
       - SYS_ADMIN
-    command: bash -c "mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
+    command: ["/bin/sh", "-c", "if ! command -v /root/.nix-profile/bin/python3 >/dev/null 2>&1; then nix profile install --accept-flake-config --profile /root/.nix-profile nixpkgs#python312 >/dev/null 2>&1; fi; while true; do sleep 30; done"]
     networks:
       - name: molecule-test-network
 provisioner:
@@ -31,6 +31,7 @@ provisioner:
       modsecurity-test-instance:
         # ModSecurity test variables
         ansible_user: "root"
+        ansible_python_interpreter: /root/.nix-profile/bin/python3
         modsecurity_enabled: true
         modsecurity_paranoia_level: 1
         modsecurity_anomaly_inbound: 5
