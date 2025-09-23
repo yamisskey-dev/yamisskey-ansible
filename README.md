@@ -8,6 +8,10 @@ Modern Ansible infrastructure management with SOPS secrets management and Nix-ba
 - [Nix](https://nixos.org/download.html) with flakes enabled
 - [direnv](https://direnv.net/) (optional but recommended)
 
+### System Requirements
+- Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)
+- Python 3 available as `/usr/bin/python3`
+
 ### Automatic Environment Setup (Recommended)
 
 If you have direnv installed:
