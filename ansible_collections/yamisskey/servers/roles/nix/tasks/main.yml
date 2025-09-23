@@ -121,14 +121,18 @@
 - name: Check Nix CLI prerequisites for Home Manager
   become: false
   ansible.builtin.shell: |-
-    missing=()
+    missing=""
     for cli in nix-channel nix-shell; do
       if ! command -v "$cli" >/dev/null 2>&1; then
-        missing+=("$cli")
+        if [ -z "$missing" ]; then
+          missing="$cli"
+        else
+          missing="$missing $cli"
+        fi
       fi
     done
-    if [ "${#missing[@]}" -gt 0 ]; then
-      echo "Missing Nix CLI tools: ${missing[*]}"
+    if [ -n "$missing" ]; then
+      echo "Missing Nix CLI tools: $missing"
       exit 1
     fi
   environment: "{{ nix_user_environment }}"
