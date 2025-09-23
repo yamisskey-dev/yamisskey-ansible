@@ -6,7 +6,7 @@
     nix_user_environment:
       HOME: "{{ ansible_user_dir }}"
       USER: "{{ ansible_user | default(ansible_env.USER) }}"
-      PATH: "{{ ansible_env.PATH }}"
+      PATH: "{{ ansible_user_dir }}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:{{ ansible_env.PATH }}"
       TMPDIR: "{{ ansible_user_dir }}/.cache/nix-installer"
       TMP: "{{ ansible_user_dir }}/.cache/nix-installer"
       TEMP: "{{ ansible_user_dir }}/.cache/nix-installer"
@@ -23,14 +23,11 @@
 - name: Determine Nix install mode
   become: false
   ansible.builtin.set_fact:
-    nix_install_effective_mode: >-
-      {{
-        nix_install_requested_mode != 'auto'
-        | ternary(
-            nix_install_requested_mode,
-            (nix_install_run_user == 'root') | ternary('daemon', 'no-daemon')
-          )
-      }}
+    nix_install_effective_mode: "{{
+      nix_install_requested_mode
+      if nix_install_requested_mode != 'auto'
+      else ('daemon' if nix_install_run_user == 'root' else 'no-daemon')
+    }}"
 
 - name: Display Nix installer mode
   ansible.builtin.debug:
@@ -121,6 +118,23 @@
   ansible.builtin.debug:
     msg: "Nix version: {{ nix_version.stdout | default('Not installed or not accessible') }}"
 
+- name: Check Nix CLI prerequisites for Home Manager
+  become: false
+  ansible.builtin.shell: |-
+    missing=()
+    for cli in nix-channel nix-shell; do
+      if ! command -v "$cli" >/dev/null 2>&1; then
+        missing+=("$cli")
+      fi
+    done
+    if [ "${#missing[@]}" -gt 0 ]; then
+      echo "Missing Nix CLI tools: ${missing[*]}"
+      exit 1
+    fi
+  environment: "{{ nix_user_environment }}"
+  register: nix_cli_prereq
+  changed_when: false
+
 - name: Check if Home Manager is installed
   become: false
   ansible.builtin.shell: |-
@@ -159,7 +173,9 @@
     nix-channel --update
     nix-shell '<home-manager>' -A install
   environment: "{{ nix_user_environment }}"
-  when: home_manager_check.rc != 0
+  when:
+    - home_manager_check.rc != 0
+    - nix_cli_prereq.rc == 0
 
 - name: Ensure Home Manager configuration directory exists
   become: false
