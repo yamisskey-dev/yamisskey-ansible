@@ -48,7 +48,12 @@ Thumbs.db
 *.swo
 *~
 
-# Environment files
+# Environment filesあｍ
 .env
 .env.local
 logs/secure/
+
+# Ansible Collections for testing (molecule requirements)
+ansible_collections/ansible/
+ansible_collections/community/
+ansible_collections/*.info/

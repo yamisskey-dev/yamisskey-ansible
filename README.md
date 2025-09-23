@@ -6,11 +6,12 @@ Modern Ansible infrastructure management with SOPS secrets management and Nix-ba
 
 ### Prerequisites
 - [Nix](https://nixos.org/download.html) with flakes enabled
-- [direnv](https://direnv.net/) (optional but recommended)
+- [direnv](https://direnv.net/)
+- [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html)
 
 ### System Requirements
 - Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)
-- Python 3 available as `/usr/bin/python3`
+- Python 3 available as `/usr/bin/python3`, `ansible` will be installed via `uv`.
 - Nix [installed manually on hosts](https://nixos.org/download/); Molecule prepares it automatically inside test containers
 
 ### Automatic Environment Setup (Recommended)

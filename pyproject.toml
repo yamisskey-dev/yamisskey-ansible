@@ -1,0 +1,30 @@
+[project]
+name = "yamisskey-provision"
+version = "1.0.0"
+description = "Modern Ansible infrastructure with SOPS secrets management"
+requires-python = ">=3.11"
+dependencies = [
+    "ansible-core>=2.17.0",
+    "ansible-lint>=25.0.0",
+    "molecule>=25.0.0",
+    "molecule-docker>=2.1.0",
+    "pytest>=7.0.0",
+    "pytest-ansible>=4.0.0",
+    "docker>=6.0.0",
+    "requests>=2.28.0",
+    "selinux>=0.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+]

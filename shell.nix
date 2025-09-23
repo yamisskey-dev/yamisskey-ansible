@@ -34,25 +34,8 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
-    echo "🚀 yamisskey-provision development environment"
-    echo "=============================================="
-    echo ""
-    echo "📦 Available tools:"
-    echo "   ansible: $(ansible --version | head -1)"
-    echo "   sops: $(sops --version --check-for-updates)"
-    echo "   age: $(age --version)"
-    echo "   ansible-lint: $(ansible-lint --version)"
-    
-    # Set up environment
-    export ANSIBLE_COLLECTIONS_PATH="$PWD"
-    export PATH="$PWD/.bin:$PATH"
-    
-    # Create necessary directories
-    mkdir -p logs backups .vendor/collections
+    # Note: Environment variables are managed by direnv (.envrc)
+    # This shell only provides packages - see .envrc for configuration
+    echo "📦 Nix shell activated. Environment managed by direnv (.envrc)"
   '';
-  
-  # Environment variables
-  ANSIBLE_FORCE_COLOR = "1";
-  ANSIBLE_HOST_KEY_CHECKING = "False";
-  PYTHONPATH = "$PWD";
 }

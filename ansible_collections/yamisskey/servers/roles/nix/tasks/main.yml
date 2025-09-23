@@ -1,230 +1,99 @@
 ---
-- name: Locate existing Nix binary
-  ansible.builtin.shell: |
-    for candidate in \
-      /root/.nix-profile/bin/nix \
-      /nix/var/nix/profiles/default/bin/nix \
-      /etc/profiles/per-user/root/bin/nix; do
-      if [ -x "$candidate" ]; then
-        echo "$candidate"
-        break
-      fi
-    done
-  register: nix_existing_binary
+- name: Check if Nix is already installed
+  ansible.builtin.shell: |-
+    if command -v nix >/dev/null 2>&1; then
+      echo "installed"
+    else
+      echo "not_installed"
+    fi
+  register: nix_check
   changed_when: false
 
-- name: Set Nix binary fact
-  ansible.builtin.set_fact:
-    nix_binary_path: "{{ nix_existing_binary.stdout | default('') }}"
+- name: Display Nix installation status
+  ansible.builtin.debug:
+    msg: "Nix installation status: {{ nix_check.stdout }}"
 
-- name: Install Nix prerequisites on APT-based systems
+- name: Install prerequisites on Debian/Ubuntu
   ansible.builtin.apt:
     update_cache: true
     name:
       - curl
       - ca-certificates
       - xz-utils
-  when:
-    - ansible_pkg_mgr == 'apt'
-    - nix_binary_path | length == 0
-
-- name: Install Nix prerequisites on Portage-based systems
-  ansible.builtin.package:
-    name:
-      - net-misc/curl
-      - app-misc/ca-certificates
-      - app-arch/xz-utils
     state: present
+  when:
+    - ansible_os_family == 'Debian'
+    - nix_check.stdout == 'not_installed'
+  become: true
+
+- name: Install prerequisites on Gentoo
+  ansible.builtin.shell: |-
+    emerge --sync --quiet
+    emerge --ask=n net-misc/curl app-misc/ca-certificates app-arch/xz-utils
   when:
     - ansible_pkg_mgr == 'portage'
-    - nix_binary_path | length == 0
+    - nix_check.stdout == 'not_installed'
+  become: true
 
-- name: Ensure Nix is installed (single-user)
-  ansible.builtin.shell: |
-    set -euo pipefail
-    curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon --yes
-  args:
-    executable: /bin/bash
-  when: nix_binary_path | length == 0
+- name: Download and install Nix (single-user mode)
+  ansible.builtin.shell: |-
+    curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+  when: nix_check.stdout == 'not_installed'
+  register: nix_install
 
-- name: Wait for Nix installation to complete
-  ansible.builtin.wait_for:
-    path: /root/.nix-profile
-    timeout: 30
-  when: nix_binary_path | length == 0
-
-- name: Re-evaluate existing Nix binary
-  ansible.builtin.shell: |
-    for candidate in \
-      /root/.nix-profile/bin/nix \
-      /nix/var/nix/profiles/default/bin/nix \
-      /etc/profiles/per-user/root/bin/nix; do
-      if [ -x "$candidate" ]; then
-        echo "$candidate"
-        break
-      fi
-    done
-  register: nix_binary_refresh
-  changed_when: false
-
-- name: Update Nix binary fact
-  ansible.builtin.set_fact:
-    nix_binary_path: "{{ nix_binary_refresh.stdout | default(nix_binary_path | default('')) }}"
-
-- name: Locate Nix profile script
-  ansible.builtin.shell: |
-    # First, try the standard locations
-    for candidate in \
-      /root/.nix-profile/etc/profile.d/nix.sh \
-      /root/.nix-profile/etc/profile.d/nix-daemon.sh \
-      /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
-      /etc/profile.d/nix.sh; do
-      if [ -f "$candidate" ]; then
-        echo "$candidate"
-        exit 0
-      fi
-    done
-    
-    # If not found, search more broadly
-    find /root/.nix-profile -name "nix*.sh" 2>/dev/null | head -1
-  args:
-    executable: /bin/bash
-  register: nix_profile_script_lookup
-  changed_when: false
-
-- name: Set profile script fact
-  ansible.builtin.set_fact:
-    nix_profile_script_path: "{{ nix_profile_script_lookup.stdout | default('') }}"
-
-- name: Debug profile directories when script missing
-  ansible.builtin.shell: |
-    echo "=== Checking /root/.nix-profile structure ==="
-    ls -la /root/.nix-profile/ || true
-    echo "=== Checking /root/.nix-profile/etc/ ==="
-    ls -la /root/.nix-profile/etc/ || true
-    echo "=== Checking /root/.nix-profile/etc/profile.d/ ==="
-    ls -la /root/.nix-profile/etc/profile.d/ || true
-    echo "=== Checking /nix/var/nix/profiles/default/etc/profile.d/ ==="
-    ls -la /nix/var/nix/profiles/default/etc/profile.d/ || true
-    echo "=== Checking /etc/profile.d/ ==="
-    ls -la /etc/profile.d/ || true
-    echo "=== Searching for nix.sh files ==="
-    find /root -name "nix.sh" 2>/dev/null || true
-    find /nix -name "nix.sh" 2>/dev/null || true
-    find /etc -name "nix.sh" 2>/dev/null || true
-  register: nix_profile_dir_debug
-  when: nix_profile_script_path | length == 0
-  changed_when: false
-  failed_when: false
-
-- name: Display debug output when profile script missing
-  ansible.builtin.debug:
-    var: nix_profile_dir_debug.stdout_lines
-  when: nix_profile_script_path | length == 0
-
-- name: Fail if no Nix profile script was found
-  ansible.builtin.fail:
-    msg: "Nix profile script not found after installation"
-  when: nix_profile_script_path | length == 0
-
-
-- name: Ensure Nix profile is loaded in root shells
+- name: Source Nix profile in bashrc
   ansible.builtin.lineinfile:
-    path: /root/.bashrc
-    line: '. {{ nix_profile_script_path }}'
+    path: "{{ ansible_user_dir }}/.bashrc"
+    line: '. {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh'
     state: present
-
-- name: Determine Nix binary via profile
-  ansible.builtin.shell: |
-    set -euo pipefail
-    . {{ nix_profile_script_path }}
-    command -v nix
-  args:
-    executable: /bin/bash
-  register: nix_binary_from_profile
-  changed_when: false
-
-- name: Update Nix binary fact from profile
-  ansible.builtin.set_fact:
-    nix_binary_path: "{{ nix_binary_from_profile.stdout | default(nix_binary_path | default('')) }}"
-
-- name: Fail if Nix binary is missing after installation
-  ansible.builtin.fail:
-    msg: "Nix binary not found after installation"
-  when: nix_binary_path | length == 0
-
-- name: Set Nix binary directory fact
-  ansible.builtin.set_fact:
-    nix_bin_dir: "{{ nix_binary_path | dirname }}"
+    create: true
+  when: nix_check.stdout == 'not_installed'
 
 - name: Verify Nix installation
-  ansible.builtin.shell: |
-    set -euo pipefail
-    . {{ nix_profile_script_path }}
+  ansible.builtin.shell: |-
+    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
     nix --version
-  args:
-    executable: /bin/bash
-  changed_when: false
-
-- name: Ensure nix binary is globally available
-  ansible.builtin.file:
-    src: "{{ nix_binary_path }}"
-    dest: /usr/local/bin/nix
-    state: link
-    force: true
-    follow: false
-
-- name: Check if Home Manager command exists
-  ansible.builtin.shell: |
-    set -e
-    . {{ nix_profile_script_path }}
-    command -v home-manager
-  args:
-    executable: /bin/bash
-  register: home_manager_available
+  register: nix_version
   changed_when: false
   failed_when: false
-  environment:
-    PATH: "{{ nix_bin_dir }}:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
+
+- name: Display Nix version
+  ansible.builtin.debug:
+    msg: "Nix version: {{ nix_version.stdout | default('Not installed or not accessible') }}"
+
+- name: Check if Home Manager is installed
+  ansible.builtin.shell: |-
+    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
+    command -v home-manager
+  register: home_manager_check
+  changed_when: false
+  failed_when: false
 
 - name: Install Home Manager
-  ansible.builtin.shell: |
-    set -euo pipefail
-    . {{ nix_profile_script_path }}
+  ansible.builtin.shell: |-
+    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
     nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
     nix-channel --update
     nix-shell '<home-manager>' -A install
-  args:
-    executable: /bin/bash
-  when: home_manager_available.rc != 0
-  environment:
-    PATH: "{{ nix_bin_dir }}:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
-  become: false
-
-- name: Determine Home Manager configuration profile
-  ansible.builtin.set_fact:
-    resolved_home_manager_config: "{{ home_manager_config | default(nix_home_manager_config | default('server')) }}"
+  when: home_manager_check.rc != 0
 
 - name: Ensure Home Manager configuration directory exists
   ansible.builtin.file:
     path: "{{ ansible_user_dir }}/.config/home-manager"
     state: directory
     mode: '0755'
-  become: false
 
 - name: Deploy Home Manager configuration
   ansible.builtin.template:
     src: home.nix.j2
     dest: "{{ ansible_user_dir }}/.config/home-manager/home.nix"
     mode: '0644'
-  become: false
   vars:
-    home_manager_config: "{{ resolved_home_manager_config }}"
+    home_manager_config: "{{ nix_home_manager_config | default('server') }}"
 
 - name: Apply Home Manager configuration
-  ansible.builtin.command: home-manager switch
-  become: false
+  ansible.builtin.shell: |-
+    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
+    home-manager switch
   register: home_manager_switch
   changed_when: "'Building' in home_manager_switch.stderr"
-  environment:
-    PATH: "{{ nix_bin_dir }}:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"

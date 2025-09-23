@@ -11,20 +11,6 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         
-        # Python environment with Ansible and related tools
-        pythonEnv = pkgs.python3.withPackages (ps: with ps; [
-          ansible-core
-          molecule
-          docker
-          pytest
-          pytest-ansible
-          yamllint
-          jinja2
-          pyyaml
-          cryptography
-          requests
-        ]);
-        
         # Role-based package sets for modular management
         rolePackages = {
           # Core system utilities (always included)
@@ -81,8 +67,6 @@
           ai = with pkgs; [
             mecab
             mecab-ipadic
-            python3
-            python3Packages.pip
           ];
 
           # GHQ role packages
@@ -92,18 +76,15 @@
 
           # Development/control node packages
           development = with pkgs; [
-            ansible_2_17
-            ansible-lint
-            pythonEnv
             yamllint
             sops
             age
             gnupg
             docker
             docker-compose
-            python3Packages.passlib
             nixpkgs-fmt
             statix
+            gettext  # Provides envsubst
           ];
 
           # Infrastructure services
@@ -158,10 +139,29 @@
           mkCommand = name: script: pkgs.writeShellScriptBin name script;
           
           baseEnv = ''
-            export ANSIBLE_COLLECTIONS_PATH="$PWD"
-            export ANSIBLE_FORCE_COLOR="1"
-            export ANSIBLE_HOST_KEY_CHECKING="False"
-            export PYTHONPATH="$PWD"
+            PROJECT_ROOT="$PWD"
+
+            if command -v git >/dev/null 2>&1; then
+              if ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
+                PROJECT_ROOT="$ROOT"
+              fi
+            fi
+
+            if [ "$PROJECT_ROOT" = "$PWD" ]; then
+              SEARCH_DIR="$PWD"
+              while [ "$SEARCH_DIR" != "/" ]; do
+                if [ -f "$SEARCH_DIR/flake.nix" ] && [ -d "$SEARCH_DIR/deploy" ]; then
+                  PROJECT_ROOT="$SEARCH_DIR"
+                  break
+                fi
+                SEARCH_DIR=$(dirname "$SEARCH_DIR")
+              done
+            fi
+
+            cd "$PROJECT_ROOT"
+
+            # Note: Environment variables are now managed by direnv (.envrc)
+            export PROJECT_ROOT
             mkdir -p logs backups .vendor/collections
           '';
           
@@ -171,13 +171,25 @@
             set -euo pipefail
             ${baseEnv}
             
-            COMMAND=$1; shift || true
+            COMMAND=''${1:-help}
+            if [ "$#" -gt 0 ]; then
+              shift
+            fi
             
             case "$COMMAND" in
               # SOPS operations
               sops)
-                OPERATION=$1; shift || true
-                TARGET=''${1:-servers}
+                if [ "$#" -gt 0 ]; then
+                  OPERATION=$1
+                  shift
+                else
+                  OPERATION=""
+                fi
+                TARGET="servers"
+                if [ "$#" -gt 0 ]; then
+                  TARGET=$1
+                  shift
+                fi
                 case "$OPERATION" in
                   install)
                     if command -v sops >/dev/null 2>&1 && command -v age >/dev/null 2>&1; then
@@ -216,9 +228,18 @@
               
               # Ansible operations
               run)
-                PLAYBOOK=$1; shift || true
-                TARGET=''${1:-servers}
-                LIMIT=$2
+                if [ "$#" -gt 0 ]; then
+                  PLAYBOOK=$1
+                  shift
+                else
+                  PLAYBOOK=""
+                fi
+                TARGET="servers"
+                if [ "$#" -gt 0 ]; then
+                  TARGET=$1
+                  shift
+                fi
+                LIMIT=''${1:-}
                 [ -n "$PLAYBOOK" ] || { echo "Usage: yp run <playbook> [target] [limit]"; exit 1; }
                 
                 DEPLOY_DIR="deploy/$TARGET"
@@ -229,9 +250,18 @@
                 ansible-playbook -i "$DEPLOY_DIR/inventory" "$DEPLOY_DIR/playbooks/$PLAYBOOK.yml" ''${LIMIT:+--limit $LIMIT} ;;
               
               check)
-                PLAYBOOK=$1; shift || true
-                TARGET=''${1:-servers}
-                LIMIT=$2
+                if [ "$#" -gt 0 ]; then
+                  PLAYBOOK=$1
+                  shift
+                else
+                  PLAYBOOK=""
+                fi
+                TARGET="servers"
+                if [ "$#" -gt 0 ]; then
+                  TARGET=$1
+                  shift
+                fi
+                LIMIT=''${1:-}
                 [ -n "$PLAYBOOK" ] || { echo "Usage: yp check <playbook> [target] [limit]"; exit 1; }
                 
                 DEPLOY_DIR="deploy/$TARGET"
@@ -243,17 +273,21 @@
               
               # Inventory management
               inventory)
-                TARGET=''${1:-servers}
-                TYPE=$2
+                TARGET="servers"
+                if [ "$#" -gt 0 ]; then
+                  TARGET=$1
+                  shift
+                fi
+                TYPE=''${1:-}
                 
                 DEPLOY_DIR="deploy/$TARGET"
                 INV_PATH="$DEPLOY_DIR/inventory"
                 
                 if [ "$TYPE" = "local" ]; then
-                  TEMPLATE_PATH="$DEPLOY_DIR/inventory.example.local"
+                  TEMPLATE_PATH="$DEPLOY_DIR/inventory.template.local"
                   echo "📋 Creating self-provisioning inventory..."
                 else
-                  TEMPLATE_PATH="$DEPLOY_DIR/inventory.example"
+                  TEMPLATE_PATH="$DEPLOY_DIR/inventory.template"
                   echo "📋 Creating $TARGET inventory from template..."
                 fi
                 
@@ -265,7 +299,41 @@
                   echo "⚠️  Backup created: backups/$TARGET-inventory-$TIMESTAMP.bak"
                 fi
                 
-                cp "$TEMPLATE_PATH" "$INV_PATH"
+                # Load environment variables (skip direnv-specific commands)
+                if [ -f ".envrc" ]; then
+                  echo "🔄 Loading environment variables from direnv..."
+                  # Extract only the export statements and variable definitions
+                  eval "$(grep -E '^export|^[A-Z_].*=' .envrc | grep -v 'use flake')"
+                  
+                  # Run the Tailscale detection logic manually
+                  if command -v tailscale >/dev/null 2>&1 && tailscale status >/dev/null 2>&1; then
+                    TAILSCALE_STATUS=$(tailscale status)
+                    export IP_BALTHASAR=$(echo "$TAILSCALE_STATUS" | grep balthasar | awk '{print $1}' || echo "IP_BALTHASAR")
+                    export IP_CASPAR=$(echo "$TAILSCALE_STATUS" | grep caspar | awk '{print $1}' || echo "IP_CASPAR")
+                    export IP_LINODE=$(echo "$TAILSCALE_STATUS" | grep linode-prox | awk '{print $1}' || echo "IP_LINODE")
+                    export IP_JOSEPH=$(echo "$TAILSCALE_STATUS" | grep joseph | awk '{print $1}' || echo "IP_JOSEPH")
+                    export IP_RASPBERRY=$(echo "$TAILSCALE_STATUS" | grep raspberrypi | awk '{print $1}' || echo "IP_RASPBERRY")
+                  else
+                    export IP_BALTHASAR="IP_BALTHASAR"
+                    export IP_CASPAR="IP_CASPAR"
+                    export IP_LINODE="IP_LINODE"
+                    export IP_JOSEPH="IP_JOSEPH"
+                    export IP_RASPBERRY="IP_RASPBERRY"
+                  fi
+                  
+                  # Set default template variables
+                  export USER="$USER"
+                  export HOSTNAME="$(hostname)"
+                  export DOMAIN="yami.ski"
+                  export NETWORK="100.64.0.0/10"
+                else
+                  echo "⚠️  .envrc not found - please ensure direnv is configured"
+                fi
+                
+                # Process template with envsubst (clean environment variable substitution)
+                echo "🔧 Processing template with envsubst..."
+                envsubst < "$TEMPLATE_PATH" > "$INV_PATH"
+                
                 echo "✅ $TARGET inventory created" ;;
               
               # Status and discovery
@@ -282,9 +350,17 @@
               
               # Testing
               test)
-                ROLE=$1
-                MODE=''${2:-test}
-                TARGET=''${3:-servers}
+                if [ "$#" -gt 0 ]; then
+                  ROLE=$1
+                  shift
+                else
+                  ROLE=""
+                fi
+                MODE=''${1:-test}
+                if [ "$#" -gt 0 ]; then
+                  shift
+                fi
+                TARGET=''${1:-servers}
                 [ -n "$ROLE" ] || { echo "Usage: yp test <role> [mode] [target]"; exit 1; }
                 
                 command -v docker >/dev/null || { echo "❌ Docker required for testing"; exit 1; }
@@ -357,16 +433,29 @@
           
           inventory-create = mkCommand "inventory-create" ''${self.packages.${system}.default}/bin/yamisskey-provision inventory "$@"'';
           cleanup-legacy = mkCommand "cleanup-legacy" ''rm -rf .bin .vendor && echo "✅ Legacy cleanup complete"'';
+          
+          # Ansible installation command
+          install = mkCommand "install" ''
+            set -euo pipefail
+            
+            echo "🚀 Installing Ansible and related tools..."
+            echo "============================================="
+            
+            # Check if uv is installed
+            if ! command -v uv >/dev/null 2>&1; then
+              echo "📦 Installing uv..."
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+              export PATH="$HOME/.cargo/bin:$PATH"
+              echo "✅ uv installed successfully"
+            else
+              echo "✅ uv already installed: $(uv --version)"
+            fi
+          '';
         };
       in {
         # Development shell - minimal for Ansible control
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            # Core Ansible toolchain only
-            ansible_2_17
-            ansible-lint
-            pythonEnv
-            
             # SOPS secrets management
             sops
             age
@@ -388,32 +477,19 @@
           ] ++ [ packages'.default ];
 
           shellHook = ''
-            # Fix locale issues
+            # Note: Most environment variables are managed by direnv (.envrc)
+            # Only essential locale and PATH settings here
             export LANG=C.UTF-8
             export LC_ALL=C.UTF-8
             
-            echo "🚀 yamisskey-provision development environment (Nix Flake)"
-            echo "=========================================================="
-            echo ""
-            echo "📦 Available tools:"
-            echo "   ansible: $(ansible --version | head -1)"
-            echo "   sops: $(sops --version --check-for-updates)"
-            echo "   age: $(age --version)"
-            echo "   ansible-lint: $(ansible-lint --version)"
-            echo "   python: $(python3 --version)"
+            # Add uv-installed tools to PATH
+            if [ -d "$HOME/.cargo/bin" ]; then
+              export PATH="$HOME/.cargo/bin:$PATH"
+            fi
             
-            # Set up environment variables
-            export ANSIBLE_COLLECTIONS_PATH="$PWD"
-            export ANSIBLE_FORCE_COLOR="1"
-            export ANSIBLE_HOST_KEY_CHECKING="False"
-            export PYTHONPATH="$PWD"
-            
-            # Create necessary directories
-            mkdir -p logs backups .vendor/collections
+            echo "🚀 Nix development shell activated. Full environment managed by direnv (.envrc)"
           '';
           
-          ANSIBLE_FORCE_COLOR = "1";
-          ANSIBLE_HOST_KEY_CHECKING = "False";
           LANG = "C.UTF-8";
           LC_ALL = "C.UTF-8";
         };
