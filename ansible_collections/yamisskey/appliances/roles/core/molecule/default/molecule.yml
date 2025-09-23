@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: core-test-instance
-    image: "{{ lookup('env', 'MOLECULE_IMAGE') | default('nixos/nix:2.21.5', true) }}"
+    image: "{{ env.MOLECULE_IMAGE | default('nixos/nix:2.21.5') }}"
     pre_build_image: true
     privileged: true
     volumes:
