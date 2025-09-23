@@ -1,11 +1,21 @@
 ---
+- name: Define Nix user environment
+  become: false
+  ansible.builtin.set_fact:
+    nix_user_environment:
+      HOME: "{{ ansible_user_dir }}"
+      USER: "{{ ansible_user | default(ansible_env.USER) }}"
+      PATH: "{{ ansible_env.PATH }}"
+
 - name: Check if Nix is already installed
+  become: false
   ansible.builtin.shell: |-
     if command -v nix >/dev/null 2>&1; then
       echo "installed"
     else
       echo "not_installed"
     fi
+  environment: "{{ nix_user_environment }}"
   register: nix_check
   changed_when: false
 
@@ -14,6 +24,7 @@
     msg: "Nix installation status: {{ nix_check.stdout }}"
 
 - name: Install prerequisites on Debian/Ubuntu
+  become: true
   ansible.builtin.apt:
     update_cache: true
     name:
@@ -24,25 +35,26 @@
   when:
     - ansible_os_family == 'Debian'
     - nix_check.stdout == 'not_installed'
-  become: true
 
 - name: Install prerequisites on Gentoo
+  become: true
   ansible.builtin.shell: |-
     emerge --sync --quiet
     emerge --ask=n net-misc/curl app-misc/ca-certificates app-arch/xz-utils
   when:
     - ansible_pkg_mgr == 'portage'
     - nix_check.stdout == 'not_installed'
-  become: true
 
 - name: Download and install Nix (single-user mode)
+  become: false
   ansible.builtin.shell: |-
-    curl -L https://nixos.org/nix/install | sh -s -- --no-daemon --yes
+    curl -L --fail https://nixos.org/nix/install | sh -s -- --no-daemon --yes
+  environment: "{{ nix_user_environment }}"
   when: nix_check.stdout == 'not_installed'
   register: nix_install
-  become: true
 
 - name: Source Nix profile in bashrc
+  become: false
   ansible.builtin.lineinfile:
     path: "{{ ansible_user_dir }}/.bashrc"
     line: '. {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh'
@@ -51,9 +63,11 @@
   when: nix_check.stdout == 'not_installed'
 
 - name: Verify Nix installation
+  become: false
   ansible.builtin.shell: |-
     . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
     nix --version
+  environment: "{{ nix_user_environment }}"
   register: nix_version
   changed_when: false
   failed_when: false
@@ -63,28 +77,34 @@
     msg: "Nix version: {{ nix_version.stdout | default('Not installed or not accessible') }}"
 
 - name: Check if Home Manager is installed
+  become: false
   ansible.builtin.shell: |-
     . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
     command -v home-manager
+  environment: "{{ nix_user_environment }}"
   register: home_manager_check
   changed_when: false
   failed_when: false
 
 - name: Install Home Manager
+  become: false
   ansible.builtin.shell: |-
     . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
     nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
     nix-channel --update
     nix-shell '<home-manager>' -A install
+  environment: "{{ nix_user_environment }}"
   when: home_manager_check.rc != 0
 
 - name: Ensure Home Manager configuration directory exists
+  become: false
   ansible.builtin.file:
     path: "{{ ansible_user_dir }}/.config/home-manager"
     state: directory
     mode: '0755'
 
 - name: Deploy Home Manager configuration
+  become: false
   ansible.builtin.template:
     src: home.nix.j2
     dest: "{{ ansible_user_dir }}/.config/home-manager/home.nix"
@@ -93,8 +113,10 @@
     home_manager_config: "{{ nix_home_manager_config | default('server') }}"
 
 - name: Apply Home Manager configuration
+  become: false
   ansible.builtin.shell: |-
     . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
     home-manager switch
+  environment: "{{ nix_user_environment }}"
   register: home_manager_switch
   changed_when: "'Building' in home_manager_switch.stderr"
