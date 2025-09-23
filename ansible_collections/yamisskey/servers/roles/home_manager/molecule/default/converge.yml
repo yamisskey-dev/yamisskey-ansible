@@ -1,0 +1,51 @@
+---
+- name: Converge home_manager role
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
+
+    - name: Verify Nix installation
+      command: which nix
+      register: nix_check
+      failed_when: nix_check.rc != 0
+      changed_when: false
+
+    - name: Fail if not running on Nix-enabled system
+      fail:
+        msg: "This test requires a Nix-enabled environment. Use 'nix develop' to enter development shell."
+      when: nix_check.rc != 0
+
+    - name: Create test directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/test
+
+  tasks:
+    - name: Apply home_manager role
+      include_role:
+        name: yamisskey.servers.home_manager
+      vars:
+        ansible_user: "root"
+        home_manager_config: "development"
+
+    - name: Basic role verification
+      debug:
+        msg: "home_manager role applied successfully"
+
+  post_tasks:
+    - name: Show test environment status
+      shell: echo "Test environment setup completed"
+      register: test_status
+      changed_when: false
+
+    - name: Display test status
+      debug:
+        var: test_status.stdout

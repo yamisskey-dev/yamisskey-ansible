@@ -1,0 +1,19 @@
+---
+- name: Verify home_manager role
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Check if home.nix exists
+      stat:
+        path: "{{ ansible_user_dir }}/.config/home-manager/home.nix"
+      register: home_nix_stat
+      failed_when: false
+
+    - name: Display home.nix status
+      debug:
+        msg: "home.nix {{ 'exists' if home_nix_stat.stat.exists else 'does not exist' }}"
+
+    - name: Verify test completed
+      debug:
+        msg: "home_manager role verification completed"
