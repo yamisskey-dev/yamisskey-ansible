@@ -1,15 +1,8 @@
 ---
-- name: Check if Nix is available
-  ansible.builtin.shell: |
-    if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-      . /root/.nix-profile/etc/profile.d/nix.sh
-    fi
-    command -v nix
-  register: nix_available
-  changed_when: false
-  failed_when: false
-  environment:
-    PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
+- name: Check if Nix binary exists
+  ansible.builtin.stat:
+    path: /root/.nix-profile/bin/nix
+  register: nix_binary
 
 - name: Install Home Manager if Nix is available
   block:
@@ -53,6 +46,6 @@
       register: home_manager_result
       changed_when: "'Building' in home_manager_result.stderr"
 
-  when: nix_available.rc == 0
+  when: nix_binary.stat.exists
   environment:
     PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"

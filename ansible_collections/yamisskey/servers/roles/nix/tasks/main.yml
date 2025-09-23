@@ -53,6 +53,7 @@
     dest: /usr/local/bin/nix
     state: link
     force: true
+    follow: false
 
 - name: Apply Home Manager configuration
   block:
