@@ -6,7 +6,7 @@ nix_home_manager_config: server
 home_manager_extra_packages: []
 
 # How the Nix installer should run.
-#   auto       -> default single-user install (safe in containers or CI).
+#   auto       -> single-user when the remote user is non-root, multi-user when root.
 #   no-daemon  -> force single-user installer.
 #   daemon     -> force multi-user installer.
 nix_install_mode: auto

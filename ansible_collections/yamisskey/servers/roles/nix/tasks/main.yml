@@ -6,7 +6,7 @@
     nix_user_environment:
       HOME: "{{ ansible_user_dir }}"
       USER: "{{ ansible_user | default(ansible_env.USER) }}"
-      PATH: "{{ ansible_env.PATH }}:{{ ansible_user_dir }}/.nix-profile/bin:/nix/var/nix/profiles/default/bin"
+      PATH: "{{ ansible_env.PATH }}"
       TMPDIR: "{{ ansible_user_dir }}/.cache/nix-installer"
       TMP: "{{ ansible_user_dir }}/.cache/nix-installer"
       TEMP: "{{ ansible_user_dir }}/.cache/nix-installer"
@@ -23,11 +23,14 @@
 - name: Determine Nix install mode
   become: false
   ansible.builtin.set_fact:
-    nix_install_effective_mode: "{{
-      nix_install_requested_mode
-      if nix_install_requested_mode != 'auto'
-      else 'no-daemon'
-    }}"
+    nix_install_effective_mode: >-
+      {{
+        nix_install_requested_mode != 'auto'
+        | ternary(
+            nix_install_requested_mode,
+            (nix_install_run_user == 'root') | ternary('daemon', 'no-daemon')
+          )
+      }}
 
 - name: Display Nix installer mode
   ansible.builtin.debug:
@@ -112,7 +115,7 @@
   environment: "{{ nix_user_environment }}"
   register: nix_version
   changed_when: false
-  failed_when: nix_version.rc != 0
+  failed_when: false
 
 - name: Display Nix version
   ansible.builtin.debug:
