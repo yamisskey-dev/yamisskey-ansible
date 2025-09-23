@@ -7,44 +7,34 @@
   tags:
     - always
 
+- name: Ensure Nix environment
+  fail:
+    msg: |
+      ❌ This infrastructure requires Nix environment!
+      
+      📋 Please install Nix and run in nix develop environment:
+      1. Install Nix: https://nixos.org/download.html
+      2. Run: nix develop
+      3. Then run Ansible playbooks
+  when: nix_available.rc != 0
+  tags:
+    - always
+
 - name: Setup Home Manager for Nix environments
   include_role:
     name: yamisskey.servers.home_manager
-  when: nix_available.rc == 0
   tags:
     - always
 
 - name: Display package management strategy
   debug:
     msg: |
-      📦 Package Management Strategy:
-      {{ '✅ Nix Flake environment detected - packages provided by Home Manager' if nix_available.rc == 0 else '📦 System package manager - installing via apt' }}
+      ✅ Nix Infrastructure Environment Detected
+      📦 All packages managed via Home Manager (Nix Flake)
+      
+      📋 Common role packages provided by Nix:
+      - prometheus, rclone, apparmor, auditd, tor, go
+      
+      🚀 Ready for infrastructure automation!
   tags:
     - always
-
-- name: Update and upgrade apt packages (non-Nix environments only)
-  apt:
-    update_cache: true
-    upgrade: 'dist'
-  when: nix_available.rc != 0
-  tags:
-    - update
-
-- name: Install essential packages via apt (non-Nix environments only)
-  apt:
-    name: '{{ packages }}'
-  when: nix_available.rc != 0
-  tags:
-    - packages
-
-- name: Skip package installation (Nix environment detected)
-  debug:
-    msg: |
-      🎯 Skipping apt package installation - packages are provided by Home Manager:
-      {{ packages | join(', ') }}
-      
-      📋 These packages are managed via Home Manager configuration.
-      To verify, run: home-manager packages
-  when: nix_available.rc == 0
-  tags:
-    - packages

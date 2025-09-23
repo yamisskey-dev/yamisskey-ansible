@@ -6,9 +6,9 @@
   home.homeDirectory = "{{ ansible_user_dir }}";
   home.stateVersion = "23.11";
 
-  # Package configuration based on host type
+  # Role-based package configuration
   home.packages = with pkgs; [
-    # Core system utilities (all hosts)
+    # Base packages (always included)
     curl
     wget
     openssh
@@ -33,6 +33,42 @@
     lsof
     tmux
 
+{% if 'common' in ansible_play_role_names or home_manager_config == 'development' or home_manager_config == 'server' or home_manager_config == 'ai-server' %}
+    # Common role packages
+    prometheus
+    rclone
+    apparmor
+    auditd
+    tor
+    go
+{% endif %}
+
+{% if 'security' in ansible_play_role_names or home_manager_config == 'development' or home_manager_config == 'server' or home_manager_config == 'ai-server' %}
+    # Security role packages
+    fail2ban
+    ufw
+    dnscrypt-proxy
+    clamav
+{% endif %}
+
+{% if 'watch' in ansible_play_role_names or home_manager_config == 'development' or home_manager_config == 'server' or home_manager_config == 'ai-server' %}
+    # Watch/monitoring role packages
+    prometheus-node-exporter
+{% endif %}
+
+{% if 'ai' in ansible_play_role_names or home_manager_config == 'ai-server' %}
+    # AI role packages
+    mecab
+    mecab-ipadic
+    python3
+    python3Packages.pip
+{% endif %}
+
+{% if 'ghq' in ansible_play_role_names or home_manager_config == 'development' %}
+    # GHQ role packages
+    ghq
+{% endif %}
+
 {% if home_manager_config == 'development' %}
     # Development/control node packages
     ansible_2_17
@@ -43,30 +79,15 @@
     gnupg
     docker
     docker-compose
-    golang
-    python3
-    python3Packages.pip
     python3Packages.passlib
     nixpkgs-fmt
     statix
-{% elif home_manager_config == 'ai-server' %}
-    # AI/ML server packages
-    fail2ban
-    ufw
+{% endif %}
+
+{% if 'system_init' in ansible_play_role_names or home_manager_config == 'development' or home_manager_config == 'server' or home_manager_config == 'ai-server' %}
+    # Infrastructure services
     cloudflared
     tailscale
-    clamav
-    mecab
-    python3
-    python3Packages.pip
-    golang
-{% else %}
-    # Standard server packages
-    fail2ban
-    ufw
-    cloudflared
-    tailscale
-    clamav
 {% endif %}
   ];
 

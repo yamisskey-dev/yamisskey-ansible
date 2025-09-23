@@ -3,89 +3,42 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
-    - name: Update apt cache safely
-      apt:
-        update_cache: true
-        cache_valid_time: 3600
-      retries: 3
-      delay: 10
-      register: apt_update_result
-      failed_when: false
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
 
+    - name: Verify Nix installation
+      command: which nix
+      register: nix_check
+      failed_when: nix_check.rc != 0
+      changed_when: false
 
-    - name: Create keyrings directory for Docker
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: '0755'
-      when: apt_update_result is not failed
+    - name: Fail if not running on Nix-enabled system
+      fail:
+        msg: "This test requires a Nix-enabled environment. Use 'nix develop' to enter development shell."
+      when: nix_check.rc != 0
 
-    - name: Add Docker GPG key
-      get_url:
-        url: "https://download.docker.com/linux/ubuntu/gpg"
-        dest: /etc/apt/keyrings/docker.asc
-        mode: '0644'
-      when: apt_update_result is not failed
+    - name: Verify Docker availability from Nix
+      command: which docker
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      changed_when: false
 
-    - name: Set Docker GPG key permissions
-      file:
-        path: /etc/apt/keyrings/docker.asc
-        mode: 'a+r'
-      when: apt_update_result is not failed
-
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-        filename: docker
-        state: present
-      when: apt_update_result is not failed
-
-    - name: Install Docker for testing
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
-        state: present
-        update_cache: true
-      when: apt_update_result is not failed
-      
-
-    - name: Install Docker for testing (fallback - use system packages)
-      apt:
-        name:
-          - docker.io
-          - docker-compose-plugin
-        state: present
-        update_cache: false
-        allow_unauthenticated: true
-      when: apt_update_result is failed
-      
-    - name: Start Docker service
+    - name: Start Docker service (if available)
       service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
-    - name: Install required Python packages
-      pip:
-        name:
-          - docker
-          - docker-compose
-          - requests
-        state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -95,39 +48,22 @@
         - /tmp/test
 
   tasks:
-    - name: Create cryptpad directory structure only
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-        owner: "4001"
-        group: "4001"
-      with_items:
-        - "/opt/cryptpad/config"
-        - "/opt/cryptpad/data/blob"
-        - "/opt/cryptpad/data/block"
-        - "/opt/cryptpad/data/data"
-        - "/opt/cryptpad/data/files"
-        - "/opt/cryptpad/customize"
-        - "/opt/cryptpad/onlyoffice-dist"
-        - "/opt/cryptpad/onlyoffice-conf"
+    - name: Apply cryptpad role
+      include_role:
+        name: yamisskey.servers.cryptpad
       vars:
         ansible_user: "root"
-        domain: "example.com"
-        cryptpad_dir: "/opt/cryptpad"
-        cryptpad_secrets_file: "/opt/cryptpad/secrets.yml"
-        cryptpad_server_name: "cryptpad.example.com"
-        
+
     - name: Basic role verification
       debug:
-        msg: "cryptpad role directory structure created successfully"
+        msg: "cryptpad role applied successfully"
 
   post_tasks:
     - name: Show test environment status
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

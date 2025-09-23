@@ -25,104 +25,131 @@
           requests
         ]);
         
-        # Home Manager configurations for different host types
-        homeConfigurations = let
-          mkHomeConfig = hostType: extraPackages: pkgs.lib.mkMerge [
-            {
-              home.packages = with pkgs; [
-                # Core system utilities
-                curl
-                wget
-                openssh
-                git
-                
-                # Network utilities
-                nettools
-                nmap
-                dnsutils
-                
-                # System monitoring
-                htop
-                btop
-                sysstat
-                lynis
-                
-                # Text processing and utilities
-                jq
-                yq-go
-                unzip
-                zip
-                tar
-                gawk
-                gnused
-                findutils
-                coreutils
-                rsync
-                lsof
-                tmux
-              ] ++ extraPackages;
-              
-              home.stateVersion = "23.11";
-            }
+        # Role-based package sets for modular management
+        rolePackages = {
+          # Core system utilities (always included)
+          base = with pkgs; [
+            curl
+            wget
+            openssh
+            git
+            nettools
+            nmap
+            dnsutils
+            htop
+            btop
+            sysstat
+            lynis
+            jq
+            yq-go
+            unzip
+            zip
+            tar
+            gawk
+            gnused
+            findutils
+            coreutils
+            rsync
+            lsof
+            tmux
           ];
-        in {
-          # Development/control node configuration
-          development = mkHomeConfig "development" (with pkgs; [
-            # Ansible toolchain (only on control nodes)
+
+          # Common role packages
+          common = with pkgs; [
+            prometheus
+            rclone
+            apparmor
+            auditd
+            tor
+            go
+          ];
+
+          # Security role packages
+          security = with pkgs; [
+            fail2ban
+            ufw
+            dnscrypt-proxy
+            clamav
+          ];
+
+          # Watch/monitoring role packages
+          watch = with pkgs; [
+            prometheus-node-exporter
+          ];
+
+          # AI role packages
+          ai = with pkgs; [
+            mecab
+            mecab-ipadic
+            python3
+            python3Packages.pip
+          ];
+
+          # GHQ role packages
+          ghq = with pkgs; [
+            ghq
+          ];
+
+          # Development/control node packages
+          development = with pkgs; [
             ansible_2_17
             ansible-lint
             pythonEnv
             yamllint
-            
-            # SOPS secrets management
             sops
             age
             gnupg
-            
-            # Container tools for testing
             docker
             docker-compose
-            
-            # Development tools
-            golang
-            python3
-            python3Packages.pip
             python3Packages.passlib
-            
-            # Nix development
             nixpkgs-fmt
             statix
-          ]);
-          
-          # Production server configuration
-          server = mkHomeConfig "server" (with pkgs; [
-            # Essential security tools
-            fail2ban
-            ufw
-            
-            # Service tools
+          ];
+
+          # Infrastructure services
+          infrastructure = with pkgs; [
             cloudflared
             tailscale
-            
-            # Monitoring and maintenance
-            clamav
-          ]);
+          ];
+        };
+
+        # Helper function to combine role packages
+        mkRoleConfig = rolesToInclude:
+          let
+            selectedPackages = builtins.concatLists (
+              builtins.map (role: rolePackages.${role}) rolesToInclude
+            );
+          in {
+            home.packages = rolePackages.base ++ selectedPackages;
+            home.stateVersion = "23.11";
+          };
+
+        # Home Manager configurations based on role combinations
+        homeConfigurations = {
+          # Development/control node
+          development = mkRoleConfig [
+            "common" "security" "watch" "ghq" "development" "infrastructure"
+          ];
           
-          # AI/ML server configuration
-          ai-server = mkHomeConfig "ai-server" (with pkgs; [
-            # Include server base
-            fail2ban
-            ufw
-            cloudflared
-            tailscale
-            clamav
-            
-            # AI-specific tools
-            mecab
-            python3
-            python3Packages.pip
-            golang
-          ]);
+          # Standard production server
+          server = mkRoleConfig [
+            "common" "security" "watch" "infrastructure"
+          ];
+          
+          # AI/ML server
+          ai-server = mkRoleConfig [
+            "common" "security" "watch" "ai" "infrastructure"
+          ];
+
+          # Minimal server (only base + common)
+          minimal = mkRoleConfig [
+            "common"
+          ];
+
+          # Security-focused server
+          security-server = mkRoleConfig [
+            "common" "security" "watch" "infrastructure"
+          ];
         };
 
       in

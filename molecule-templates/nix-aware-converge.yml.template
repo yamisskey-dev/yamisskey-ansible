@@ -1,6 +1,6 @@
 ---
-# Nix-aware Molecule converge template
-# This template provides conditional package installation based on Nix environment detection
+# Nix-only Molecule converge template
+# This template requires Nix environment and does not fall back to system package managers
 - name: Converge {{role_name}} role
   hosts: all
   become: true
@@ -15,109 +15,53 @@
       tags:
         - always
 
-    - name: Display package management strategy
-      debug:
+    - name: Ensure Nix environment for testing
+      fail:
         msg: |
-          🧪 Molecule Test Environment ({{role_name}}):
-          {{ '✅ Nix Flake environment - packages provided by Nix' if nix_available.rc == 0 else '📦 System package manager - installing via apt' }}
+          ❌ Molecule tests now require Nix environment!
+          
+          📋 All packages are managed via Nix Flake:
+          - Docker: Available via Nix
+          - Python packages: Available via Nix
+          - Role-specific packages: Managed by Home Manager
+          
+          🚀 Run tests in nix develop environment:
+          1. nix develop
+          2. yamisskey-provision test {{role_name}}
+      when: nix_available.rc != 0
       tags:
         - always
 
-    # Docker installation block (non-Nix environments only)
-    - name: Docker Installation Block (non-Nix environments)
-      block:
-        - name: Update apt cache safely
-          apt:
-            update_cache: true
-            cache_valid_time: 3600
-          retries: 3
-          delay: 10
-          register: apt_update_result
-          failed_when: false
-
-        - name: Create keyrings directory for Docker
-          file:
-            path: /etc/apt/keyrings
-            state: directory
-            mode: '0755'
-          when: apt_update_result is not failed
-
-        - name: Add Docker GPG key
-          get_url:
-            url: "https://download.docker.com/linux/ubuntu/gpg"
-            dest: /etc/apt/keyrings/docker.asc
-            mode: '0644'
-          when: apt_update_result is not failed
-
-        - name: Set Docker GPG key permissions
-          file:
-            path: /etc/apt/keyrings/docker.asc
-            mode: 'a+r'
-          when: apt_update_result is not failed
-
-        - name: Add Docker repository
-          apt_repository:
-            repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-            filename: docker
-            state: present
-          when: apt_update_result is not failed
-
-        - name: Install Docker for testing
-          apt:
-            name:
-              - docker-ce
-              - docker-ce-cli
-              - containerd.io
-              - docker-buildx-plugin
-              - docker-compose-plugin
-            state: present
-            update_cache: true
-          when: apt_update_result is not failed
-          
-        - name: Install Docker for testing (fallback - use system packages)
-          apt:
-            name:
-              - docker.io
-              - docker-compose-plugin
-            state: present
-            update_cache: false
-          when: apt_update_result is failed
-          
-        - name: Start Docker service
-          service:
-            name: docker
-            state: started
-            enabled: true
-          failed_when: false
-            
-        - name: Add test user to docker group
-          user:
-            name: "{{ ansible_user }}"
-            groups: docker
-            append: true
-            
-        - name: Install required Python packages
-          pip:
-            name:
-              - docker
-              - docker-compose
-              - requests
-            state: present
-      when: nix_available.rc != 0
-      tags:
-        - docker
-        - packages
-
-    - name: Skip Docker installation (Nix environment)
+    - name: Display Nix-based test environment status
       debug:
         msg: |
-          🎯 Skipping Docker installation - provided by Nix Flake
-          📋 Docker and related tools are available in the development environment.
-          🧪 Ready for {{role_name}} role testing!
-      when: nix_available.rc == 0
+          ✅ Nix-based Test Environment ({{role_name}}):
+          📦 All packages provided by Nix Flake
+          🧪 Ready for infrastructure testing!
       tags:
-        - docker
-        - packages
+        - always
+
+    - name: Verify essential tools are available
+      command: "{{ item }}"
+      register: tool_check
+      failed_when: false
+      changed_when: false
+      loop:
+        - "docker --version"
+        - "python3 --version"
+        - "nix --version"
+      tags:
+        - verification
+
+    - name: Display tool versions
+      debug:
+        msg: |
+          🔧 Available tools (Nix-managed):
+          {% for result in tool_check.results %}
+          - {{ result.cmd[0] }}: {{ result.stdout if result.rc == 0 else 'not available' }}
+          {% endfor %}
+      tags:
+        - verification
         
     - name: Create test directories
       file:
@@ -138,11 +82,11 @@
         
     - name: Basic role verification
       debug:
-        msg: "{{role_name}} role applied successfully"
+        msg: "{{role_name}} role applied successfully in Nix environment"
 
   post_tasks:
     - name: Show test environment status
-      shell: echo "Test environment setup completed for {{role_name}}"
+      shell: echo "Nix-based test environment completed for {{role_name}}"
       register: test_status
       changed_when: false
       

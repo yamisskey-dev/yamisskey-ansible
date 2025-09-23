@@ -3,31 +3,44 @@
   hosts: all
   become: true
   gather_facts: true
-  
-  tasks:
-    - name: Update package cache
-      apt:
-        update_cache: true
-        cache_valid_time: 3600
-        
-    - name: Install basic test packages
-      apt:
-        name:
-          - curl
-          - wget
-          - systemd
-        state: present
-        
-    - name: Basic role verification
-      debug:
-        msg: "cloudflared role test environment ready"
-        
-    - name: Create test directory for verify step
+
+  pre_tasks:
+    - name: Verify Nix installation
+      command: which nix
+      register: nix_check
+      failed_when: nix_check.rc != 0
+      changed_when: false
+
+    - name: Fail if not running on Nix-enabled system
+      fail:
+        msg: "This test requires a Nix-enabled environment. Use 'nix develop' to enter development shell."
+      when: nix_check.rc != 0
+
+    - name: Create test directories
       file:
-        path: /tmp/test
+        path: "{{ item }}"
         state: directory
         mode: '0755'
-        
-    - name: Test basic functionality
+      loop:
+        - /tmp/test
+
+  tasks:
+    - name: Apply cloudflared role
+      include_role:
+        name: yamisskey.servers.cloudflared
+      vars:
+        ansible_user: "root"
+
+    - name: Basic role verification
       debug:
-        msg: "Role cloudflared basic tests completed successfully"
+        msg: "cloudflared role applied successfully"
+
+  post_tasks:
+    - name: Show test environment status
+      shell: echo "Test environment setup completed"
+      register: test_status
+      changed_when: false
+
+    - name: Display test status
+      debug:
+        var: test_status.stdout

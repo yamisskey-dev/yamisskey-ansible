@@ -3,72 +3,42 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Wait for instance SSH availability
       wait_for_connection:
         timeout: 30
 
-    - name: Create keyrings directory for Docker
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: '0755'
+    - name: Verify Nix installation
+      command: which nix
+      register: nix_check
+      failed_when: nix_check.rc != 0
+      changed_when: false
 
-    - name: Add Docker GPG key
-      get_url:
-        url: "https://download.docker.com/linux/ubuntu/gpg"
-        dest: /etc/apt/keyrings/docker.asc
-        mode: '0644'
+    - name: Fail if not running on Nix-enabled system
+      fail:
+        msg: "This test requires a Nix-enabled environment. Use 'nix develop' to enter development shell."
+      when: nix_check.rc != 0
 
-    - name: Set Docker GPG key permissions
-      file:
-        path: /etc/apt/keyrings/docker.asc
-        mode: 'a+r'
+    - name: Verify Docker availability from Nix
+      command: which docker
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      changed_when: false
 
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-        filename: docker
-        state: present
-
-    - name: Install Docker for testing
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
-        install_recommends: false
-        update_cache: true
-        state: present
-      register: mcaptcha_docker_install
-      retries: 3
-      delay: 5
-      until: mcaptcha_docker_install is succeeded
-      
-    - name: Start Docker service
+    - name: Start Docker service (if available)
       service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
-    - name: Install required Python packages
-      pip:
-        name:
-          - docker
-          - docker-compose
-          - requests
-        state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -82,9 +52,8 @@
       include_role:
         name: yamisskey.servers.mcaptcha
       vars:
-        # Test-specific configuration will be added here
         ansible_user: "root"
-        
+
     - name: Basic role verification
       debug:
         msg: "mcaptcha role applied successfully"
@@ -94,7 +63,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

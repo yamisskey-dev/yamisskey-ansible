@@ -240,17 +240,9 @@
     force: true
   notify: restart minecraft
 
-# PlayIt.gg APTパッケージのインストールと設定（ARM64対応）
+# PlayIt.gg APTパッケージのインストールと設定（Nixでは利用不可のためAPT使用）
 - name: PlayIt.gg setup helper
   block:
-    - name: Install required packages for PlayIt.gg
-      apt:
-        name:
-          - curl
-          - gnupg
-        update_cache: true
-      become: true
-
     - name: Add PlayIt.gg APT repository key
       shell: |
         curl -SsL https://playit-cloud.github.io/ppa/key.gpg | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/playit.gpg >/dev/null
@@ -290,6 +282,7 @@
              sudo systemctl enable playit.service
 
           ⚠️ 重要:
+          - PlayIt.ggはNixパッケージが利用不可のためAPTを使用
           - 初回セットアップは手動で行ってください
           - アカウント設定後、サービスを手動で開始してください
           ===============================================

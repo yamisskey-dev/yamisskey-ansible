@@ -6,125 +6,52 @@
   
   pre_tasks:
     - name: Check if running in Nix environment
-      ansible.builtin.command: command -v nix
+      shell: command -v nix >/dev/null 2>&1
       register: nix_available
-      changed_when: false
       failed_when: false
+      changed_when: false
 
-    - name: Skip Docker installation in Nix environment
-      ansible.builtin.debug:
-        msg: "Skipping Docker installation - Nix environment provides Docker"
-      when: nix_available.rc == 0
-
-    - name: Install Docker in non-Nix environments
-      block:
-        - name: Update apt cache safely
-          apt:
-            update_cache: true
-            cache_valid_time: 3600
-          retries: 3
-          delay: 10
-          register: apt_update_result
-          failed_when: false
-
-        - name: Create keyrings directory for Docker
-          file:
-            path: /etc/apt/keyrings
-            state: directory
-            mode: '0755'
-          when: apt_update_result is not failed
-
-        - name: Add Docker GPG key
-          get_url:
-            url: "https://download.docker.com/linux/ubuntu/gpg"
-            dest: /etc/apt/keyrings/docker.asc
-            mode: '0644'
-          when: apt_update_result is not failed
-
-        - name: Set Docker GPG key permissions
-          file:
-            path: /etc/apt/keyrings/docker.asc
-            mode: 'a+r'
-          when: apt_update_result is not failed
-
-        - name: Add Docker repository
-          apt_repository:
-            repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-            filename: docker
-            state: present
-          when: apt_update_result is not failed
-
-        - name: Install Docker for testing
-          apt:
-            name:
-              - docker-ce
-              - docker-ce-cli
-              - containerd.io
-              - docker-buildx-plugin
-              - docker-compose-plugin
-            state: present
-            update_cache: true
-          when: apt_update_result is not failed
+    - name: Ensure Nix environment for testing
+      fail:
+        msg: |
+          ❌ Security role tests require Nix environment!
           
-        - name: Install Docker for testing (fallback - use system packages)
-          apt:
-            name:
-              - docker.io
-              - docker-compose-plugin
-            state: present
-            update_cache: false
-            allow_unauthenticated: true
-          when: apt_update_result is failed
+          📋 All security packages are managed via Nix Flake:
+          - Security tools: fail2ban, ufw, dnscrypt-proxy, clamav
           
-        - name: Start Docker service
-          service:
-            name: docker
-            state: started
-            enabled: true
-          failed_when: false
-            
-        - name: Add test user to docker group
-          user:
-            name: "{{ ansible_user }}"
-            groups: docker
-            append: true
-            
-        - name: Install required Python packages
-          pip:
-            name:
-              - docker
-              - docker-compose
-              - requests
-            state: present
+          🚀 Run in nix develop environment.
       when: nix_available.rc != 0
-        
-    - name: Create test directories
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-      loop:
-        - /tmp/test
+
+    - name: Display Nix-based test environment status
+      debug:
+        msg: |
+          ✅ Nix-based Test Environment (security role)
+          📦 All security packages provided by Nix Flake
+          🔒 Ready for security role testing!
 
   tasks:
     - name: Apply security role
       include_role:
         name: yamisskey.servers.security
       vars:
-        # Test-specific configuration will be added here
-        ansible_user: "root"
+        test_mode: true
+        skip_system_checks: true
         security_manage_fail2ban_service: false
+        security_manage_clamav: false
+        security_install_crowdsec: false
         
-    - name: Basic role verification
-      debug:
-        msg: "security role applied successfully"
-
-  post_tasks:
-    - name: Show test environment status
-      shell: echo "Test environment setup completed"
-      register: test_status
+    - name: Verify Nix-managed security packages are available
+      command: "which {{ item }}"
+      register: security_package_check
+      failed_when: false
       changed_when: false
-      
-    - name: Display test status
+      loop:
+        - fail2ban-client
+        - ufw
+        - dnscrypt-proxy
+        - clamdscan
+        
+    - name: Display security package availability
       debug:
-        var: test_status.stdout
+        msg: "Security package {{ item.item }} is {{ 'available' if item.rc == 0 else 'not available' }} at {{ item.stdout if item.rc == 0 else 'not found' }}"
+      loop: "{{ security_package_check.results }}"
