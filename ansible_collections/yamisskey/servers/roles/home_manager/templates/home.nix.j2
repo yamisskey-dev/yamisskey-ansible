@@ -33,6 +33,10 @@
     lsof
     tmux
 
+{% for pkg in home_manager_extra_packages %}
+    {{ pkg }}
+{% endfor %}
+
 {% if 'common' in ansible_play_role_names or home_manager_config == 'development' or home_manager_config == 'server' or home_manager_config == 'ai-server' %}
     # Common role packages
     prometheus
@@ -56,7 +60,7 @@
     prometheus-node-exporter
 {% endif %}
 
-{% if 'ai' in ansible_play_role_names or home_manager_config == 'ai-server' %}
+{% if 'ai' in ansible_play_role_names or home_manager_config == 'ai-server' or home_manager_config == 'development' %}
     # AI role packages
     mecab
     mecab-ipadic

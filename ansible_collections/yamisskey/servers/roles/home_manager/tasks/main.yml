@@ -4,6 +4,8 @@
   register: nix_available
   changed_when: false
   failed_when: false
+  environment:
+    PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
 
 - name: Install Home Manager if Nix is available
   block:
@@ -24,6 +26,7 @@
     - name: Determine host configuration type
       ansible.builtin.set_fact:
         home_manager_config: "{{ 'ai-server' if 'ai' in group_names else ('development' if 'development' in group_names or inventory_hostname == 'localhost' else 'server') }}"
+      when: home_manager_config is not defined
 
     - name: Create Home Manager configuration directory
       ansible.builtin.file:
@@ -47,3 +50,5 @@
       changed_when: "'Building' in home_manager_result.stderr"
 
   when: nix_available.rc == 0
+  environment:
+    PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"

@@ -1,0 +1,46 @@
+---
+- name: Ensure Nix is installed (single-user)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
+  args:
+    executable: /bin/bash
+    creates: /root/.nix-profile/bin/nix
+
+- name: Check for Nix profile script
+  ansible.builtin.stat:
+    path: /root/.nix-profile/etc/profile.d/nix.sh
+  register: nix_profile_script
+
+- name: Ensure Nix profile is loaded in root shells
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: '. /root/.nix-profile/etc/profile.d/nix.sh'
+    state: present
+  when: nix_profile_script.stat.exists
+
+- name: Verify Nix installation
+  ansible.builtin.shell: |
+    set -euo pipefail
+    . /root/.nix-profile/etc/profile.d/nix.sh
+    nix --version
+  args:
+    executable: /bin/bash
+  when: nix_profile_script.stat.exists
+  changed_when: false
+
+- name: Ensure nix binary is globally available
+  ansible.builtin.file:
+    src: /root/.nix-profile/bin/nix
+    dest: /usr/local/bin/nix
+    state: link
+    force: true
+
+- name: Apply Home Manager configuration
+  ansible.builtin.include_role:
+    name: yamisskey.servers.home_manager
+  vars:
+    home_manager_config: "{{ nix_home_manager_config }}"
+  apply:
+    environment:
+      PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"

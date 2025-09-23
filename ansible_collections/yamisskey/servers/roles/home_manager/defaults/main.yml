@@ -1,0 +1,3 @@
+---
+# Additional packages that should always be present in the Home Manager profile.
+home_manager_extra_packages: []

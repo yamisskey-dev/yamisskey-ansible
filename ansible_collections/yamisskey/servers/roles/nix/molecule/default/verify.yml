@@ -1,0 +1,33 @@
+---
+- name: Verify nix role outcome
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Source Nix profile and capture tool availability
+      shell: |
+        . /root/.nix-profile/etc/profile.d/nix.sh
+        command -v {{ item }}
+      args:
+        executable: /bin/bash
+      loop:
+        - nix
+        - home-manager
+        - docker
+        - bat
+        - rg
+      register: tool_checks
+      changed_when: false
+
+    - name: Assert tools are available
+      assert:
+        that:
+          - item.rc == 0
+        fail_msg: "{{ item.item }} is not available in the Nix environment"
+      loop: "{{ tool_checks.results }}"
+
+    - name: Show tool paths
+      debug:
+        msg: "{{ item.item }} is available at {{ item.stdout }}"
+      loop: "{{ tool_checks.results }}"
