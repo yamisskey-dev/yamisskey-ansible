@@ -33,7 +33,6 @@ provisioner:
     group_vars:
       all:
         ansible_python_interpreter: /usr/bin/python3
-      all:
         cadvisor:
           enabled: false
   config_options:
