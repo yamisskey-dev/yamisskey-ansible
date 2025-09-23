@@ -6,7 +6,7 @@
 
   pre_tasks:
     - name: Verify Nix installation
-      shell: |\
+      shell: |
         if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
           . /root/.nix-profile/etc/profile.d/nix.sh
         fi
