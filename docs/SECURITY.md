@@ -115,7 +115,7 @@ ansible-vault edit deploy/servers/group_vars/vault.yml
    ansible-vault view deploy/servers/group_vars/vault.yml
    
    # プレイブック実行テスト
-   make check PLAYBOOK=common
+   yamisskey-provision check common
    ```
 
 ---
@@ -260,7 +260,7 @@ ansible-vault edit deploy/servers/group_vars/vault.yml
 # vault_cloudflare_api_token: "new-token-here"
 
 # 3. デプロイテスト
-make check PLAYBOOK=cloudflared
+yamisskey-provision check cloudflared
 
 # 4. 旧トークン無効化（Cloudflare dashboard）
 ```
@@ -280,7 +280,7 @@ cloudflared tunnel route dns yamisskey-balthasar-v2 yami.ski
 ansible-vault edit deploy/servers/group_vars/vault.yml
 
 # 4. 段階的切り替え
-make run PLAYBOOK=cloudflared LIMIT=balthasar
+yamisskey-provision run cloudflared LIMIT=balthasar
 
 # 5. 旧トンネル削除
 cloudflared tunnel delete yamisskey-balthasar-v1
@@ -335,7 +335,7 @@ cloudflared tunnel delete yamisskey-balthasar-v1
 3. **MinIO サービス復旧**
    ```bash
    # MinIO 再起動（KMS設定読み込み）
-   make run PLAYBOOK=minio TAGS=restart
+   yamisskey-provision run minio servers "" restart
    
    # データアクセステスト
    mc ls minio/files | head -5
@@ -389,19 +389,19 @@ sudo -u postgres psql -c "SELECT pg_is_in_recovery();"
 gpg --decrypt emergency-kit.gpg > emergency-credentials.json
 
 # 2. 基本インフラ再構築
-make run PLAYBOOK=system-init LIMIT=all
-make run PLAYBOOK=security LIMIT=all
+yamisskey-provision run system-init servers all
+yamisskey-provision run security servers all
 
 # 3. ストレージ復旧
-make run PLAYBOOK=minio TARGET=appliances
+yamisskey-provision run minio appliances
 
 # 4. アプリケーション復旧
-make run PLAYBOOK=misskey
-make run PLAYBOOK=monitor
+yamisskey-provision run misskey
+yamisskey-provision run monitor
 
 # 5. 外部接続復旧
-make run PLAYBOOK=cloudflared
-make run PLAYBOOK=modsecurity-nginx
+yamisskey-provision run cloudflared
+yamisskey-provision run modsecurity-nginx
 ```
 
 ---

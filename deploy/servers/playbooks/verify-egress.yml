@@ -1,7 +1,6 @@
 ---
 # Egress Route Verification Playbook
 # Purpose: Verify and test external connectivity routes (WARP, Squid, Direct)
-# Usage: make run PLAYBOOK=verify-egress TAGS=<egress_type>
 
 - name: Verify Egress Connectivity Routes
   hosts: all

@@ -23,10 +23,10 @@ cd ansible_collections/yamisskey/servers/roles/new-role
 
 ```bash
 # 構文チェックで基本エラーを確認
-make test ROLE=new-role MODE=syntax
+yamisskey-provision test new-role syntax
 
 # 実装後、テストを実行
-make test ROLE=new-role
+yamisskey-provision test new-role
 ```
 
 ### 3. Refactor - コードを改善する
@@ -45,8 +45,8 @@ make test ROLE=new-role
 
 2. **テスト実行（Red）**
    ```bash
-   make test ROLE=new-role MODE=syntax  # 構文チェック
-   make test ROLE=new-role MODE=converge  # デプロイテスト
+   yamisskey-provision test new-role syntax    # 構文チェック
+   yamisskey-provision test new-role converge  # デプロイテスト
    ```
 
 3. **実装（Green）**
@@ -57,7 +57,7 @@ make test ROLE=new-role
 
 4. **検証とリファクタリング**
    ```bash
-   make test ROLE=new-role  # 完全テスト
+   yamisskey-provision test new-role  # 完全テスト
    ```
 
 ## 🧪 Moleculeテストの種類
@@ -65,28 +65,28 @@ make test ROLE=new-role
 ### 構文チェック
 ```bash
 # 単一ロールの構文チェック
-make test ROLE=minio MODE=syntax
+yamisskey-provision test minio syntax
 
 # 全ロールの構文チェック
-make test TARGET=servers MODE=syntax
+yamisskey-provision test syntax servers
 ```
 
 ### デプロイテスト（Converge）
 ```bash
 # ロールをデプロイしてエラーがないか確認
-make test ROLE=minio MODE=converge
+yamisskey-provision test minio converge
 ```
 
 ### 完全テスト
 ```bash
 # 構文チェック→デプロイ→検証→べき等性チェック
-make test ROLE=minio
+yamisskey-provision test minio
 ```
 
 ### クリーンアップ
 ```bash
 # テスト環境をクリーンアップ
-make test ROLE=minio MODE=cleanup
+yamisskey-provision test minio cleanup
 ```
 
 ## 📝 テストケースの書き方
@@ -203,13 +203,13 @@ make test ROLE=minio MODE=cleanup
 
 ```bash
 # 開発中のロールをプリチェック
-make test ROLE=your-role MODE=syntax
+yamisskey-provision test your-role syntax
 
 # デプロイテストで基本動作確認
-make test ROLE=your-role MODE=converge
+yamisskey-provision test your-role converge
 
 # 完全テスト（時間がかかる）
-make test ROLE=your-role
+yamisskey-provision test your-role
 ```
 
 ## 🛠️ デバッグとトラブルシューティング
@@ -218,7 +218,7 @@ make test ROLE=your-role
 
 ```bash
 # 詳細ログでテスト実行
-ANSIBLE_STDOUT_CALLBACK=debug make test ROLE=your-role
+ANSIBLE_STDOUT_CALLBACK=debug yamisskey-provision test your-role
 
 # コンテナの状態確認
 docker ps -a
@@ -246,7 +246,7 @@ molecule login
    ```bash
    # Docker設定でメモリ制限を増加
    # または軽量なテストのみ実行
-   make test ROLE=your-role MODE=syntax
+   yamisskey-provision test your-role syntax
    ```
 
 ## 📈 ベストプラクティス
@@ -323,7 +323,7 @@ cd ansible_collections/yamisskey/servers/roles/webapp
 
 ```bash
 # テスト実行
-make test ROLE=webapp
+yamisskey-provision test webapp
 
 # 結果に基づいて改善
 # - エラーハンドリング追加

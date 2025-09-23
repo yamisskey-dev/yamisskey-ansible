@@ -10,8 +10,8 @@
 
 使い方:
 - 変数を更新後、関連プレイブックを実行します。
-  - 確認: `make check PLAYBOOK=setup TARGET=appliances`
-  - 実行: `make run PLAYBOOK=setup TARGET=appliances`
+  - 確認: `yamisskey-provision check setup TARGET=appliances`
+  - 実行: `yamisskey-provision run setup TARGET=appliances`
 - 個別ホストで上書きが必要な値は `host_vars/<host>.yml` で定義します。
 
 参考: ルートの `README.md`（Make コマンド集）

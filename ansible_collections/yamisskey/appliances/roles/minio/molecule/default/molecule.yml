@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: truenas-test
-    image: geerlingguy/docker-ubuntu2204-ansible:latest
+    image: "{{ lookup('env', 'MOLECULE_IMAGE') | default('nixos/nix:2.21.5', true) }}"
     pre_build_image: true
     privileged: true
     volumes:

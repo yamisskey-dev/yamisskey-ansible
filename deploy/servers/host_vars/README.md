@@ -7,8 +7,8 @@
 
 使い方:
 - 変数を更新後、該当プレイブックを実行します。
-  - 確認実行: `make check PLAYBOOK=security`
-  - 本番実行: `make run PLAYBOOK=security`
+  - 確認実行: `yamisskey-provision check security`
+  - 本番実行: `yamisskey-provision run security`
 
 注意:
 - シークレットは Ansible Vault 等の安全な手段で管理してください。

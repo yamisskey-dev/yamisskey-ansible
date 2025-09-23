@@ -73,25 +73,25 @@ roles/<role_name>/
 ### 基本実行
 ```bash
 # TrueNAS初期設定
-make run PLAYBOOK=setup TARGET=appliances
+yamisskey-provision run setup appliances
 
 # MinIO関連設定
-make run PLAYBOOK=migrate-minio-truenas TARGET=appliances
+yamisskey-provision run migrate-minio-truenas appliances
 ```
 
 ### パラメータ指定
 ```bash
 # 特定のタスクのみ実行
-make run PLAYBOOK=setup TARGET=appliances TAGS=dataset
+yamisskey-provision run setup appliances TAGS=dataset
 
 # 特定のホストに限定
-make run PLAYBOOK=setup TARGET=appliances LIMIT=truenas.local
+yamisskey-provision run setup appliances LIMIT=truenas.local
 ```
 
 ### ドライラン
 ```bash
 # 実際に変更せずに確認
-make check PLAYBOOK=setup TARGET=appliances
+yamisskey-provision check setup appliances
 ```
 
 ## ⚙️ 設定
@@ -182,22 +182,22 @@ curl -X POST "https://truenas.local/api/v2.0/auth/login" \
 ### 完全セットアップ
 ```bash
 # 1. TrueNAS基本設定
-make run PLAYBOOK=setup TARGET=appliances
+yamisskey-provision run setup appliances
 
 # 2. MinIO設定とデータ移行
-make run PLAYBOOK=migrate-minio-truenas TARGET=appliances
+yamisskey-provision run migrate-minio-truenas appliances
 
 # 3. 移行フェーズA実行
-make run PLAYBOOK=migrate-minio-phase-a TARGET=appliances
+yamisskey-provision run migrate-minio-phase-a appliances
 ```
 
 ### トラブルシューティング
 ```bash
 # 設定確認（ドライラン）
-make check PLAYBOOK=setup TARGET=appliances
+yamisskey-provision check setup appliances
 
 # ログ確認
-make logs
+yamisskey-provision logs
 
 # インベントリ確認
 cat deploy/appliances/inventory

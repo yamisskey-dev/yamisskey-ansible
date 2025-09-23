@@ -26,7 +26,7 @@
 
 ```bash
 # 動的インベントリを生成して移行実行
-make migrate SOURCE=balthasar TARGET=raspberrypi
+yamisskey-provision migrate SOURCE=balthasar TARGET=raspberrypi
 ```
 
 このコマンドは以下を自動実行します：
@@ -40,7 +40,7 @@ make migrate SOURCE=balthasar TARGET=raspberrypi
 
 ```bash
 # 1. インベントリ生成
-make inventory SOURCE=balthasar TARGET=raspberrypi
+yamisskey-provision inventory servers SOURCE=balthasar TARGET=raspberrypi
 
 # 2. 接続確認
 ansible -i deploy/servers/inventory all -m ping
@@ -56,7 +56,7 @@ ansible-playbook -i deploy/servers/inventory \
 
 ```bash
 # カスタムポートでの移行
-make inventory SOURCE=balthasar TARGET=raspberrypi
+yamisskey-provision inventory servers SOURCE=balthasar TARGET=raspberrypi
 ansible-playbook -i deploy/servers/inventory \
   deploy/servers/playbooks/migrate.yml \
   -e "migrate_source=balthasar migrate_target=raspberrypi" \
@@ -162,7 +162,7 @@ sudo docker exec minio mc ls --recursive minio/assets/ | wc -l
 ### データ復元手順
 ```bash
 # 逆方向移行（raspberrypi → balthasar）
-make migrate SOURCE=raspberrypi TARGET=balthasar
+yamisskey-provision migrate SOURCE=raspberrypi TARGET=balthasar
 
 # DNS 設定の復元
 # drive.yami.ski → balthasar IP

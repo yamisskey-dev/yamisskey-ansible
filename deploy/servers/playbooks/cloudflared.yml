@@ -1,7 +1,6 @@
 ---
 # Cloudflared automation playbook
 # Unified playbook using the enhanced cloudflared role
-# Supports both manual (make install) and automatic installation modes
 
 - name: Setup Cloudflared with full automation
   hosts: all
@@ -46,7 +45,6 @@
           ⚠️  Manual mode: Configuration deployed, manual steps required
 
           📋 Next steps:
-          1. make install  # Install cloudflared binary
           2. Complete tunnel setup as shown in role output
 
           {% endif %}

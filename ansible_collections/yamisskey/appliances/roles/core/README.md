@@ -115,7 +115,7 @@ truenas_users:
 
 ```bash
 # 統一コマンド体系
-make run TARGET=appliances PLAYBOOK=setup
+yamisskey-provision run setup appliances
 
 # 直接ロール実行
 ansible-playbook -i inventory playbooks/setup.yml
@@ -125,13 +125,13 @@ ansible-playbook -i inventory playbooks/setup.yml
 
 ```bash
 # 特定データセットのみ
-make run TARGET=appliances PLAYBOOK=setup TAGS=datasets
+yamisskey-provision run setup appliances TAGS=datasets
 
 # ドライラン
-make run TARGET=appliances PLAYBOOK=setup CHECK=true
+yamisskey-provision run setup appliances CHECK=true
 
 # カスタム設定
-make run TARGET=appliances PLAYBOOK=setup EXTRA_VARS="truenas_pool_name=storage"
+yamisskey-provision run setup appliances EXTRA_VARS="truenas_pool_name=storage"
 ```
 
 ## 📁 ディレクトリ構造
@@ -207,10 +207,10 @@ id 1801
 
 ```bash
 # 詳細ログで実行
-make run TARGET=appliances PLAYBOOK=setup VERBOSE=3
+yamisskey-provision run setup appliances VERBOSE=3
 
 # 特定タスクのみ実行
-make run TARGET=appliances PLAYBOOK=setup TAGS=users
+yamisskey-provision run setup appliances TAGS=users
 
 # 設定確認
 ansible-inventory -i inventory --list

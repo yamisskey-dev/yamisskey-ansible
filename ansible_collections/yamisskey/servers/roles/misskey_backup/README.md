@@ -2,5 +2,5 @@
 
 Misskey のバックアップ処理を行うロールです。
 
-- 呼び出し例: `make run PLAYBOOK=misskey-backup`
+- 呼び出し例: `yamisskey-provision run misskey-backup`
 

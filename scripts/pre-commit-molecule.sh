@@ -27,9 +27,12 @@ fi
 # Check if necessary tools are available
 if ! command -v molecule >/dev/null 2>&1; then
     echo -e "${RED}❌ Molecule not found. Please install Molecule first:${NC}"
-    echo "   make install"
+    echo "   direnv allow  # Auto-loads Nix environment with Molecule"
     exit 1
 fi
+
+# Always use the Nix-enabled base image for local Molecule runs (can override)
+export MOLECULE_IMAGE="${MOLECULE_IMAGE:-nixos/nix:2.21.5}"
 
 # Set up environment
 export PATH="$HOME/.local/share/pipx/venvs/molecule/bin:$HOME/.local/bin:$PATH"
@@ -69,7 +72,7 @@ else
     echo -e "${RED}💥 Some Molecule checks failed. Please fix the issues before committing.${NC}"
     echo ""
     echo -e "${YELLOW}💡 Tips:${NC}"
-    echo "   - Run 'make test ROLE=<role-name> MODE=syntax' to debug specific issues"
+    echo "   - Run 'yamisskey-provision test <role-name> syntax' to debug specific issues"
     echo "   - Check your YAML syntax and Ansible task definitions"
     echo "   - Ensure all required variables are defined in defaults/main.yml"
     exit 1

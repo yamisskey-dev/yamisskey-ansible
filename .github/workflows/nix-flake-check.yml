@@ -1,0 +1,31 @@
+name: ❄️ Nix Flake Check
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}-flake
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  flake-check:
+    name: nix flake check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v12
+
+      - name: Show Nix version
+        run: nix --version
+
+      - name: Run nix flake check
+        run: nix flake check --no-update-lock-file

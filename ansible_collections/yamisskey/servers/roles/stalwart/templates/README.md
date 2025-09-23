@@ -11,5 +11,5 @@
 - `stalwart_server_name`: Web UI 接続先ホスト名の表示に利用
 
 実行例:
-- 確認: `make check PLAYBOOK=stalwart`
-- 実行: `make run PLAYBOOK=stalwart`
+- 確認: `yamisskey-provision check stalwart`
+- 実行: `yamisskey-provision run stalwart`

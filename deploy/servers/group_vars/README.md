@@ -7,8 +7,8 @@
 
 使い方:
 - 変数を更新後、該当プレイブックを実行します。
-  - 確認実行: `make check PLAYBOOK=common`
-  - 本番実行: `make run PLAYBOOK=common`
+  - 確認実行: `yamisskey-provision check common`
+  - 本番実行: `yamisskey-provision run common`
 
 参考:
 - ルートの `README.md`（Make コマンド集）

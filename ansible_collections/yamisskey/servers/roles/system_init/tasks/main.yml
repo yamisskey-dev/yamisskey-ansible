@@ -10,13 +10,30 @@
   tags:
     - always
 
-- name: Update apt package index
+- name: Check if running in Nix environment
+  shell: command -v nix >/dev/null 2>&1
+  register: nix_available
+  failed_when: false
+  changed_when: false
+  tags:
+    - always
+
+- name: Display package management strategy
+  debug:
+    msg: |
+      🏗️ System Initialization Strategy:
+      {{ '✅ Nix Flake environment - Docker/Tailscale/Cloudflared provided by Nix' if nix_available.rc == 0 else '📦 System package manager - installing via distribution packages' }}
+  tags:
+    - always
+
+- name: Update apt package index (non-Nix environments)
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
   when:
     - ansible_os_family == "Debian"
     - not (test_mode | default(false))
+    - nix_available.rc != 0
   tags:
     - packages
 
@@ -29,17 +46,18 @@
   tags:
     - always
 
-- name: Apply common role for necessary packages
+- name: Apply common role for necessary packages (non-Nix environments)
   ansible.builtin.include_role:
     name: yamisskey.servers.common
-  when: 
+  when:
     - not (test_mode | default(false))
     - common_playbook_check.stat.exists
+    - nix_available.rc != 0
   tags:
     - packages
     - common
 
-- name: Install base packages if common playbook not available
+- name: Install base packages if common playbook not available (non-Nix environments)
   ansible.builtin.apt:
     name:
       - curl
@@ -52,30 +70,64 @@
       - ca-certificates
     state: present
     update_cache: true
-  when: 
+  when:
     - not (test_mode | default(false))
-    - not common_playbook_check.stat.exists 
+    - not common_playbook_check.stat.exists
     - ansible_os_family == "Debian"
+    - nix_available.rc != 0
   tags:
     - packages
     - base
 
-- name: Install Docker
+- name: Skip base package installation (Nix environment)
+  debug:
+    msg: |
+      🎯 Skipping system package installation - provided by Nix Flake:
+      - curl, wget, git, gnupg (development tools)
+      - Docker, Tailscale, Cloudflared (infrastructure tools)
+      
+      📋 All tools are available in the Nix development environment.
+  when: nix_available.rc == 0
+  tags:
+    - packages
+
+- name: Install Docker (non-Nix environments)
   ansible.builtin.include_tasks: docker.yml
-  when: install_docker | default(true)
+  when:
+    - install_docker | default(true)
+    - nix_available.rc != 0
   tags:
     - docker
 
-- name: Install Tailscale
+- name: Install Tailscale (non-Nix environments)
   ansible.builtin.include_tasks: tailscale.yml
-  when: install_tailscale | default(true)
+  when:
+    - install_tailscale | default(true)
+    - nix_available.rc != 0
   tags:
     - tailscale
 
-- name: Install Cloudflare products
+- name: Install Cloudflare products (non-Nix environments)
   ansible.builtin.include_tasks: cloudflare.yml
-  when: install_cloudflare | default(true)
+  when:
+    - install_cloudflare | default(true)
+    - nix_available.rc != 0
   tags:
+    - cloudflare
+
+- name: Skip infrastructure tool installation (Nix environment)
+  debug:
+    msg: |\n      🎯 Infrastructure Tools Status (Nix Environment):
+      - Docker: ✅ Available via Nix Flake
+      - Tailscale: ✅ Available via Nix Flake
+      - Cloudflared: ✅ Available via Nix Flake
+      
+      📋 Use 'yamisskey-provision help' to verify all tools.
+      🚀 Ready for Ansible infrastructure automation!
+  when: nix_available.rc == 0
+  tags:
+    - docker
+    - tailscale
     - cloudflare
 
 - name: Verify installations

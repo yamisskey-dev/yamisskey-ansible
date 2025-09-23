@@ -29,5 +29,5 @@ minio_kms_master_key: "..."       # KMS マスターキー
 ```
 
 実行例:
-- 確認: `make check PLAYBOOK=minio`
-- 実行: `make run PLAYBOOK=minio`
+- 確認: `yamisskey-provision check minio`
+- 実行: `yamisskey-provision run minio`

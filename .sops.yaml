@@ -1,0 +1,29 @@
+# SOPS Configuration for yamisskey-provision
+# Replaces Ansible Vault with modern secrets management
+
+# Creation rules for different file types and paths
+creation_rules:
+  # Servers secrets - using Age for modern encryption
+  - path_regex: deploy/servers/group_vars/vault\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+  # Appliances secrets
+  - path_regex: deploy/appliances/group_vars/vault\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+  # Host-specific secrets
+  - path_regex: deploy/.*/host_vars/.*\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+  # Development and testing secrets
+  - path_regex: secrets.*\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+# Destination rules (where to apply encryption)
+destination_rules: []
+
+# MAC only encrypted values (not keys)
+mac_only_encrypted: true
+
+# Shamir secret sharing disabled for simplicity
+shamir_threshold: 0

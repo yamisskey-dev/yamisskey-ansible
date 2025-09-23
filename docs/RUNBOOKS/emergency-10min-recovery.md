@@ -7,7 +7,7 @@
 ### 1.1 サービス状態確認
 ```bash
 # すべてのサービス状態をチェック
-make status
+yamisskey-provision status
 curl -s https://yami.ski/api/meta | jq -r '.version // "ERROR"'
 ```
 
@@ -33,7 +33,7 @@ nslookup yami.ski
 #### Option A: 通常再起動
 ```bash
 cd /home/taka/.ghq/github.com/yamisskey-dev/yamisskey-provision
-make run PLAYBOOK=site TARGET=servers LIMIT=balthasar
+yamisskey-provision run site TARGET=servers LIMIT=balthasar
 ```
 
 #### Option B: MinIO遅延時のローカル一時運用
@@ -61,7 +61,7 @@ docker compose exec web node built/disable-posting.js
 #### トンネル死亡時の緊急切り替え
 ```bash
 # Linodeプロキシ経由への一時切り替え
-make run PLAYBOOK=deploy-proxy-services TARGET=servers LIMIT=linode-proxy
+yamisskey-provision run deploy-proxy-services TARGET=servers LIMIT=linode-proxy
 
 # DNS切り替え（Cloudflare管理画面）
 # A yami.ski -> Linode IP に変更
@@ -155,7 +155,7 @@ docker compose exec web node built/scripts/resume-federation.js --full
 1. **障害レポート作成**: [`incident-template.md`](incident-template.md) を使用
 2. **ログ収集**: 
    ```bash
-   make run PLAYBOOK=collect-logs TARGET=all
+   yamisskey-provision run collect-logs TARGET=all
    ```
 3. **バックアップ検証**: 次回障害に備えた検証実施
 4. **監視アラート確認**: 見逃したアラートがないかチェック

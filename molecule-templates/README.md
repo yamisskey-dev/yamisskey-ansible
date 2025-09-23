@@ -14,15 +14,12 @@
 ### 1. Moleculeのインストール
 
 ```bash
-# uv経由でMoleculeをインストール
-make install
+# Nix環境ですべて自動インストール（direnvを推奨）
+direnv allow
 ```
 
-これにより以下がインストールされます：
-- ansible（uv経由）
-- ansible-lint（uv経由）
-- molecule（pipx経由）
-- molecule-plugins[docker]（pipxでinject）
+Molecule テストは既定で `nixos/nix:2.21.5` イメージを使用します。別のベースイメージを試したい場合は
+`MOLECULE_IMAGE` を上書きしてください。
 
 ### 2. Moleculeテスト設定の追加
 
@@ -37,26 +34,26 @@ make install
 
 ```bash
 # 基本的なテスト実行
-make test ROLE=common
+yamisskey-provision test common
 
 # 構文チェックのみ
-make test ROLE=common MODE=syntax
+yamisskey-provision test common syntax
 
-# コンバージテストのみ  
-make test ROLE=minio MODE=converge
+# コンバージテストのみ
+yamisskey-provision test minio converge
 
 # クリーンアップ
-make test ROLE=system-init MODE=cleanup
+yamisskey-provision test system-init cleanup
 ```
 
 ### 全ロールのテスト
 
 ```bash
 # 全ロール（servers）の基本テスト
-make test TARGET=servers
+yamisskey-provision test "" "" servers
 
 # 全ロール（appliances）の構文チェック
-make test TARGET=appliances MODE=syntax
+yamisskey-provision test "" syntax appliances
 ```
 
 ## 📁 作成される構造
