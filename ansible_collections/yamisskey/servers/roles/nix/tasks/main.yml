@@ -71,7 +71,7 @@
     - ansible_pkg_mgr == 'portage'
     - nix_check.stdout == 'not_installed'
 
-- name: Download and install Nix (single-user mode)
+- name: Download and install Nix ({{ nix_install_effective_mode }} mode)
   become: false
   ansible.builtin.shell: |-
     curl -L --fail https://nixos.org/nix/install | sh -s -- --{{ nix_install_effective_mode }} --yes
