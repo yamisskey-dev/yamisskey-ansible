@@ -1,6 +1,10 @@
 ---
 - name: Check if Nix is available
-  ansible.builtin.command: command -v nix
+  ansible.builtin.shell: |
+    if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+      . /root/.nix-profile/etc/profile.d/nix.sh
+    fi
+    command -v nix
   register: nix_available
   changed_when: false
   failed_when: false
