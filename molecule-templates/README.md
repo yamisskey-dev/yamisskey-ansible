@@ -18,9 +18,11 @@
 direnv allow
 ```
 
-Molecule テストは既定で `nixos/nix:2.21.5` イメージを使用します。`prepare.yml` で RAW
-モジュールを用いて `nix profile install nixpkgs#python312` を実行し、
-`/root/.nix-profile/bin/python3` を Ansible のインタープリタとして利用する前提です。
+Molecule テストは既定で `nixos/nix:2.21.5` イメージを使用します。`prepare.yml` では
+RAW モジュールで `nix --extra-experimental-features 'nix-command flakes' build` を実行し、
+`nixpkgs#python312` を `/tmp/nix-python` にビルドしてから `/tmp/nix-python/bin/python3`
+を Ansible のインタープリタとして利用します。プロファイルを汚さずに毎回クリーンな
+Python 実行環境を確保する構成です。
 
 ### 2. Moleculeテスト設定の追加
 

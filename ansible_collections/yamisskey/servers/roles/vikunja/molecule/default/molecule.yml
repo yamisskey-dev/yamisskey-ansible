@@ -28,7 +28,7 @@ provisioner:
       vikunja-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
-        ansible_python_interpreter: /root/.nix-profile/bin/python3
+        ansible_python_interpreter: /tmp/nix-python/bin/python3
         domain: "example.com"
         vikunja_secrets_file: "/tmp/vikunja-secrets.yml"
         db_root_password: "test-root-password"

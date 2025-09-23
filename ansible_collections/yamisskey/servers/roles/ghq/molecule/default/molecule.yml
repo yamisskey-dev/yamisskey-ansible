@@ -19,6 +19,9 @@ provisioner:
   playbooks:
     prepare: prepare.yml
   inventory:
+    group_vars:
+      all:
+        ansible_python_interpreter: /tmp/nix-python/bin/python3
     host_vars:
       ghq-test-instance:
         ghq_operation: "install"

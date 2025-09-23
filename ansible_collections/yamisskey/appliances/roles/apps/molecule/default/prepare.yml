@@ -10,18 +10,12 @@
         chmod 1777 /tmp/.ansible-tmp
         chown root:root /tmp/.ansible-tmp
 
-    - name: Configure Nix experimental features
+    - name: Build python via Nix if missing (pure)
       raw: |
-        mkdir -p /etc/nix
-        cat <<'EOF' >/etc/nix/nix.conf
-        experimental-features = nix-command flakes
-        EOF
-
-    - name: Install Python via Nix profile if missing
-      raw: |
-        if ! command -v /root/.nix-profile/bin/python3 >/dev/null 2>&1; then
-          nix profile install --profile /root/.nix-profile nixpkgs#python312
+        if [ ! -x /tmp/nix-python/bin/python3 ]; then
+          rm -f /tmp/nix-python
+          nix --extra-experimental-features 'nix-command flakes' build nixpkgs#python312 -o /tmp/nix-python
         fi
 
-    - name: Confirm Python availability
-      raw: /root/.nix-profile/bin/python3 --version
+    - name: Confirm python availability
+      raw: /tmp/nix-python/bin/python3 --version

@@ -28,7 +28,7 @@ provisioner:
       jitsi-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
-        ansible_python_interpreter: /root/.nix-profile/bin/python3
+        ansible_python_interpreter: /tmp/nix-python/bin/python3
 verifier:
   name: ansible
 scenario:

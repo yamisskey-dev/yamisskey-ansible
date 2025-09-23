@@ -28,7 +28,7 @@ provisioner:
       minio-test-instance:
         # MinIO test configuration
         ansible_user: "root"
-        ansible_python_interpreter: /root/.nix-profile/bin/python3
+        ansible_python_interpreter: /tmp/nix-python/bin/python3
         minio_secrets_file: "/tmp/test-secrets.yml"
         minio_alias: "testminio"
         minio_bucket_name_for_misskey: "test-misskey-files"

@@ -12,7 +12,8 @@ platforms:
     cgroupns_mode: host
     tmpfs:
       - /run
-      - /tmp    command: bash -c "if ! command -v /root/.nix-profile/bin/python3 >/dev/null 2>&1; then nix profile install --accept-flake-config --profile /root/.nix-profile nixpkgs#python312 >/dev/null 2>&1 || exit 1; fi; mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
+      - /tmp
+    command: bash -c "if ! command -v /tmp/nix-python/bin/python3 >/dev/null 2>&1; then nix profile install --accept-flake-config --profile /root/.nix-profile nixpkgs#python312 >/dev/null 2>&1 || exit 1; fi; mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
     networks:
       - name: molecule-test-network
 provisioner:
@@ -20,6 +21,9 @@ provisioner:
   playbooks:
     prepare: prepare.yml
   inventory:
+    group_vars:
+      all:
+        ansible_python_interpreter: /tmp/nix-python/bin/python3
     host_vars:
       monitor-test-instance:
         # Test configuration for Docker-based monitoring
