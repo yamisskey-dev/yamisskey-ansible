@@ -20,8 +20,6 @@ platforms:
       CMD ["/bin/bash"]
     command: /bin/bash -c "while true; do sleep 1000; done"
     privileged: false
-    capabilities:
-      - NET_ADMIN
 provisioner:
   name: ansible
   connection_options:

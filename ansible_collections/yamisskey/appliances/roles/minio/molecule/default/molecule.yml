@@ -7,9 +7,6 @@ platforms:
   - name: truenas-test
     image: nixos/nix:2.21.5
     pre_build_image: true
-    privileged: true
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
 provisioner:
   name: ansible
   playbooks:
