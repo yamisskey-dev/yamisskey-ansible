@@ -1,4 +1,9 @@
 ---
+- name: Check if Nix binary already exists
+  ansible.builtin.stat:
+    path: /root/.nix-profile/bin/nix
+  register: nix_binary
+
 - name: Install Nix prerequisites on APT-based systems
   ansible.builtin.apt:
     update_cache: true
@@ -6,7 +11,9 @@
       - curl
       - ca-certificates
       - xz-utils
-  when: ansible_pkg_mgr == 'apt'
+  when:
+    - ansible_pkg_mgr == 'apt'
+    - not nix_binary.stat.exists
 
 - name: Install Nix prerequisites on Portage-based systems
   ansible.builtin.package:
@@ -15,7 +22,9 @@
       - app-misc/ca-certificates
       - app-arch/xz-utils
     state: present
-  when: ansible_pkg_mgr == 'portage'
+  when:
+    - ansible_pkg_mgr == 'portage'
+    - not nix_binary.stat.exists
 
 - name: Ensure Nix is installed (single-user)
   ansible.builtin.shell: |
@@ -24,11 +33,22 @@
   args:
     executable: /bin/bash
     creates: /root/.nix-profile/bin/nix
+  when: not nix_binary.stat.exists
+
+- name: Refresh Nix binary fact
+  ansible.builtin.stat:
+    path: /root/.nix-profile/bin/nix
+  register: nix_binary
 
 - name: Check for Nix profile script
   ansible.builtin.stat:
     path: /root/.nix-profile/etc/profile.d/nix.sh
   register: nix_profile_script
+
+- name: Fail if Nix profile script is missing after installation
+  ansible.builtin.fail:
+    msg: "Nix profile script not found at /root/.nix-profile/etc/profile.d/nix.sh after installation"
+  when: not nix_profile_script.stat.exists
 
 - name: Ensure Nix profile is loaded in root shells
   ansible.builtin.lineinfile:
@@ -54,13 +74,65 @@
     state: link
     force: true
     follow: false
+  when: nix_binary.stat.exists
+
+- name: Check if Home Manager command exists
+  ansible.builtin.shell: |
+    . /root/.nix-profile/etc/profile.d/nix.sh
+    command -v home-manager
+  args:
+    executable: /bin/bash
+  register: home_manager_available
+  changed_when: false
+  failed_when: false
+  when: nix_profile_script.stat.exists
+  environment:
+    PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
+
+- name: Install Home Manager
+  ansible.builtin.shell: |
+    set -euo pipefail
+    . /root/.nix-profile/etc/profile.d/nix.sh
+    nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
+    nix-channel --update
+    nix-shell '<home-manager>' -A install
+  args:
+    executable: /bin/bash
+  when:
+    - nix_profile_script.stat.exists
+    - home_manager_available.rc != 0
+  environment:
+    PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
+  become: false
+
+- name: Determine Home Manager configuration profile
+  ansible.builtin.set_fact:
+    resolved_home_manager_config: "{{ home_manager_config | default(nix_home_manager_config | default('server')) }}"
+  when: nix_profile_script.stat.exists
+
+- name: Ensure Home Manager configuration directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.config/home-manager"
+    state: directory
+    mode: '0755'
+  become: false
+  when: nix_profile_script.stat.exists
+
+- name: Deploy Home Manager configuration
+  ansible.builtin.template:
+    src: home.nix.j2
+    dest: "{{ ansible_user_dir }}/.config/home-manager/home.nix"
+    mode: '0644'
+  become: false
+  when: nix_profile_script.stat.exists
+  vars:
+    home_manager_config: "{{ resolved_home_manager_config }}"
 
 - name: Apply Home Manager configuration
-  block:
-    - name: Include Home Manager role
-      ansible.builtin.include_role:
-        name: yamisskey.servers.home_manager
-      vars:
-        home_manager_config: "{{ nix_home_manager_config }}"
+  ansible.builtin.command: home-manager switch
+  become: false
+  register: home_manager_switch
+  changed_when: "'Building' in home_manager_switch.stderr"
+  when: nix_profile_script.stat.exists
   environment:
     PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"

@@ -20,9 +20,9 @@
   tags:
     - always
 
-- name: Setup Home Manager for Nix environments
+- name: Prepare Nix environment with Home Manager
   include_role:
-    name: yamisskey.servers.home_manager
+    name: yamisskey.servers.nix
   tags:
     - always
 

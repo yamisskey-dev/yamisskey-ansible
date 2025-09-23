@@ -1,3 +1,6 @@
 ---
 # Default Home Manager configuration profile to apply when provisioning via the nix role.
 nix_home_manager_config: server
+
+# Additional packages to inject into the Home Manager profile.
+home_manager_extra_packages: []
