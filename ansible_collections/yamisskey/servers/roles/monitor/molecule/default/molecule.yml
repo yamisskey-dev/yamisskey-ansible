@@ -18,6 +18,8 @@ platforms:
       - /run
       - /tmp
     command: /lib/systemd/systemd
+    environment:
+      container: docker
     networks:
       - name: molecule-test-network
 provisioner:

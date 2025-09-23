@@ -12,7 +12,12 @@ platforms:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - /var/run/docker.sock:/var/run/docker.sock
+    tmpfs:
+      - /run
+      - /tmp
     command: /lib/systemd/systemd
+    environment:
+      container: docker
 provisioner:
   name: ansible
   playbooks:
