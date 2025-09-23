@@ -12,8 +12,8 @@
 
 使い方:
 - 値を更新後、関連プレイブックを実行します。
-  - 確認: `make check PLAYBOOK=setup TARGET=appliances`
-  - 実行: `make run PLAYBOOK=setup TARGET=appliances`
+  - 確認: `yamisskey-provision check setup TARGET=appliances`
+  - 実行: `yamisskey-provision run setup TARGET=appliances`
 
 注意:
 - 秘密情報は必ず Ansible Vault で管理してください。

@@ -9,5 +9,5 @@
 - `main.yml`: 上記を統合するエントリーポイント
 
 実行例:
-- 確認: `make check PLAYBOOK=setup TARGET=appliances`
-- 実行: `make run PLAYBOOK=setup TARGET=appliances`
+- 確認: `yamisskey-provision check setup TARGET=appliances`
+- 実行: `yamisskey-provision run setup TARGET=appliances`

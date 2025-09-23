@@ -10,5 +10,5 @@
     - `RCLONE_CONFIG_BACKUP_BUCKET_ACL`
 
 実行例:
-- 確認: `make check PLAYBOOK=misskey-backup`
-- 実行: `make run PLAYBOOK=misskey-backup`
+- 確認: `yamisskey-provision check misskey-backup`
+- 実行: `yamisskey-provision run misskey-backup`

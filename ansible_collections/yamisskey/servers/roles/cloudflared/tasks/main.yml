@@ -1,6 +1,5 @@
 ---
 # Cloudflared role with full automation capabilities
-# Supports both manual (make install) and automatic installation modes
 
 # Installation phase (conditional based on cloudflared_skip_install)
 - name: Install cloudflared
@@ -71,9 +70,6 @@
       {% else %}
 
       📋 Manual steps required (follow project README.md):
-
-      1. Install cloudflared (if not using automation):
-         make install
 
       2. Login and create tunnel:
          cloudflared tunnel login

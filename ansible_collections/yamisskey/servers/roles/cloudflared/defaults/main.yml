@@ -40,7 +40,7 @@ cloudflared_origin_request:
   noHappyEyeballs: true
 
 # Installation configuration
-cloudflared_skip_install: true   # Default to true - use 'make install' as recommended
+cloudflared_skip_install: true   # Default to true
 cloudflared_version: "latest"    # GitHub release version (only used if skip_install is false)
 
 # Service configuration

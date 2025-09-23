@@ -1,33 +1,119 @@
 # yamisskey-provision
 
-A unified Ansible infrastructure management toolkit with an intuitive Makefile wrapper for deploying and managing servers and appliances (TrueNAS) with equal ease.
+Modern Ansible infrastructure management with SOPS secrets management and Nix-based development environment.
+
+## 🚀 Quick Start
+
+### Prerequisites
+- [Nix](https://nixos.org/download.html) with flakes enabled
+- [direnv](https://direnv.net/) (optional but recommended)
+
+### Automatic Environment Setup (Recommended)
+
+If you have direnv installed:
+```bash
+cd yamisskey-provision
+direnv allow  # Automatically loads Nix environment
+```
+
+### Manual Environment Setup
+
+```bash
+cd yamisskey-provision
+nix develop  # Enter development environment manually
+```
+
+## 🔐 SOPS Secrets (Default)
+
+This project manages all secrets with SOPS (Age recipients) and the unified `yamisskey-provision` command:
+
+```bash
+# Check SOPS status
+yamisskey-provision sops status servers
+
+# Edit secrets with SOPS
+yamisskey-provision sops edit servers
+
+# View secrets (read-only)
+yamisskey-provision sops view servers
+```
+
+## 🚀 Unified Command Interface
+
+All operations use the single `yamisskey-provision` command with intuitive subcommands:
+
+### SOPS Operations
+```bash
+yamisskey-provision sops install                    # Install SOPS and Age
+yamisskey-provision sops edit [target]              # Edit encrypted secrets
+yamisskey-provision sops view [target]              # View decrypted secrets
+yamisskey-provision sops status [target]            # Check SOPS status
+```
+
+### Ansible Operations
+```bash
+yamisskey-provision run <playbook> [target] [limit] # Run playbook
+yamisskey-provision check <playbook> [target]       # Dry-run with diff
+```
+
+### Infrastructure Management
+```bash
+yamisskey-provision inventory [target] [type]       # Create inventory
+yamisskey-provision status                          # Health check
+yamisskey-provision list [target]                   # List playbooks
+```
+
+### Testing & Maintenance
+```bash
+yamisskey-provision test <role> [mode] [target]     # Test role with molecule
+yamisskey-provision backup [target]                 # Backup inventory
+yamisskey-provision logs                            # View recent logs
+```
+
+For detailed migration instructions, see [docs/SOPS_MIGRATION.md](docs/SOPS_MIGRATION.md).
+
+## 📦 What's Included
+
+- **Ansible 2.17+** with complete ecosystem
+- **SOPS + Age** for modern secrets management
+- **Testing tools** (molecule, ansible-lint)
+- **Complete Python environment** for development
+- **Automatic environment loading** via direnv
+
+
+A unified Ansible infrastructure management toolkit providing enterprise-grade infrastructure automation with modern secrets management.
 
 ## Overview
 
 This repository provides a comprehensive infrastructure-as-code solution with:
-- **🚀 Unified Ansible Wrapper**: Simple, consistent commands for both servers and appliances
+- **🚀 Unified Command Interface**: Single `yamisskey-provision` command for all operations
 - **🎯 Dual Target Support**: Seamless switching between servers and TrueNAS appliances
-- **📦 Automatic Setup**: Cross-platform Ansible management via uv
+- **🔐 Modern Secrets Management**: SOPS with Age encryption replacing Ansible Vault
 - **💾 Smart Backups**: Target-specific inventory backups with timestamps
 - **🔍 Error Handling**: Clear error messages and validation
 - **📋 Discovery Tools**: List available playbooks and create inventories
 - **✅ Production Quality**: 100% Ansible Lint compliance with enterprise-grade reliability
 
-## 🔐 Security & Vault Configuration
+## 🔐 Modern SOPS Security Configuration
 
-### Ansible Vault Setup
+### SOPS Setup
 
-This project uses Ansible Vault for secure secret management. Before running playbooks, set up your vault:
+This project uses SOPS (Secrets OPerationS) with Age encryption for secure secret management:
 
 ```bash
-echo "your-vault-password" > .vault_pass
-chmod 600 .vault_pass
-ansible-vault create deploy/servers/group_vars/vault.yml --vault-password-file .vault_pass
+# Install SOPS and Age (automatic via Nix)
+yamisskey-provision sops install
+
+# Check status
+yamisskey-provision sops status servers
+
+# Edit secrets
+yamisskey-provision sops edit servers
 ```
 
-### Required Vault Variables
+### Required Secret Variables
 
-Add these encrypted variables to your vault files:
+Add these encrypted variables to your SOPS files:
 
 ```yaml
 minio_root_user: "admin"
@@ -42,12 +128,13 @@ cloudflare_tunnel_token: "tunnel-token-here"
 cloudflare_tunnel_credentials: "credentials-json-here"
 ```
 
-### Vault Usage Examples
+### SOPS Usage Examples
 
 ```bash
-ansible-vault edit deploy/servers/group_vars/vault.yml --vault-password-file .vault_pass
-make run PLAYBOOK=common --extra-vars "@deploy/servers/group_vars/vault.yml" --vault-password-file .vault_pass
-ansible-vault encrypt deploy/servers/host_vars/production_secrets.yml
+# Edit secrets with SOPS
+yamisskey-provision sops edit servers
+# View decrypted secrets (read-only)
+yamisskey-provision sops view servers
 ```
 
 ## Quick Start
@@ -74,24 +161,26 @@ git clone https://github.com/yamisskey-dev/yamisskey-provision.git
 cd yamisskey-provision
 ```
 
-Install Ansible and Collections:
+The Nix environment will automatically provide all dependencies:
 ```bash
-make install
-ansible-galaxy collection install -r requirements.yml
+# With direnv (automatic)
+direnv allow
+
+# Or manual
+nix develop
 ```
 
 Create inventory (choose your target):
 ```bash
-make inventory
-make inventory TARGET=appliances
+yamisskey-provision inventory servers
+yamisskey-provision inventory appliances
 ```
 
 ### 2.1 Collections Installation
 
-The project uses modern Ansible Collections. Install them automatically:
+The project uses modern Ansible Collections. They are automatically available in the Nix environment:
 
 ```bash
-ansible-galaxy collection install -r requirements.yml
 ansible-galaxy collection list | grep yamisskey
 ansible-galaxy collection list | grep -E "(community|ansible)"
 ```
@@ -100,54 +189,53 @@ ansible-galaxy collection list | grep -E "(community|ansible)"
 
 Get help:
 ```bash
-make help
+yamisskey-provision --help
 ```
 
 Run a playbook on servers (default):
 ```bash
-make run PLAYBOOK=common
+yamisskey-provision run common
 ```
 
 Run a playbook on appliances:
 ```bash
-make run PLAYBOOK=setup TARGET=appliances
+yamisskey-provision run setup appliances
 ```
 
 Check what would be changed (dry-run):
 ```bash
-make check PLAYBOOK=security
-make check PLAYBOOK=migrate-minio-phase-a TARGET=appliances
+yamisskey-provision check security
+yamisskey-provision check migrate-minio-phase-a appliances
 ```
 
 ## 🎯 Unified Command System
 
-All commands work consistently across both targets using the `TARGET` parameter:
+All commands work consistently across both targets using the target parameter:
 
 ### Core Commands
 
 | Command | Description | Server Example | Appliance Example |
 |---------|-------------|----------------|-------------------|
-| `run` | Execute playbook | `make run PLAYBOOK=common` | `make run PLAYBOOK=setup TARGET=appliances` |
-| `check` | Dry-run with diff | `make check PLAYBOOK=security` | `make check PLAYBOOK=migrate-minio-phase-a TARGET=appliances` |
-| `deploy` | Run multiple playbooks | `make deploy PLAYBOOKS='common security'` | `make deploy PLAYBOOKS='setup migrate-minio-phase-a' TARGET=appliances` |
-| `list` | Show available playbooks | `make list` | `make list TARGET=appliances` |
+| `run` | Execute playbook | `yamisskey-provision run common` | `yamisskey-provision run setup appliances` |
+| `check` | Dry-run with diff | `yamisskey-provision check security` | `yamisskey-provision check migrate-minio-phase-a appliances` |
+| `list` | Show available playbooks | `yamisskey-provision list` | `yamisskey-provision list appliances` |
 
 ### Management Commands
 
 | Command | Description | Server Example | Appliance Example |
 |---------|-------------|----------------|-------------------|
-| `inventory` | Create inventory | `make inventory` | `make inventory TARGET=appliances` |
-| `backup` | Backup inventory | `make backup` | `make backup TARGET=appliances` |
-| `logs` | View recent logs | `make logs` | `make logs` |
+| `inventory` | Create inventory | `yamisskey-provision inventory servers` | `yamisskey-provision inventory appliances` |
+| `backup` | Backup inventory | `yamisskey-provision backup servers` | `yamisskey-provision backup appliances` |
+| `logs` | View recent logs | `yamisskey-provision logs` | `yamisskey-provision logs` |
 
 ### Advanced Parameters
 
-Add these parameters to any `run`, `check`, or `deploy` command:
+Add limit and tags to any `run` or `check` command:
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `LIMIT=<hosts>` | Target specific hosts | `make run PLAYBOOK=common LIMIT=local` |
-| `TAGS=<tags>` | Run only specific tags | `make run PLAYBOOK=security TAGS=firewall,ssh` |
+| Example | Description |
+|---------|-------------|
+| `yamisskey-provision run common servers local` | Target specific hosts |
+| `yamisskey-provision run security servers "" firewall,ssh` | Run only specific tags |
 
 ## 📋 Complete Provisioning Workflows
 
@@ -155,22 +243,21 @@ Add these parameters to any `run`, `check`, or `deploy` command:
 
 1. **Initial Setup**
    ```bash
-   make install
-   make inventory
-   make backup
+   yamisskey-provision inventory servers
+   yamisskey-provision backup servers
    ```
 
 2. **Base System Configuration**
    ```bash
-   make run PLAYBOOK=common
-   make run PLAYBOOK=security
+   yamisskey-provision run common
+   yamisskey-provision run security
    ```
 
 3. **Service Installation**
    ```bash
-   make run PLAYBOOK=monitor
-   make run PLAYBOOK=minio
-   make run PLAYBOOK=misskey
+   yamisskey-provision run monitor
+   yamisskey-provision run minio
+   yamisskey-provision run misskey
    ```
 
 ### Misskey Instance Deployment
@@ -178,11 +265,10 @@ Add these parameters to any `run`, `check`, or `deploy` command:
 Complete Misskey setup workflow:
 
 ```bash
-make deploy PLAYBOOKS='common security modsecurity-nginx monitor minio misskey'
-make check PLAYBOOK=common
-make run PLAYBOOK=common
-make check PLAYBOOK=misskey
-make run PLAYBOOK=misskey
+yamisskey-provision check common
+yamisskey-provision run common
+yamisskey-provision check misskey
+yamisskey-provision run misskey
 ```
 
 ### TrueNAS Appliance Setup
@@ -190,12 +276,11 @@ make run PLAYBOOK=misskey
 Complete TrueNAS appliance management:
 
 ```bash
-make inventory TARGET=appliances
-make backup TARGET=appliances
-make deploy PLAYBOOKS='setup migrate-minio-phase-a' TARGET=appliances
-make check PLAYBOOK=setup TARGET=appliances
-make run PLAYBOOK=setup TARGET=appliances
-make run PLAYBOOK=migrate-minio-truenas TARGET=appliances
+yamisskey-provision inventory appliances
+yamisskey-provision backup appliances
+yamisskey-provision check setup appliances
+yamisskey-provision run setup appliances
+yamisskey-provision run migrate-minio-truenas appliances
 ```
 
 ### Mixed Environment Management
@@ -203,35 +288,33 @@ make run PLAYBOOK=migrate-minio-truenas TARGET=appliances
 Managing both servers and appliances:
 
 ```bash
-make list TARGET=servers
-make run PLAYBOOK=common TARGET=servers
-make list TARGET=appliances
-make run PLAYBOOK=setup TARGET=appliances
-make backup TARGET=servers
-make backup TARGET=appliances
+yamisskey-provision list servers
+yamisskey-provision run common servers
+yamisskey-provision list appliances
+yamisskey-provision run setup appliances
+yamisskey-provision backup servers
+yamisskey-provision backup appliances
 ```
 
 ## 🚀 Advanced Usage
 
 ### Combining Parameters
 ```bash
-make run PLAYBOOK=security LIMIT=local TAGS=firewall,ssh
-make check PLAYBOOK=migrate-minio-phase-a TARGET=appliances LIMIT=truenas.local
-make deploy PLAYBOOKS='common security' TAGS=install,config
+yamisskey-provision run security servers local firewall,ssh
+yamisskey-provision check migrate-minio-phase-a appliances truenas.local
 ```
 
 ### Quick Reference
 ```bash
-make help
-make install
-make inventory
-make inventory TARGET=appliances
-make list
-make list TARGET=appliances
-make run PLAYBOOK=common
-make run PLAYBOOK=setup TARGET=appliances
-make backup
-make backup TARGET=appliances
+yamisskey-provision --help
+yamisskey-provision inventory servers
+yamisskey-provision inventory appliances
+yamisskey-provision list
+yamisskey-provision list appliances
+yamisskey-provision run common
+yamisskey-provision run setup appliances
+yamisskey-provision backup servers
+yamisskey-provision backup appliances
 ```
 
 This unified system provides consistent, predictable commands that work the same way whether you're managing traditional servers or TrueNAS appliances.

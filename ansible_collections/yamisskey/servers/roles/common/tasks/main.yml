@@ -1,13 +1,50 @@
 ---
-- name: Update and upgrade apt packages
+- name: Check if running in Nix environment
+  shell: command -v nix >/dev/null 2>&1
+  register: nix_available
+  failed_when: false
+  changed_when: false
+  tags:
+    - always
+
+- name: Setup Home Manager for Nix environments
+  include_role:
+    name: yamisskey.servers.home_manager
+  when: nix_available.rc == 0
+  tags:
+    - always
+
+- name: Display package management strategy
+  debug:
+    msg: |
+      📦 Package Management Strategy:
+      {{ '✅ Nix Flake environment detected - packages provided by Home Manager' if nix_available.rc == 0 else '📦 System package manager - installing via apt' }}
+  tags:
+    - always
+
+- name: Update and upgrade apt packages (non-Nix environments only)
   apt:
     update_cache: true
     upgrade: 'dist'
+  when: nix_available.rc != 0
   tags:
     - update
 
-- name: Install essential packages
+- name: Install essential packages via apt (non-Nix environments only)
   apt:
     name: '{{ packages }}'
+  when: nix_available.rc != 0
+  tags:
+    - packages
+
+- name: Skip package installation (Nix environment detected)
+  debug:
+    msg: |
+      🎯 Skipping apt package installation - packages are provided by Home Manager:
+      {{ packages | join(', ') }}
+      
+      📋 These packages are managed via Home Manager configuration.
+      To verify, run: home-manager packages
+  when: nix_available.rc == 0
   tags:
     - packages

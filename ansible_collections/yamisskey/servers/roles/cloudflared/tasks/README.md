@@ -10,5 +10,5 @@
 - 接続検証（トンネル UUID がある場合）
 
 実行例:
-- 確認: `make check PLAYBOOK=cloudflared`
-- 実行: `make run PLAYBOOK=cloudflared`
+- 確認: `yamisskey-provision check cloudflared`
+- 実行: `yamisskey-provision run cloudflared`

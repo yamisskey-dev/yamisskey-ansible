@@ -1,7 +1,6 @@
 ---
 # MinIO Migration Verification Playbook
 # Purpose: Comprehensive post-migration verification for MinIO data integrity
-# Usage: make run PLAYBOOK=verify-minio-migration LIMIT=<source_server>
 
 - name: Verify MinIO Migration Integrity
   hosts: all

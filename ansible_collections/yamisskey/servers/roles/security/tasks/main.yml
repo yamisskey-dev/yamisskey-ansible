@@ -1,5 +1,16 @@
 ---
-- name: Ensure required packages are installed
+- name: Check if running in Nix environment
+  ansible.builtin.command: command -v nix
+  register: nix_available
+  changed_when: false
+  failed_when: false
+
+- name: Skip package installation in Nix environment
+  ansible.builtin.debug:
+    msg: "Skipping package installation - Nix environment provides security packages"
+  when: nix_available.rc == 0
+
+- name: Install required packages in non-Nix environments
   ansible.builtin.apt:
     name: "{{ item }}"
   loop:
@@ -11,12 +22,15 @@
     - curl
     - dnsutils
   become: true
+  when: nix_available.rc != 0
 
-- name: Ensure tailscale is installed (optional)
+- name: Ensure tailscale is installed (optional) in non-Nix environments
   ansible.builtin.apt:
     name: tailscale
     state: present
-  when: install_tailscale | default(false)
+  when:
+    - install_tailscale | default(false)
+    - nix_available.rc != 0
   become: true
 
 - name: Check if tailscale CLI is available
@@ -305,6 +319,7 @@
         curl -s https://install.crowdsec.net | sudo sh
       register: crowdsec_repo_install
       changed_when: true
+      when: nix_available.rc != 0
 
     - name: Install CrowdSec package
       ansible.builtin.apt:
@@ -312,10 +327,12 @@
         state: present
         update_cache: yes
       register: crowdsec_install
+      when: nix_available.rc != 0
 
     - name: Install firewall bouncer
       ansible.builtin.apt:
         name: crowdsec-firewall-bouncer
+      when: nix_available.rc != 0
 
     - name: Create required directories
       ansible.builtin.file:
@@ -473,10 +490,11 @@
 
 - name: Setup dnscrypt-proxy (System Install)
   block:
-    - name: Install dnscrypt-proxy
+    - name: Install dnscrypt-proxy in non-Nix environments
       ansible.builtin.package:
         name: dnscrypt-proxy
       register: dnscrypt_install_result
+      when: nix_available.rc != 0
 
     - name: Verify dnscrypt-proxy installation
       ansible.builtin.command:

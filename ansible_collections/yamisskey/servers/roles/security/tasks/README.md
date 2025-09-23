@@ -23,5 +23,5 @@ cloudflare_region1_ips_v6: ["2606:4700:.../48", ...]
 ```
 
 実行例:
-- 確認: `make check PLAYBOOK=security`
-- 実行: `make run PLAYBOOK=security`
+- 確認: `yamisskey-provision check security`
+- 実行: `yamisskey-provision run security`

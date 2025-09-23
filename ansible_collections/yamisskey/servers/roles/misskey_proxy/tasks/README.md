@@ -22,5 +22,5 @@ summaly_dir: "{{ proxy_dir }}/summaly-docker"
 ```
 
 実行例:
-- 確認: `make check PLAYBOOK=misskey-proxy`
-- 実行: `make run PLAYBOOK=misskey-proxy`
+- 確認: `yamisskey-provision check misskey-proxy`
+- 実行: `yamisskey-provision run misskey-proxy`

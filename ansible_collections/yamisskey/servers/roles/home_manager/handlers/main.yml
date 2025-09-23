@@ -1,0 +1,5 @@
+---
+- name: Apply Home Manager configuration
+  ansible.builtin.command: home-manager switch
+  become: false
+  listen: "Apply Home Manager configuration"

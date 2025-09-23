@@ -233,6 +233,7 @@ jobs:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.vendor/collections:${{ github.workspace }}/ansible_collections:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_GALAXY_COLLECTIONS_PATH: ${{ github.workspace }}/.vendor/collections:${{ github.workspace }}/ansible_collections:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible.cfg
+          MOLECULE_IMAGE: nixos/nix:2.21.5
         run: |
           set -euo pipefail
           mkdir -p "$GITHUB_WORKSPACE/.vendor/collections"

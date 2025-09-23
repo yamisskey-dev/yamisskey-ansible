@@ -8,5 +8,5 @@
 - unattended-upgrades の設定ファイル配備（`files/20auto-upgrades`）とサービス有効化
 
 実行例:
-- 確認: `make check PLAYBOOK=common`
-- 実行: `make run PLAYBOOK=common`
+- 確認: `yamisskey-provision check common`
+- 実行: `yamisskey-provision run common`

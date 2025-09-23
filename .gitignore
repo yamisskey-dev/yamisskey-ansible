@@ -2,24 +2,35 @@
 .ansible/
 .vendor/
 
-# Ansible inventories (created by make inventory)
+# Ansible inventories (created by yamisskey-provision inventory)
 deploy/servers/inventory
 deploy/appliances/inventory
 
-# Ansible secrets
+# Ansible secrets (both legacy and SOPS)
 .vault_pass
 .vault_pass.backup
 .env.secure
 deploy/**/group_vars/vault.yml
 deploy/**/ansible.cfg.debug
 
-# Runtime directories created by Makefile
+# SOPS secrets management
+.sops.yaml.backup
+*.age
+secrets/
+age-key.txt
+
+# Runtime directories created by Nix scripts
 backups/
 logs/
 dist/
 
 # Build artifacts
 yamisskey-*.tar.gz
+
+# Nix development environment
+result
+result-*
+.direnv/
 
 # OS generated files
 .DS_Store

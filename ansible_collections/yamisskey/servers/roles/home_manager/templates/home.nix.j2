@@ -1,0 +1,103 @@
+{ config, pkgs, ... }:
+
+{
+  # User information
+  home.username = "{{ ansible_user_id }}";
+  home.homeDirectory = "{{ ansible_user_dir }}";
+  home.stateVersion = "23.11";
+
+  # Package configuration based on host type
+  home.packages = with pkgs; [
+    # Core system utilities (all hosts)
+    curl
+    wget
+    openssh
+    git
+    nettools
+    nmap
+    dnsutils
+    htop
+    btop
+    sysstat
+    lynis
+    jq
+    yq-go
+    unzip
+    zip
+    tar
+    gawk
+    gnused
+    findutils
+    coreutils
+    rsync
+    lsof
+    tmux
+
+{% if home_manager_config == 'development' %}
+    # Development/control node packages
+    ansible_2_17
+    ansible-lint
+    yamllint
+    sops
+    age
+    gnupg
+    docker
+    docker-compose
+    golang
+    python3
+    python3Packages.pip
+    python3Packages.passlib
+    nixpkgs-fmt
+    statix
+{% elif home_manager_config == 'ai-server' %}
+    # AI/ML server packages
+    fail2ban
+    ufw
+    cloudflared
+    tailscale
+    clamav
+    mecab
+    python3
+    python3Packages.pip
+    golang
+{% else %}
+    # Standard server packages
+    fail2ban
+    ufw
+    cloudflared
+    tailscale
+    clamav
+{% endif %}
+  ];
+
+  # Enable programs that need special configuration
+  programs = {
+    # Basic shell configuration
+    bash = {
+      enable = true;
+      bashrcExtra = ''
+        # yamisskey-provision environment
+        export PATH="$HOME/.nix-profile/bin:$PATH"
+      '';
+    };
+
+{% if home_manager_config == 'development' %}
+    # Development tools
+    git = {
+      enable = true;
+      userName = "{{ ansible_user_id }}";
+      userEmail = "{{ ansible_user_id }}@{{ inventory_hostname }}";
+    };
+{% endif %}
+  };
+
+  # Service configuration
+  services = {
+{% if home_manager_config != 'development' %}
+    # Production services
+{% endif %}
+  };
+
+  # Let Home Manager install and manage itself
+  programs.home-manager.enable = true;
+}
