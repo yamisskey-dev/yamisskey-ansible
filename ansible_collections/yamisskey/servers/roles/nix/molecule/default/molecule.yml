@@ -36,7 +36,7 @@ provisioner:
   inventory:
     host_vars:
       nix-test-instance:
-        ansible_user: "root"
+        ansible_user: "ubuntu"
         ansible_python_interpreter: /usr/bin/python3
 verifier:
   name: ansible

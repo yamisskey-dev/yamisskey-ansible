@@ -37,9 +37,10 @@
 
 - name: Download and install Nix (single-user mode)
   ansible.builtin.shell: |-
-    curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+    curl -L https://nixos.org/nix/install | sh -s -- --no-daemon --yes
   when: nix_check.stdout == 'not_installed'
   register: nix_install
+  become: false
 
 - name: Source Nix profile in bashrc
   ansible.builtin.lineinfile:

@@ -1,7 +1,7 @@
 ---
 - name: Converge nix role
   hosts: all
-  become: true
+  become: false
   gather_facts: true
 
   pre_tasks:
@@ -26,7 +26,7 @@
   post_tasks:
     - name: Capture Nix environment details
       shell: |
-        . /root/.nix-profile/etc/profile.d/nix.sh
+        . ~/.nix-profile/etc/profile.d/nix.sh
         nix --version
         home-manager --version
       register: nix_env_details
