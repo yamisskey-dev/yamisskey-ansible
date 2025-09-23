@@ -10,6 +10,8 @@
       TMPDIR: "{{ ansible_user_dir }}/.cache/nix-installer"
       TMP: "{{ ansible_user_dir }}/.cache/nix-installer"
       TEMP: "{{ ansible_user_dir }}/.cache/nix-installer"
+    nix_install_requested_mode: "{{ nix_install_mode | default('auto') }}"
+    nix_install_run_user: "{{ ansible_user | default(ansible_env.USER) }}"
 
 - name: Ensure Nix installer temp directory exists
   become: false
@@ -17,6 +19,22 @@
     path: "{{ nix_user_temp_dir }}"
     state: directory
     mode: '0755'
+
+- name: Determine Nix install mode
+  become: false
+  ansible.builtin.set_fact:
+    nix_install_effective_mode: >-
+      {{
+        nix_install_requested_mode != 'auto'
+        | ternary(
+            nix_install_requested_mode,
+            (nix_install_run_user == 'root') | ternary('daemon', 'no-daemon')
+          )
+      }}
+
+- name: Display Nix installer mode
+  ansible.builtin.debug:
+    msg: "Nix installer mode resolved to: {{ nix_install_effective_mode }}"
 
 - name: Check if Nix is already installed
   become: false
@@ -59,7 +77,7 @@
 - name: Download and install Nix (single-user mode)
   become: false
   ansible.builtin.shell: |-
-    curl -L --fail https://nixos.org/nix/install | sh -s -- --no-daemon --yes
+    curl -L --fail https://nixos.org/nix/install | sh -s -- --{{ nix_install_effective_mode }} --yes
   environment: "{{ nix_user_environment }}"
   when: nix_check.stdout == 'not_installed'
   register: nix_install
@@ -76,7 +94,23 @@
 - name: Verify Nix installation
   become: false
   ansible.builtin.shell: |-
-    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
+    found_script=0
+    for script in \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix-daemon.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+      /etc/profile.d/nix.sh; do
+      if [ -f "$script" ]; then
+        . "$script"
+        found_script=1
+        break
+      fi
+    done
+    if ! command -v nix >/dev/null 2>&1; then
+      echo "nix command not available after sourcing known profile scripts"
+      exit 1
+    fi
     nix --version
   environment: "{{ nix_user_environment }}"
   register: nix_version
@@ -90,7 +124,17 @@
 - name: Check if Home Manager is installed
   become: false
   ansible.builtin.shell: |-
-    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
+    for script in \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix-daemon.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+      /etc/profile.d/nix.sh; do
+      if [ -f "$script" ]; then
+        . "$script"
+        break
+      fi
+    done
     command -v home-manager
   environment: "{{ nix_user_environment }}"
   register: home_manager_check
@@ -100,7 +144,17 @@
 - name: Install Home Manager
   become: false
   ansible.builtin.shell: |-
-    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
+    for script in \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix-daemon.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+      /etc/profile.d/nix.sh; do
+      if [ -f "$script" ]; then
+        . "$script"
+        break
+      fi
+    done
     nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
     nix-channel --update
     nix-shell '<home-manager>' -A install
@@ -126,7 +180,17 @@
 - name: Apply Home Manager configuration
   become: false
   ansible.builtin.shell: |-
-    . {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh
+    for script in \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix-daemon.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+      /etc/profile.d/nix.sh; do
+      if [ -f "$script" ]; then
+        . "$script"
+        break
+      fi
+    done
     home-manager switch
   environment: "{{ nix_user_environment }}"
   register: home_manager_switch

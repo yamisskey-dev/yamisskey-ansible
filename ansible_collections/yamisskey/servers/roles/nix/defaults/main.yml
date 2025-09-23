@@ -4,3 +4,9 @@ nix_home_manager_config: server
 
 # Additional packages to inject into the Home Manager profile.
 home_manager_extra_packages: []
+
+# How the Nix installer should run.
+#   auto       -> single-user when the remote user is non-root, multi-user when root.
+#   no-daemon  -> force single-user installer.
+#   daemon     -> force multi-user installer.
+nix_install_mode: auto
