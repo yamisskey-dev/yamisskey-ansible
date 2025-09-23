@@ -47,7 +47,7 @@
     executable: /bin/bash
   when: nix_binary_path | length == 0
 
-- name: Refresh Nix binary fact after installation
+- name: Re-evaluate existing Nix binary
   ansible.builtin.shell: |
     for candidate in \
       /root/.nix-profile/bin/nix \
@@ -64,15 +64,6 @@
 - name: Update Nix binary fact
   ansible.builtin.set_fact:
     nix_binary_path: "{{ nix_binary_refresh.stdout | default(nix_binary_path | default('')) }}"
-
-- name: Fail if Nix binary is missing after installation
-  ansible.builtin.fail:
-    msg: "Nix binary not found after installation"
-  when: nix_binary_path | length == 0
-
-- name: Set Nix binary directory fact
-  ansible.builtin.set_fact:
-    nix_bin_dir: "{{ nix_binary_path | dirname }}"
 
 - name: Locate Nix profile script
   ansible.builtin.shell: |
@@ -95,23 +86,50 @@
   ansible.builtin.set_fact:
     nix_profile_script_path: "{{ nix_profile_script_lookup.stdout | default('') }}"
 
-- name: Debug profile directory contents when missing
-  ansible.builtin.command: ls -la /root/.nix-profile/etc/profile.d/
+- name: Debug profile directories when script missing
+  ansible.builtin.shell: |
+    ls -la /root/.nix-profile/etc/profile.d/ || true
+    ls -la /nix/var/nix/profiles/default/etc/profile.d/ || true
+    ls -la /etc/profile.d/ || true
   register: nix_profile_dir_debug
   when: nix_profile_script_path | length == 0
-  failed_when: false
   changed_when: false
+  failed_when: false
 
 - name: Fail if no Nix profile script was found
   ansible.builtin.fail:
     msg: "Nix profile script not found after installation"
   when: nix_profile_script_path | length == 0
 
+
 - name: Ensure Nix profile is loaded in root shells
   ansible.builtin.lineinfile:
     path: /root/.bashrc
     line: '. {{ nix_profile_script_path }}'
     state: present
+
+- name: Determine Nix binary via profile
+  ansible.builtin.shell: |
+    set -euo pipefail
+    . {{ nix_profile_script_path }}
+    command -v nix
+  args:
+    executable: /bin/bash
+  register: nix_binary_from_profile
+  changed_when: false
+
+- name: Update Nix binary fact from profile
+  ansible.builtin.set_fact:
+    nix_binary_path: "{{ nix_binary_from_profile.stdout | default(nix_binary_path | default('')) }}"
+
+- name: Fail if Nix binary is missing after installation
+  ansible.builtin.fail:
+    msg: "Nix binary not found after installation"
+  when: nix_binary_path | length == 0
+
+- name: Set Nix binary directory fact
+  ansible.builtin.set_fact:
+    nix_bin_dir: "{{ nix_binary_path | dirname }}"
 
 - name: Verify Nix installation
   ansible.builtin.shell: |
@@ -132,6 +150,7 @@
 
 - name: Check if Home Manager command exists
   ansible.builtin.shell: |
+    set -e
     . {{ nix_profile_script_path }}
     command -v home-manager
   args:
