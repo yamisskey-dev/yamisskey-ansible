@@ -37,9 +37,11 @@
     force: true
 
 - name: Apply Home Manager configuration
-  ansible.builtin.include_role:
-    name: yamisskey.servers.home_manager
-  vars:
-    home_manager_config: "{{ nix_home_manager_config }}"
+  block:
+    - name: Include Home Manager role
+      ansible.builtin.include_role:
+        name: yamisskey.servers.home_manager
+      vars:
+        home_manager_config: "{{ nix_home_manager_config }}"
   environment:
     PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
