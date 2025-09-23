@@ -40,6 +40,7 @@
     curl -L https://nixos.org/nix/install | sh -s -- --no-daemon --yes
   when: nix_check.stdout == 'not_installed'
   register: nix_install
+  become: true
 
 - name: Source Nix profile in bashrc
   ansible.builtin.lineinfile:
