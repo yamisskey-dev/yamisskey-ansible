@@ -7,32 +7,23 @@
   gather_facts: true
   
   pre_tasks:
-    - name: Check if running in Nix environment
-      shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
+    - name: Install Nix (single-user)
+      raw: |
+        if ! command -v /root/.nix-profile/bin/nix >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
         fi
-        command -v nix >/dev/null 2>&1
-      register: nix_available
-      failed_when: false
-      changed_when: false
       tags:
         - always
 
-    - name: Ensure Nix environment for testing
-      fail:
-        msg: |
-          ❌ Molecule tests now require Nix environment!
-          
-          📋 All packages are managed via Nix Flake:
-          - Docker: Available via Nix
-          - Python packages: Available via Nix
-          - Role-specific packages: Managed by Home Manager
-          
-          🚀 Run tests in nix develop environment:
-          1. nix develop
-          2. yamisskey-provision test {{role_name}}
-      when: nix_available.rc != 0
+    - name: Ensure Nix profile is sourced for future shells
+      raw: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          if ! grep -q '/root/.nix-profile/etc/profile.d/nix.sh' /root/.bashrc; then
+            echo '. /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc
+          fi
+          . /root/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+        fi
       tags:
         - always
 

@@ -16,20 +16,21 @@
     truenas_skip_bucket_iam_setup: true
 
   pre_tasks:
-    - name: Verify Nix installation
-      shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
+    - name: Install Nix (single-user)
+      raw: |
+        if ! command -v /root/.nix-profile/bin/nix >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
         fi
-        command -v /root/.nix-profile/bin/nix
-      register: nix_check
-      failed_when: nix_check.rc != 0
-      changed_when: false
 
-    - name: Fail if not running on Nix-enabled system
-      fail:
-        msg: "This test requires a Nix-enabled environment. Use 'nix develop' to enter development shell."
-      when: nix_check.rc != 0
+    - name: Ensure Nix profile is sourced for future shells
+      raw: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          if ! grep -q '/root/.nix-profile/etc/profile.d/nix.sh' /root/.bashrc; then
+            echo '. /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc
+          fi
+          . /root/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+        fi
 
     - name: Copy midclt mock script
       copy:

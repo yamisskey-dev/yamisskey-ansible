@@ -5,27 +5,21 @@
   gather_facts: true
   
   pre_tasks:
-    - name: Check if running in Nix environment
-      shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
+    - name: Install Nix (single-user)
+      raw: |
+        if ! command -v /root/.nix-profile/bin/nix >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
         fi
-        command -v nix >/dev/null 2>&1
-      register: nix_available
-      failed_when: false
-      changed_when: false
 
-    - name: Ensure Nix environment for testing
-      fail:
-        msg: |
-          ❌ Common role tests require Nix environment!
-          
-          📋 All packages are managed via Nix Flake:
-          - Basic tools: curl, git, htop (via Home Manager)
-          - All common role packages: prometheus, rclone, etc.
-          
-          🚀 Run in nix develop environment.
-      when: nix_available.rc != 0
+    - name: Ensure Nix profile is sourced for future shells
+      raw: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          if ! grep -q '/root/.nix-profile/etc/profile.d/nix.sh' /root/.bashrc; then
+            echo '. /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc
+          fi
+          . /root/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+        fi
 
     - name: Display Nix-based test environment status
       debug:
