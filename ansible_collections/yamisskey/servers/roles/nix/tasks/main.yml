@@ -175,7 +175,7 @@
     done
     nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
     nix-channel --update
-    nix-shell '<home-manager>' -A install
+    yes | nix-shell '<home-manager>' -A install
   environment: "{{ nix_user_environment }}"
   when:
     - home_manager_check.rc != 0
