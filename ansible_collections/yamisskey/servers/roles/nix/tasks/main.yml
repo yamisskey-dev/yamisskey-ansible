@@ -40,26 +40,26 @@
     path: /root/.nix-profile/bin/nix
   register: nix_binary
 
-- name: Locate potential Nix profile scripts
-  ansible.builtin.stat:
-    path: "{{ item }}"
-  register: nix_profile_candidates
-  loop:
-    - /root/.nix-profile/etc/profile.d/nix.sh
-    - /root/.nix-profile/etc/profile.d/nix-daemon.sh
+- name: Locate Nix profile script
+  ansible.builtin.shell: |
+    if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+      echo /root/.nix-profile/etc/profile.d/nix.sh
+    elif [ -f /root/.nix-profile/etc/profile.d/nix-daemon.sh ]; then
+      echo /root/.nix-profile/etc/profile.d/nix-daemon.sh
+    fi
+  args:
+    executable: /bin/bash
+  register: nix_profile_script_lookup
+  changed_when: false
 
-- name: Determine Nix profile script path
+- name: Set profile script fact
   ansible.builtin.set_fact:
-    nix_profile_script_path: "{{ item.stat.path }}"
-  loop: "{{ nix_profile_candidates.results }}"
-  when: item.stat.exists
-  loop_control:
-    label: "{{ item.stat.path }}"
+    nix_profile_script_path: "{{ nix_profile_script_lookup.stdout | default('') }}"
 
 - name: Fail if no Nix profile script was found
   ansible.builtin.fail:
     msg: "Nix profile script not found after installation"
-  when: nix_profile_script_path is not defined
+  when: nix_profile_script_path | length == 0
 
 - name: Ensure Nix profile is loaded in root shells
   ansible.builtin.lineinfile:
