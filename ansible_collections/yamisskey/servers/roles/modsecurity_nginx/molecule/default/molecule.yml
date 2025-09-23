@@ -66,6 +66,7 @@ scenario:
     - destroy
     - syntax
     - create
+    - prepare
     - converge
     - idempotence
     - side_effect
