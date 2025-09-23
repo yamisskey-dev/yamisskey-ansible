@@ -47,6 +47,12 @@
     executable: /bin/bash
   when: nix_binary_path | length == 0
 
+- name: Wait for Nix installation to complete
+  ansible.builtin.wait_for:
+    path: /root/.nix-profile
+    timeout: 30
+  when: nix_binary_path | length == 0
+
 - name: Re-evaluate existing Nix binary
   ansible.builtin.shell: |
     for candidate in \
@@ -67,6 +73,7 @@
 
 - name: Locate Nix profile script
   ansible.builtin.shell: |
+    # First, try the standard locations
     for candidate in \
       /root/.nix-profile/etc/profile.d/nix.sh \
       /root/.nix-profile/etc/profile.d/nix-daemon.sh \
@@ -74,9 +81,12 @@
       /etc/profile.d/nix.sh; do
       if [ -f "$candidate" ]; then
         echo "$candidate"
-        break
+        exit 0
       fi
     done
+    
+    # If not found, search more broadly
+    find /root/.nix-profile -name "nix*.sh" 2>/dev/null | head -1
   args:
     executable: /bin/bash
   register: nix_profile_script_lookup
@@ -88,13 +98,29 @@
 
 - name: Debug profile directories when script missing
   ansible.builtin.shell: |
+    echo "=== Checking /root/.nix-profile structure ==="
+    ls -la /root/.nix-profile/ || true
+    echo "=== Checking /root/.nix-profile/etc/ ==="
+    ls -la /root/.nix-profile/etc/ || true
+    echo "=== Checking /root/.nix-profile/etc/profile.d/ ==="
     ls -la /root/.nix-profile/etc/profile.d/ || true
+    echo "=== Checking /nix/var/nix/profiles/default/etc/profile.d/ ==="
     ls -la /nix/var/nix/profiles/default/etc/profile.d/ || true
+    echo "=== Checking /etc/profile.d/ ==="
     ls -la /etc/profile.d/ || true
+    echo "=== Searching for nix.sh files ==="
+    find /root -name "nix.sh" 2>/dev/null || true
+    find /nix -name "nix.sh" 2>/dev/null || true
+    find /etc -name "nix.sh" 2>/dev/null || true
   register: nix_profile_dir_debug
   when: nix_profile_script_path | length == 0
   changed_when: false
   failed_when: false
+
+- name: Display debug output when profile script missing
+  ansible.builtin.debug:
+    var: nix_profile_dir_debug.stdout_lines
+  when: nix_profile_script_path | length == 0
 
 - name: Fail if no Nix profile script was found
   ansible.builtin.fail:

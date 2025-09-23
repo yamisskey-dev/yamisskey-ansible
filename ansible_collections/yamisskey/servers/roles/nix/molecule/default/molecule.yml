@@ -30,6 +30,7 @@ provisioner:
       callbacks_enabled: profile_tasks,timer
       remote_tmp: /tmp/.ansible-tmp
       roles_path: ../../../
+      allow_broken_conditionals: true
   env:
     ANSIBLE_REMOTE_TMP: /tmp/.ansible-tmp
   inventory:
