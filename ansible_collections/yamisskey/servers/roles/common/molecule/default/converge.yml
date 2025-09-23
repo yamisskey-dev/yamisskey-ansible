@@ -6,7 +6,11 @@
   
   pre_tasks:
     - name: Check if running in Nix environment
-      shell: command -v nix >/dev/null 2>&1
+      shell: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        command -v nix >/dev/null 2>&1
       register: nix_available
       failed_when: false
       changed_when: false
@@ -44,7 +48,11 @@
         mode: '0755'
       
     - name: Verify Nix-managed packages are available
-      command: "which {{ item }}"
+      shell: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        which {{ item }}
       register: package_check
       failed_when: false
       changed_when: false

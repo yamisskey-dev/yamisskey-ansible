@@ -1,0 +1,27 @@
+---
+- name: Prepare Molecule instance
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure /tmp/.ansible-tmp exists
+      raw: |
+        mkdir -p /tmp/.ansible-tmp
+        chmod 1777 /tmp/.ansible-tmp
+        chown root:root /tmp/.ansible-tmp
+
+    - name: Install Nix (single-user)
+      raw: |
+        if ! command -v /root/.nix-profile/bin/nix >/dev/null 2>&1; then
+          curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
+        fi
+
+    - name: Ensure Nix profile is sourced for future shells
+      raw: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          if ! grep -q '/root/.nix-profile/etc/profile.d/nix.sh' /root/.bashrc; then
+            echo '. /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc
+          fi
+          . /root/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+        fi

@@ -6,7 +6,11 @@
 
   pre_tasks:
     - name: Verify Nix installation
-      command: which nix
+      shell: |\
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        which nix
       register: nix_check
       failed_when: nix_check.rc != 0
       changed_when: false
@@ -17,7 +21,11 @@
       when: nix_check.rc != 0
 
     - name: Verify Docker availability from Nix
-      command: which docker
+      shell: |\
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        which docker
       register: docker_check
       failed_when: docker_check.rc != 0
       changed_when: false

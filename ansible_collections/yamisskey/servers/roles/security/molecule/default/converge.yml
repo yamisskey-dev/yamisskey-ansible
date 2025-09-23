@@ -6,7 +6,11 @@
   
   pre_tasks:
     - name: Check if running in Nix environment
-      shell: command -v nix >/dev/null 2>&1
+      shell: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        command -v nix >/dev/null 2>&1
       register: nix_available
       failed_when: false
       changed_when: false
@@ -41,7 +45,11 @@
         security_install_crowdsec: false
         
     - name: Verify Nix-managed security packages are available
-      command: "which {{ item }}"
+      shell: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        which {{ item }}
       register: security_package_check
       failed_when: false
       changed_when: false

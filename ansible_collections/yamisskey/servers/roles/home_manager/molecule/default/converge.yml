@@ -9,8 +9,9 @@
       wait_for_connection:
         timeout: 30
 
-    - name: Verify Nix installation
-      command: which nix
+    - name: Source Nix profile and verify installation
+      shell: |
+        . /root/.nix-profile/etc/profile.d/nix.sh && which nix
       register: nix_check
       failed_when: nix_check.rc != 0
       changed_when: false

@@ -8,7 +8,11 @@
   
   pre_tasks:
     - name: Check if running in Nix environment
-      shell: command -v nix >/dev/null 2>&1
+      shell: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        command -v nix >/dev/null 2>&1
       register: nix_available
       failed_when: false
       changed_when: false
@@ -42,7 +46,11 @@
         - always
 
     - name: Verify essential tools are available
-      command: "{{ item }}"
+      shell: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          . /root/.nix-profile/etc/profile.d/nix.sh
+        fi
+        {{ item }}
       register: tool_check
       failed_when: false
       changed_when: false
