@@ -40,31 +40,42 @@
     path: /root/.nix-profile/bin/nix
   register: nix_binary
 
-- name: Check for Nix profile script
+- name: Locate potential Nix profile scripts
   ansible.builtin.stat:
-    path: /root/.nix-profile/etc/profile.d/nix.sh
-  register: nix_profile_script
+    path: "{{ item }}"
+  register: nix_profile_candidates
+  loop:
+    - /root/.nix-profile/etc/profile.d/nix.sh
+    - /root/.nix-profile/etc/profile.d/nix-daemon.sh
 
-- name: Fail if Nix profile script is missing after installation
+- name: Determine Nix profile script path
+  ansible.builtin.set_fact:
+    nix_profile_script_path: "{{ item.stat.path }}"
+  loop: "{{ nix_profile_candidates.results }}"
+  when: item.stat.exists
+  loop_control:
+    label: "{{ item.stat.path }}"
+
+- name: Fail if no Nix profile script was found
   ansible.builtin.fail:
-    msg: "Nix profile script not found at /root/.nix-profile/etc/profile.d/nix.sh after installation"
-  when: not nix_profile_script.stat.exists
+    msg: "Nix profile script not found after installation"
+  when: nix_profile_script_path is not defined
 
 - name: Ensure Nix profile is loaded in root shells
   ansible.builtin.lineinfile:
     path: /root/.bashrc
-    line: '. /root/.nix-profile/etc/profile.d/nix.sh'
+    line: '. {{ nix_profile_script_path }}'
     state: present
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
 
 - name: Verify Nix installation
   ansible.builtin.shell: |
     set -euo pipefail
-    . /root/.nix-profile/etc/profile.d/nix.sh
+    . {{ nix_profile_script_path }}
     nix --version
   args:
     executable: /bin/bash
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
   changed_when: false
 
 - name: Ensure nix binary is globally available
@@ -78,28 +89,28 @@
 
 - name: Check if Home Manager command exists
   ansible.builtin.shell: |
-    . /root/.nix-profile/etc/profile.d/nix.sh
+    . {{ nix_profile_script_path }}
     command -v home-manager
   args:
     executable: /bin/bash
   register: home_manager_available
   changed_when: false
   failed_when: false
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
   environment:
     PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
 
 - name: Install Home Manager
   ansible.builtin.shell: |
     set -euo pipefail
-    . /root/.nix-profile/etc/profile.d/nix.sh
+    . {{ nix_profile_script_path }}
     nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
     nix-channel --update
     nix-shell '<home-manager>' -A install
   args:
     executable: /bin/bash
   when:
-    - nix_profile_script.stat.exists
+    - nix_profile_script_path is defined
     - home_manager_available.rc != 0
   environment:
     PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
@@ -108,7 +119,7 @@
 - name: Determine Home Manager configuration profile
   ansible.builtin.set_fact:
     resolved_home_manager_config: "{{ home_manager_config | default(nix_home_manager_config | default('server')) }}"
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
 
 - name: Ensure Home Manager configuration directory exists
   ansible.builtin.file:
@@ -116,7 +127,7 @@
     state: directory
     mode: '0755'
   become: false
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
 
 - name: Deploy Home Manager configuration
   ansible.builtin.template:
@@ -124,7 +135,7 @@
     dest: "{{ ansible_user_dir }}/.config/home-manager/home.nix"
     mode: '0644'
   become: false
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
   vars:
     home_manager_config: "{{ resolved_home_manager_config }}"
 
@@ -133,6 +144,6 @@
   become: false
   register: home_manager_switch
   changed_when: "'Building' in home_manager_switch.stderr"
-  when: nix_profile_script.stat.exists
+  when: nix_profile_script_path is defined
   environment:
     PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
