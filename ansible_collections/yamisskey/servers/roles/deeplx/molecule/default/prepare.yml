@@ -1,21 +1,30 @@
 ---
-- name: Prepare Molecule instance for Nix
+- name: Prepare Molecule instance
   hosts: all
   gather_facts: false
   become: true
   tasks:
-    - name: Ensure /tmp/.ansible-tmp exists
-      raw: |
-        mkdir -p /tmp/.ansible-tmp
-        chmod 1777 /tmp/.ansible-tmp
-        chown root:root /tmp/.ansible-tmp
+    - name: Install prerequisites for Nix
+      apt:
+        name:
+          - curl
+          - ca-certificates
+          - xz-utils
+        state: present
+        update_cache: true
 
-    - name: Build python via Nix if missing (pure)
+    - name: Install Nix (single-user)
       raw: |
-        if [ ! -x /tmp/nix-python/bin/python3 ]; then
-          rm -f /tmp/nix-python
-          nix --extra-experimental-features 'nix-command flakes' build nixpkgs#python312 -o /tmp/nix-python
+        if ! command -v /root/.nix-profile/bin/nix >/dev/null 2>&1; then
+          curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
         fi
 
-    - name: Confirm python availability
-      raw: /tmp/nix-python/bin/python3 --version
+    - name: Ensure Nix profile is sourced for future shells
+      raw: |
+        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
+          if ! grep -q '/root/.nix-profile/etc/profile.d/nix.sh' /root/.bashrc; then
+            echo '. /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc
+          fi
+          . /root/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+        fi

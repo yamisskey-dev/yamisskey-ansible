@@ -5,11 +5,16 @@ driver:
   name: docker
 platforms:
   - name: common-test-instance
-    image: nixos/nix:2.21.5
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
     pre_build_image: true
+    cgroupns_mode: host
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     tmpfs:
       - /run
-    command: bash -c "mkdir -p /tmp/.ansible-tmp && chmod 1777 /tmp/.ansible-tmp && chown root:root /tmp/.ansible-tmp && touch /tmp/.ansible-tmp/.ansible-test && while true; do sleep 30; done"
+    command: /lib/systemd/systemd
 provisioner:
   name: ansible
   playbooks:
@@ -29,7 +34,7 @@ provisioner:
       common-test-instance:
         ansible_user: "root"
         ansible_connection: community.docker.docker
-        ansible_python_interpreter: /tmp/nix-python/bin/python3
+        ansible_python_interpreter: /usr/bin/python3
 verifier:
   name: ansible
 scenario:

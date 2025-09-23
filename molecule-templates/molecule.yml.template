@@ -5,21 +5,14 @@ driver:
   name: docker
 platforms:
   - name: ${ROLE_NAME}-test-instance
-    image: ubuntu:20.04
-    dockerfile: |
-      FROM ubuntu:20.04
-      ENV DEBIAN_FRONTEND=noninteractive
-      RUN apt-get update && apt-get install -y \
-          python3 python3-pip sudo systemd \
-          && apt-get clean \
-          && rm -rf /var/lib/apt/lists/* \
-          && useradd -m -s /bin/bash ansible \
-          && echo 'ansible:ansible' | chpasswd \
-          && usermod -aG sudo ansible \
-          && echo 'ansible ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-      CMD ["/bin/bash"]
-    command: /bin/bash -c "while true; do sleep 1000; done"
-    privileged: false
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
+    pre_build_image: true
+    cgroupns_mode: host
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: /lib/systemd/systemd
 provisioner:
   name: ansible
   connection_options:

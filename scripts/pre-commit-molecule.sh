@@ -31,8 +31,8 @@ if ! command -v molecule >/dev/null 2>&1; then
     exit 1
 fi
 
-# Always use the Nix-based Molecule image for local runs (override via MOLECULE_IMAGE if needed)
-export MOLECULE_IMAGE="${MOLECULE_IMAGE:-nixos/nix:2.21.5}"
+# Always use the Ubuntu + Ansible image for local Molecule runs (override via MOLECULE_IMAGE if needed)
+export MOLECULE_IMAGE="${MOLECULE_IMAGE:-geerlingguy/docker-ubuntu2204-ansible:latest}"
 
 # Set up environment
 export PATH="$HOME/.local/share/pipx/venvs/molecule/bin:$HOME/.local/bin:$PATH"
