@@ -117,11 +117,11 @@
 
 - name: Skip infrastructure tool installation (Nix environment)
   debug:
-    msg: |\n      🎯 Infrastructure Tools Status (Nix Environment):
+    msg: |
+      🎯 Infrastructure Tools Status (Nix Environment):
       - Docker: ✅ Available via Nix Flake
       - Tailscale: ✅ Available via Nix Flake
       - Cloudflared: ✅ Available via Nix Flake
-      
       📋 Use 'yamisskey-provision help' to verify all tools.
       🚀 Ready for Ansible infrastructure automation!
   when: nix_available.rc == 0

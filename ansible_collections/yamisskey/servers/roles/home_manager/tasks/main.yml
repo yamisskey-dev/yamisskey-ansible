@@ -23,14 +23,7 @@
 
     - name: Determine host configuration type
       ansible.builtin.set_fact:
-        home_manager_config: >-
-          {%- if 'ai' in group_names -%}
-          ai-server
-          {%- elif 'development' in group_names or inventory_hostname == 'localhost' -%}
-          development
-          {%- else -%}
-          server
-          {%- endif -%}
+        home_manager_config: "{{ 'ai-server' if 'ai' in group_names else ('development' if 'development' in group_names or inventory_hostname == 'localhost' else 'server') }}"
 
     - name: Create Home Manager configuration directory
       ansible.builtin.file:
