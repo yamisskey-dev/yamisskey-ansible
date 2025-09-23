@@ -18,8 +18,7 @@
 direnv allow
 ```
 
-Molecule テストは既定で `nixos/nix:2.21.5` イメージを使用します。別のベースイメージを試したい場合は
-`MOLECULE_IMAGE` を上書きしてください。
+Molecule テストは既定で `nixos/nix:2.21.5` イメージを使用します。
 
 ### 2. Moleculeテスト設定の追加
 

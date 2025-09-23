@@ -5,7 +5,7 @@ driver:
   name: docker
 platforms:
   - name: misskey-proxy-test-instance
-    image: "{{ env.MOLECULE_IMAGE | default('nixos/nix:2.21.5') }}"
+    image: nixos/nix:2.21.5
     pre_build_image: true
     privileged: true
     volumes:
