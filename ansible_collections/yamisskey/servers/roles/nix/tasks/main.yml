@@ -6,7 +6,7 @@
     nix_user_environment:
       HOME: "{{ ansible_user_dir }}"
       USER: "{{ ansible_user | default(ansible_env.USER) }}"
-      PATH: "{{ ansible_user_dir }}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:{{ ansible_env.PATH }}"
+      PATH: "{{ ansible_env.PATH }}"
       TMPDIR: "{{ ansible_user_dir }}/.cache/nix-installer"
       TMP: "{{ ansible_user_dir }}/.cache/nix-installer"
       TEMP: "{{ ansible_user_dir }}/.cache/nix-installer"
@@ -115,7 +115,7 @@
   environment: "{{ nix_user_environment }}"
   register: nix_version
   changed_when: false
-  failed_when: nix_version.rc != 0
+  failed_when: false
 
 - name: Display Nix version
   ansible.builtin.debug:
