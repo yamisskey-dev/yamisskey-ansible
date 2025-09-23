@@ -2,10 +2,21 @@
 - name: Define Nix user environment
   become: false
   ansible.builtin.set_fact:
+    nix_user_temp_dir: "{{ ansible_user_dir }}/.cache/nix-installer"
     nix_user_environment:
       HOME: "{{ ansible_user_dir }}"
       USER: "{{ ansible_user | default(ansible_env.USER) }}"
       PATH: "{{ ansible_env.PATH }}"
+      TMPDIR: "{{ ansible_user_dir }}/.cache/nix-installer"
+      TMP: "{{ ansible_user_dir }}/.cache/nix-installer"
+      TEMP: "{{ ansible_user_dir }}/.cache/nix-installer"
+
+- name: Ensure Nix installer temp directory exists
+  become: false
+  ansible.builtin.file:
+    path: "{{ nix_user_temp_dir }}"
+    state: directory
+    mode: '0755'
 
 - name: Check if Nix is already installed
   become: false
