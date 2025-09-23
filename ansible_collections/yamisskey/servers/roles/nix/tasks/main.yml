@@ -42,7 +42,7 @@
 - name: Ensure Nix is installed (single-user)
   ansible.builtin.shell: |
     set -euo pipefail
-    curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon
+    curl --proto '=https' --tlsv1.2 -sSf https://nixos.org/nix/install | sh -s -- --no-daemon --yes
   args:
     executable: /bin/bash
   when: nix_binary_path | length == 0
