@@ -11,7 +11,7 @@
 
     - name: Source Nix profile and verify installation
       shell: |
-        . /root/.nix-profile/etc/profile.d/nix.sh && which nix
+        . /root/.nix-profile/etc/profile.d/nix.sh && command -v /root/.nix-profile/bin/nix
       register: nix_check
       failed_when: nix_check.rc != 0
       changed_when: false

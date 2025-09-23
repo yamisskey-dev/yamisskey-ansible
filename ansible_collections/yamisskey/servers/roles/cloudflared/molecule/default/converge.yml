@@ -10,7 +10,7 @@
         if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
           . /root/.nix-profile/etc/profile.d/nix.sh
         fi
-        which nix
+        command -v /root/.nix-profile/bin/nix
       register: nix_check
       failed_when: nix_check.rc != 0
       changed_when: false
