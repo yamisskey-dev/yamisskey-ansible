@@ -12,6 +12,8 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
 provisioner:
   name: ansible
+  playbooks:
+    prepare: prepare.yml
   config_options:
     defaults:
       callbacks_enabled: timer,profile_tasks

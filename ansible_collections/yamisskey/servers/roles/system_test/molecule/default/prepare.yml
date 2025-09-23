@@ -1,0 +1,20 @@
+---
+- name: Prepare Molecule instance for Nix
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure /tmp/.ansible-tmp exists
+      raw: |
+        mkdir -p /tmp/.ansible-tmp
+        chmod 1777 /tmp/.ansible-tmp
+        chown root:root /tmp/.ansible-tmp
+
+    - name: Install Python via Nix profile if missing
+      raw: |
+        if ! command -v /root/.nix-profile/bin/python3 >/dev/null 2>&1; then
+          nix profile install --profile /root/.nix-profile nixpkgs#python312
+        fi
+
+    - name: Confirm Python availability
+      raw: /root/.nix-profile/bin/python3 --version
