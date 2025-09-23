@@ -1,4 +1,22 @@
 ---
+- name: Install Nix prerequisites on APT-based systems
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - curl
+      - ca-certificates
+      - xz-utils
+  when: ansible_pkg_mgr == 'apt'
+
+- name: Install Nix prerequisites on Portage-based systems
+  ansible.builtin.package:
+    name:
+      - net-misc/curl
+      - app-misc/ca-certificates
+      - app-arch/xz-utils
+    state: present
+  when: ansible_pkg_mgr == 'portage'
+
 - name: Ensure Nix is installed (single-user)
   ansible.builtin.shell: |
     set -euo pipefail
