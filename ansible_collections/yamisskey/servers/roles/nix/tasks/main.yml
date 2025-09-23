@@ -41,6 +41,5 @@
     name: yamisskey.servers.home_manager
   vars:
     home_manager_config: "{{ nix_home_manager_config }}"
-  apply:
-    environment:
-      PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
+  environment:
+    PATH: "/root/.nix-profile/bin:{{ ansible_env.PATH | default('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin') }}"
