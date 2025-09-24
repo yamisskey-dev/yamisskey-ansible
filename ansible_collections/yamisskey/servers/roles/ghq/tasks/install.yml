@@ -1,26 +1,8 @@
 ---
-- name: Check if running in Nix environment
-  shell: command -v nix >/dev/null 2>&1
-  register: nix_available
-  failed_when: false
-  changed_when: false
-
-- name: Ensure Nix environment
-  fail:
-    msg: |
-      ❌ GHQ role requires Nix environment!
-      
-      📋 GHQ and Go are now managed via Nix Flake:
-      - ghq: Available via Home Manager
-      - go: Available via Home Manager
-      
-      Please run in nix develop environment.
-  when: nix_available.rc != 0
-
 - name: Display GHQ package status
   debug:
     msg: |
-      ✅ GHQ packages managed via Nix Flake
+      ✅ GHQ packages managed via system packages
       📦 Available tools: ghq, go
       🚀 Ready for repository management!
 

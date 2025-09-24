@@ -32,7 +32,7 @@
   include_role:
     name: yamisskey.servers.packages
   vars:
-    packages_profile: "{{ nix_package_profile | default(nix_home_manager_config, true) | default('server', true) }}"
+    packages_profile: "server"
   when: not (test_mode | default(false))
   tags:
     - packages

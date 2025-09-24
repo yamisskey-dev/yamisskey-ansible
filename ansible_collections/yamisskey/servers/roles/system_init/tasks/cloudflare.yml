@@ -1,26 +1,8 @@
 ---
-- name: Check if running in Nix environment
-  shell: command -v nix >/dev/null 2>&1
-  register: nix_available
-  failed_when: false
-  changed_when: false
-
-- name: Ensure Nix environment for Cloudflare setup
-  fail:
-    msg: |
-      ❌ Cloudflare setup requires Nix environment!
-      
-      📋 Cloudflare tools are now managed via Nix Flake:
-      - cloudflared: Available via Home Manager
-      - All networking tools: Available via Nix
-      
-      🚀 Run in nix develop environment.
-  when: nix_available.rc != 0
-
 - name: Display Cloudflare package status
   debug:
     msg: |
-      ✅ Cloudflare packages managed via Nix Flake
+      ✅ Cloudflare packages managed via system packages
       📦 Available tools: cloudflared, tailscale
       ☁️ Ready for Cloudflare operations!
 
