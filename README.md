@@ -14,7 +14,7 @@ Install minimum required packages
 - [age](https://github.com/FiloSottile/age)
 - [tailscale](https://tailscale.com/download/linux)
 
-Ensure servers can be reachedvia Tailscale SSH
+Ensure servers can be reached in Tailscale
 ```bash
 tailscale login
 sudo tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
