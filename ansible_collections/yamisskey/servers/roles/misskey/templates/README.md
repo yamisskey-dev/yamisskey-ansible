@@ -8,5 +8,5 @@
 - `misskey_postgresql.conf.j2` → `{{ misskey_dir }}/.config/postgresql.conf`
 
 実行例:
-- 確認: `yamisskey-provision check misskey`
-- 実行: `yamisskey-provision run misskey`
+- 確認: `make check PLAYBOOK=misskey`
+- 実行: `make run PLAYBOOK=misskey`

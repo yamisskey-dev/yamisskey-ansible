@@ -9,4 +9,4 @@
 - `clamd.conf.j2` → `/etc/clamav/clamd.conf`
 - `crowdsec-config.yaml.j2`, `crowdsec-firewall-bouncer.yaml.j2`, `crowdsec-whitelists.yaml.j2` → CrowdSec 設定
 
-テンプレート変更後は `yamisskey-provision check security` で差分と適用影響を確認してください。
+テンプレート変更後は `make check PLAYBOOK=security` で差分と適用影響を確認してください。

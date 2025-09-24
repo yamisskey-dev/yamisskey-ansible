@@ -12,5 +12,5 @@
 - `minio_bucket_name_for_misskey`（例: `files`）, `minio_bucket_name_for_outline`（例: `assets`）
 
 実行例:
-- 確認: `yamisskey-provision check minio`
-- 実行: `yamisskey-provision run minio`
+- 確認: `make check PLAYBOOK=minio`
+- 実行: `make run PLAYBOOK=minio`

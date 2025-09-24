@@ -3,7 +3,7 @@
   hosts: all
   become: true
   gather_facts: false
-
+  
   pre_tasks:
     - name: Wait for instance to become reachable
       wait_for_connection:
@@ -16,26 +16,154 @@
     - name: Gather facts
       setup:
 
-    - name: Install system packages via packages role
-      include_role:
-        name: yamisskey.servers.packages
-      vars:
-        packages_profile: development
+    - name: Update apt cache safely
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      retries: 3
+      delay: 10
+      register: apt_update_result
+      failed_when: false
 
-    - name: Verify Docker availability 
-      shell: |
-        fi
-        command -v docker
-      register: docker_check
-      failed_when: docker_check.rc != 0
+    - name: Create keyrings directory for Docker
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: apt_update_result is not failed
+
+    - name: Add Docker GPG key
+      get_url:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+      when: apt_update_result is not failed
+
+    - name: Set Docker GPG key permissions
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: 'a+r'
+      when: apt_update_result is not failed
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+        filename: docker
+        state: present
+      when: apt_update_result is not failed
+
+    - name: Install Docker for testing
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: apt_update_result is not failed
+
+    - name: Install Docker for testing (fallback - use system packages)
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: false
+        allow_unauthenticated: true
+      when: apt_update_result is failed
+      
+    - name: Check if Docker daemon is already running
+      shell: dockerd --version && pgrep dockerd
+      register: docker_daemon_check
+      failed_when: false
       changed_when: false
 
-    - name: Start Docker service (if available)
+    - name: Force stop any existing Docker processes
+      shell: |
+        set +e  # Allow commands to fail
+        pkill -f dockerd 2>/dev/null || echo "No dockerd processes found"
+        pkill -f docker-containerd 2>/dev/null || echo "No containerd processes found"
+        sleep 2
+        exit 0  # Always exit successfully
+      when: docker_daemon_check.rc != 0
+      changed_when: false
+      failed_when: false
+
+    - name: Check Docker lock files when daemon is not running
+      stat:
+        path: "{{ item }}"
+      loop:
+        - /var/run/docker.pid
+        - /var/lib/docker/network/files/local-kv.db.lock
+      register: docker_lock_files_state
+      when: docker_daemon_check.rc != 0
+
+    - name: Remove Docker lock files if they exist (but not active socket)
+      file:
+        path: "{{ item.item }}"
+        state: absent
+      loop: "{{ docker_lock_files_state.results | default([]) }}"
+      when:
+        - docker_daemon_check.rc != 0
+        - item.stat.exists
+
+    - name: Check Docker lock files when daemon is running
+      stat:
+        path: "{{ item }}"
+      loop:
+        - /var/lib/docker/network/files/local-kv.db.lock
+      register: docker_running_lock_files_state
+      when: docker_daemon_check.rc == 0
+
+    - name: Clean only specific lock files when Docker is running
+      file:
+        path: "{{ item.item }}"
+        state: absent
+      loop: "{{ docker_running_lock_files_state.results | default([]) }}"
+      when:
+        - docker_daemon_check.rc == 0
+        - item.stat.exists
+
+    - name: Ensure Docker service is stopped before restart
+      service:
+        name: docker
+        state: stopped
+      failed_when: false
+
+    - name: Start Docker service with systemctl
+      shell: systemctl start docker
+      register: docker_systemctl_start
+      retries: 3
+      delay: 5
+      until: docker_systemctl_start.rc == 0
+      failed_when: false
+      changed_when: false
+
+    - name: Alternative Docker start using service command
       service:
         name: docker
         state: started
         enabled: true
+      register: docker_service_start
+      when: docker_systemctl_start is failed
+      retries: 3
+      delay: 10
+      until: docker_service_start is succeeded
       failed_when: false
+
+    - name: Manual Docker daemon start as last resort
+      shell: |
+        dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2376 &
+        sleep 5
+        pgrep dockerd
+      register: docker_manual_start
+      when:
+        - docker_systemctl_start is failed
+        - docker_service_start is failed
+      failed_when: false
+      changed_when: false
 
     - name: Wait for Docker socket to be available
       wait_for:
@@ -53,18 +181,44 @@
       failed_when: false
       changed_when: false
 
+    - name: Display Docker service status for debugging
+      shell: systemctl status docker --no-pager || service docker status
+      register: docker_status_debug
+      failed_when: false
+      when: docker_verify is failed
+
+    - name: Show Docker debug information
+      debug:
+        msg: |
+          Docker Status Debug:
+          systemctl start result: {{ docker_systemctl_start.rc | default('not attempted') }}
+          service start result: {{ docker_service_start.rc | default('not attempted') }}
+          manual start result: {{ docker_manual_start.rc | default('not attempted') }}
+          socket available: {{ docker_socket_wait.elapsed | default('timeout') }}
+          docker version check: {{ docker_verify.rc | default('failed') }}
+          service status: {{ docker_status_debug.stdout | default('not available') }}
+      when: docker_verify is failed
+        
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
+        
+    - name: Install required Python packages
+      pip:
+        name:
+          - docker
+          - docker-compose
+          - requests
+        state: present
 
     - name: Install midclt Molecule mock
       copy:
         dest: /usr/local/bin/midclt
         mode: '0755'
         content: "{{ lookup('file', playbook_dir ~ '/../../../..' ~ '/files/midclt-mock.py') }}"
-
+        
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -78,8 +232,9 @@
       include_role:
         name: yamisskey.appliances.core
       vars:
+        # Test-specific configuration will be added here
         ansible_user: "root"
-
+        
     - name: Basic role verification
       debug:
         msg: "core role applied successfully"
@@ -89,7 +244,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-
+      
     - name: Display test status
       debug:
         var: test_status.stdout

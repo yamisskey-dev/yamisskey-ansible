@@ -6,5 +6,5 @@
 - `vikunja_secrets_file`: 例 `/var/www/vikunja/secrets.yml`
 
 関連プレイブック:
-- 確認: `yamisskey-provision check vikunja`
-- 実行: `yamisskey-provision run vikunja`
+- 確認: `make check PLAYBOOK=vikunja`
+- 実行: `make run PLAYBOOK=vikunja`

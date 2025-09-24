@@ -1,8 +1,0 @@
----
-- name: Process APT repositories
-  ansible.builtin.include_tasks: apt_repo_process.yml
-  loop: "{{ packages_install_methods.apt_repo | dict2items | list }}"
-  when: 
-    - packages_install_methods.apt_repo is defined
-    - packages_selected is defined
-    - (item.value.packages | intersect(packages_selected)) | length > 0

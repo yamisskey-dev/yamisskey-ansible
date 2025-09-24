@@ -6,9 +6,7 @@
 deploy/servers/inventory
 deploy/appliances/inventory
 
-# Ansible secrets (both legacy and SOPS)
-.vault_pass
-.vault_pass.backup
+# Ansible secrets (SOPS)
 .env.secure
 deploy/**/group_vars/vault.yml
 deploy/**/ansible.cfg.debug

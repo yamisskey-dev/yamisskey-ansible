@@ -2,5 +2,5 @@
 
 共通の基本セットアップ（パッケージ、ユーザ、時刻同期など）を行うロールです。
 
-- 呼び出し例: `yamisskey-provision run common`
+- 呼び出し例: `make run PLAYBOOK=common`
 

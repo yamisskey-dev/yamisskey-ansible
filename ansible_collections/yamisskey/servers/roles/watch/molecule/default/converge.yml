@@ -1,66 +1,60 @@
 ---
-- name: Converge watch role
+- name: Converge
   hosts: all
   become: true
-  gather_facts: true
-
+  vars:
+    # テスト用の設定値（cAdvisorはDocker-in-Dockerでテスト困難なため無効化）
+    node_exporter:
+      enabled: true
+      package_name: prometheus-node-exporter
+      service_name: prometheus-node-exporter
+      port: "{{ watch_services.node_exporter }}"
+    cadvisor:
+      enabled: false
+    
+    # テスト用のポート設定（デフォルトと異なるポートを使用してコンフリクトを避ける）
+    watch_services:
+      node_exporter: 9100
+      cadvisor: 8085
+    watch_node_exporter_port: 9100
+    watch_cadvisor_port: 8085
+    
+    # テスト用のネットワーク設定
+    monitor_network:
+      name: monitor
+      create: true
+    
+    # テスト環境でもシステムチェックを有効化
+    skip_system_checks: false
+    
   pre_tasks:
-    - name: Wait for instance SSH availability
-      wait_for_connection:
-        timeout: 30
+    # 基本的な依存関係とDockerライブラリをインストール
+    - name: Install basic dependencies
+      apt:
+        name:
+          - curl
+          - wget
+          - tar
+          - systemd
+          - python3-pip
+          - python3-docker
+        state: present
+        update_cache: true
 
-    - name: Install system packages via packages role
-      include_role:
-        name: yamisskey.servers.packages
-      vars:
-        packages_profile: development
+    - name: Install Docker Python library via pip
+      pip:
+        name:
+          - docker
+          - requests
+        state: present
 
-    - name: Verify Docker availability 
-      shell: |
-        fi
-        command -v docker
-      register: docker_check
-      failed_when: docker_check.rc != 0
-      changed_when: false
-
-    - name: Start Docker service (if available)
-      service:
-        name: docker
-        state: started
-        enabled: true
-      failed_when: false
-
-    - name: Add test user to docker group
-      user:
-        name: "{{ ansible_user }}"
-        groups: docker
-        append: true
-
-    - name: Create test directories
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-      loop:
-        - /tmp/test
+    - name: Install Node Exporter package for testing
+      apt:
+        name: prometheus-node-exporter
+        state: present
+        update_cache: true
 
   tasks:
-    - name: Apply watch role
+    - name: Include watch role
       include_role:
         name: yamisskey.servers.watch
-      vars:
-        ansible_user: "root"
-
-    - name: Basic role verification
-      debug:
-        msg: "watch role applied successfully"
-
-  post_tasks:
-    - name: Show test environment status
-      shell: echo "Test environment setup completed"
-      register: test_status
-      changed_when: false
-
-    - name: Display test status
-      debug:
-        var: test_status.stdout

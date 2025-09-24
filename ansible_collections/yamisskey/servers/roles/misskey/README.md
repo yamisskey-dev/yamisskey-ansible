@@ -86,34 +86,34 @@ misskey_domain: 'yami.ski'
 ### 基本実行
 ```bash
 # Misskeyプレイブック実行
-yamisskey-provision run misskey
+make run PLAYBOOK=misskey
 
 # ドライラン（変更内容確認）
-yamisskey-provision check misskey
+make check PLAYBOOK=misskey
 
 # 特定のタグのみ実行
-yamisskey-provision run misskey TAGS=install
-yamisskey-provision run misskey TAGS=config
+make run PLAYBOOK=misskey TAGS=install
+make run PLAYBOOK=misskey TAGS=config
 ```
 
 ### インストールフロー
 ```bash
 # 1. 基盤環境構築
-yamisskey-provision run common
-yamisskey-provision run security
+make run PLAYBOOK=common
+make run PLAYBOOK=security
 
 # 2. データベース・キャッシュ準備
 # (PostgreSQL・Redisはcommonロールに含まれる)
 
 # 3. Webサーバー・プロキシ設定
-yamisskey-provision run modsecurity-nginx
-yamisskey-provision run misskey-proxy
+make run PLAYBOOK=modsecurity-nginx
+make run PLAYBOOK=misskey-proxy
 
 # 4. Misskey本体インストール
-yamisskey-provision run misskey
+make run PLAYBOOK=misskey
 
 # 5. ストレージ設定（オプション）
-yamisskey-provision run minio
+make run PLAYBOOK=minio
 ```
 
 ## 🔧 テンプレートファイル
@@ -169,34 +169,34 @@ vault_minio_secret_key: "s3_secret_key"
 ### 開発環境セットアップ
 ```bash
 # 最小構成でのインストール
-yamisskey-provision run common
-yamisskey-provision run misskey TAGS=install,config
+make run PLAYBOOK=common
+make run PLAYBOOK=misskey TAGS=install,config
 
 # 開発用設定での実行
-MISSKEY_ENV=development yamisskey-provision run misskey
+MISSKEY_ENV=development make run PLAYBOOK=misskey
 ```
 
 ### 本番環境デプロイメント
 ```bash
 # フルスタックデプロイメント
-yamisskey-provision run common && yamisskey-provision run security && yamisskey-provision run modsecurity-nginx && yamisskey-provision run misskey-proxy && yamisskey-provision run misskey && yamisskey-provision run minio
+make deploy PLAYBOOKS='common security modsecurity-nginx misskey-proxy misskey minio'
 
 # 段階的デプロイメント
-yamisskey-provision run common
-yamisskey-provision check misskey    # 確認
-yamisskey-provision run misskey      # 実行
+make run PLAYBOOK=common
+make check PLAYBOOK=misskey    # 確認
+make run PLAYBOOK=misskey      # 実行
 ```
 
 ### メンテナンス作業
 ```bash
 # 設定ファイルのみ更新
-yamisskey-provision run misskey TAGS=config
+make run PLAYBOOK=misskey TAGS=config
 
 # サービス再起動
-yamisskey-provision run misskey TAGS=restart
+make run PLAYBOOK=misskey TAGS=restart
 
 # アプリケーション更新
-yamisskey-provision run misskey TAGS=update
+make run PLAYBOOK=misskey TAGS=update
 ```
 
 ## 🐛 トラブルシューティング
@@ -275,7 +275,7 @@ sudo journalctl -u docker -f
 sudo -u postgres pg_dump example_misskey_db > misskey_backup.sql
 
 # メディアファイルバックアップ（MinIO使用時）
-yamisskey-provision run misskey-backup
+make run PLAYBOOK=misskey-backup
 ```
 
 ### 復旧手順

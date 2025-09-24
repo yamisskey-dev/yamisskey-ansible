@@ -17,5 +17,5 @@ warp_excluded_hosts:
 ```
 
 実行例:
-- 確認: `yamisskey-provision check cloudflare-warp`
-- 実行: `yamisskey-provision run cloudflare-warp`
+- 確認: `make check PLAYBOOK=cloudflare-warp`
+- 実行: `make run PLAYBOOK=cloudflare-warp`

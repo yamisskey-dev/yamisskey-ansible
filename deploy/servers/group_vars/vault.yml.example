@@ -2,8 +2,8 @@
 # ========================================
 # Yamisskey Provision - Vault Variables
 # ========================================
-# このファイルを vault.yml にコピーして本番環境の値に変更後、暗号化してください:
-# ansible-vault encrypt group_vars/vault.yml
+# このファイルを vault.yml にコピーして本番環境の値に変更後、SOPS で暗号化してください:
+# sops -e -i group_vars/vault.yml
 
 # ========================================
 # Cloudflare Configuration (必須)
@@ -194,8 +194,8 @@ vault_ssl_certificate: |
 # Security Notice
 # ========================================
 # IMPORTANT: After creating vault.yml with real values:
-# 1. ansible-vault encrypt group_vars/vault.yml
-# 2. Store the vault password in a secure password manager
+# 1. sops -e -i group_vars/vault.yml
+# 2. Ensure age-key.txt is securely stored and backed up
 # 3. Never commit the unencrypted vault.yml to version control
-# 4. Consider using ansible-vault rekey to rotate vault passwords
-# 5. Test decryption: ansible-vault decrypt group_vars/vault.yml --output=-
+# 4. To rotate keys, use: sops updatekeys group_vars/vault.yml
+# 5. Test decryption: sops -d group_vars/vault.yml
