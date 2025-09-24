@@ -44,7 +44,6 @@ packages_install_methods:
     - htop
     - btop
     - jq
-    - yq
     - vim
     - nano
     - tree
@@ -307,8 +306,7 @@ packages_by_role:
       - htop
       - btop
       - jq
-      - yq
-  # Application-specific roles
+      -   # Application-specific roles
   minecraft:
     Debian:
       - docker.io
@@ -615,8 +613,7 @@ packages_base:
     - sysstat
     - lynis
     - jq
-    - yq
-    - unzip
+    -     - unzip
     - zip
     - tar
     - gawk
@@ -645,8 +642,7 @@ packages_profiles:
       - htop
       - btop
       - jq
-      - yq
-      - curl
+      -       - curl
       - wget
   server:
     Debian:
@@ -699,8 +695,7 @@ packages_profiles:
       - htop
       - btop
       - jq
-      - yq
-      - curl
+      -       - curl
       - wget
   monitoring:
     Debian:

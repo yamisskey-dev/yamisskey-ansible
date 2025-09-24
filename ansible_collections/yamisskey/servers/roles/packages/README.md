@@ -286,7 +286,7 @@ packages_profiles:
 
 - `development`: Development tools and utilities (ansible, ansible-lint, yamllint, sops, age, gnupg, docker.io, docker-compose, python3-passlib, git, ghq, vim, nano, tree, htop, btop, jq, yq)
 - `server`: Production server essentials (prometheus, rclone, apparmor, auditd, fail2ban, ufw, cloudflared, tailscale, docker.io, docker-compose, nginx, postgresql-client, redis-tools)
-- `ai-server`: AI/ML development environment (mecab, mecab-ipadic, python3, python3-pip, python3-dev, python3-venv, docker.io, docker-compose, htop, btop, jq, yq)
+- `ai-server`: AI/ML development environment (mecab, mecab-ipadic, python3, python3-pip, python3-dev, python3-venv, docker.io, docker-compose, htop, btop, jq)
 - `monitoring`: Monitoring stack (prometheus, grafana, prometheus-node-exporter, docker.io, docker-compose, htop, btop, sysstat)
 - `storage`: Storage and backup tools (rclone, rsync, tar, gzip, docker.io, docker-compose, postgresql-client, redis-tools)
 
