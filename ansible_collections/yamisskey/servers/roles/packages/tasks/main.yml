@@ -3,33 +3,73 @@
   ansible.builtin.set_fact:
     packages_profile_effective: "{{ packages_profile | default('server') }}"
 
-- name: Initialize package selection
+- name: Initialize package selection with base packages
   ansible.builtin.set_fact:
-    packages_selected: "{{ (packages_categories.base[ansible_os_family] | default([])) | list }}"
+    packages_selected: "{{ packages_base[ansible_os_family] | default([]) }}"
 
-- name: Merge category packages
+- name: Get current play role names
   ansible.builtin.set_fact:
-    packages_selected: "{{ packages_selected | union(packages_categories[item.category][ansible_os_family] | default([])) }}"
-  when: item.include
-  loop:
-    - { category: 'common', include: (('common' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
-    - { category: 'security', include: (('security' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
-    - { category: 'watch', include: (('watch' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
-    - { category: 'ai', include: (('ai' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'ai-server']) }
-    - { category: 'ghq', include: (('ghq' in (ansible_play_role_names | default([]))) or packages_profile_effective == 'development') }
-    - { category: 'development', include: (packages_profile_effective == 'development') }
-    - { category: 'infrastructure', include: (('system_init' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
+    current_role_names: "{{ ansible_play_role_names | default([]) }}"
 
-- name: Append extra package requests
+- name: Get current play tags
+  ansible.builtin.set_fact:
+    current_tags: "{{ ansible_run_tags | default([]) }}"
+
+- name: Collect packages from active roles
+  ansible.builtin.set_fact:
+    packages_selected: "{{ packages_selected | union(packages_by_role[item][ansible_os_family] | default([])) }}"
+  loop: "{{ current_role_names }}"
+  when: 
+    - item in packages_by_role
+    - packages_by_role[item] is defined
+    - packages_by_role[item][ansible_os_family] is defined
+
+- name: Collect packages from active tags
+  ansible.builtin.set_fact:
+    packages_selected: "{{ packages_selected | union(packages_by_tag[item][ansible_os_family] | default([])) }}"
+  loop: "{{ current_tags }}"
+  when: 
+    - item in packages_by_tag
+    - packages_by_tag[item] is defined
+    - packages_by_tag[item][ansible_os_family] is defined
+
+- name: Add profile-based packages
+  ansible.builtin.set_fact:
+    packages_selected: "{{ packages_selected | union(packages_profiles[packages_profile_effective][ansible_os_family] | default([])) }}"
+  when: 
+    - packages_profile_effective in packages_profiles
+    - packages_profiles[packages_profile_effective] is defined
+    - packages_profiles[packages_profile_effective][ansible_os_family] is defined
+
+- name: Add extra packages
   ansible.builtin.set_fact:
     packages_selected: "{{ packages_selected | union(packages_extra | default([]) | map('string') | list) }}"
 
-- name: Display selected system packages
+- name: Remove duplicate packages
+  ansible.builtin.set_fact:
+    packages_selected: "{{ packages_selected | unique | list }}"
+
+- name: Display package selection summary
   ansible.builtin.debug:
-    msg: "System packages to install: {{ packages_selected }}"
+    msg: |
+      📦 Package Selection Summary:
+      🎯 Profile: {{ packages_profile_effective }}
+      🎭 Active Roles: {{ current_role_names | join(', ') }}
+      🏷️  Active Tags: {{ current_tags | join(', ') }}
+      📋 Total Packages: {{ packages_selected | length }}
+      📦 Packages: {{ packages_selected | join(', ') }}
 
 - name: Install system packages
   ansible.builtin.package:
     name: "{{ packages_selected }}"
     state: present
   when: packages_selected | length > 0
+  register: package_install_result
+
+- name: Display installation results
+  ansible.builtin.debug:
+    msg: |
+      ✅ Package Installation Complete:
+      📦 Installed: {{ package_install_result.changed | ternary('Yes', 'No') }}
+      📋 Packages: {{ packages_selected | join(', ') }}
+  when: package_install_result is defined

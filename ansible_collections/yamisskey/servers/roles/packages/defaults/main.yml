@@ -1,38 +1,12 @@
 ---
-# Preferred package profile for this host. Set to null to rely on role-based
-# detection or legacy variables.
-packages_profile: null
+# Package management configuration
+packages_profile: null  # Override with specific profile: development, server, ai-server, etc.
+packages_extra: []      # Additional packages to install explicitly
 
-# Additional packages to install explicitly.
-packages_extra: []
-
-# Mapping of package categories to OS-specific package lists.
-packages_categories:
-  base:
-    Debian:
-      - curl
-      - wget
-      - openssh-client
-      - git
-      - net-tools
-      - nmap
-      - dnsutils
-      - htop
-      - btop
-      - sysstat
-      - lynis
-      - jq
-      - yq
-      - unzip
-      - zip
-      - tar
-      - gawk
-      - sed
-      - findutils
-      - coreutils
-      - rsync
-      - lsof
-      - tmux
+# Role-based package mapping
+# Each role can specify its required packages
+packages_by_role:
+  # Core system roles
   common:
     Debian:
       - prometheus
@@ -47,18 +21,445 @@ packages_categories:
       - ufw
       - dnscrypt-proxy
       - clamav
+  system_init:
+    Debian:
+      - cloudflared
+      - tailscale
+      - docker.io
+      - docker-compose
   watch:
     Debian:
       - prometheus-node-exporter
+  monitor:
+    Debian:
+      - prometheus
+      - grafana
+      - node-exporter
+  # Application roles
+  misskey:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+      - redis-tools
+  misskey_proxy:
+    Debian:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+  misskey_backup:
+    Debian:
+      - rclone
+      - postgresql-client
+      - redis-tools
+  minio:
+    Debian:
+      - docker.io
+      - docker-compose
+  matrix:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+      - redis-tools
+  # AI/ML roles
   ai:
     Debian:
       - mecab
       - mecab-ipadic
       - python3
       - python3-pip
+      - python3-dev
+      - python3-venv
+  # Development roles
   ghq:
     Debian:
       - ghq
+  # Infrastructure roles
+  cloudflared:
+    Debian:
+      - cloudflared
+  cloudflare_warp:
+    Debian:
+      - cloudflare-warp
+  # Web services
+  modsecurity_nginx:
+    Debian:
+      - nginx
+      - libapache2-mod-security2
+      - nginx-module-headers-more
+  # Database roles (if needed)
+  postgresql:
+    Debian:
+      - postgresql
+      - postgresql-client
+      - postgresql-contrib
+  mysql:
+    Debian:
+      - mysql-server
+      - mysql-client
+  redis:
+    Debian:
+      - redis-server
+      - redis-tools
+  # Monitoring roles
+  grafana:
+    Debian:
+      - grafana
+  prometheus:
+    Debian:
+      - prometheus
+      - prometheus-node-exporter
+  # Backup roles
+  backup:
+    Debian:
+      - rclone
+      - rsync
+      - tar
+      - gzip
+  # Testing roles
+  integration_test:
+    Debian:
+      - python3-pytest
+      - python3-tox
+      - docker.io
+  system_test:
+    Debian:
+      - docker.io
+      - curl
+      - jq
+  # Utility roles
+  tools:
+    Debian:
+      - curl
+      - wget
+      - git
+      - htop
+      - btop
+      - jq
+      - yq
+  # Application-specific roles
+  minecraft:
+    Debian:
+      - docker.io
+      - docker-compose
+      - playit
+  jitsi:
+    Debian:
+      - docker.io
+      - docker-compose
+      - nginx
+  lemmy:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+  searxng:
+    Debian:
+      - docker.io
+      - docker-compose
+  outline:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+  vikunja:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+  cryptpad:
+    Debian:
+      - docker.io
+      - docker-compose
+  ctfd:
+    Debian:
+      - docker.io
+      - docker-compose
+      - python3
+      - python3-pip
+  neo_quesdon:
+    Debian:
+      - docker.io
+      - docker-compose
+  mcaptcha:
+    Debian:
+      - docker.io
+      - docker-compose
+  deeplx:
+    Debian:
+      - docker.io
+      - docker-compose
+  impostor:
+    Debian:
+      - docker.io
+      - docker-compose
+  uptime:
+    Debian:
+      - docker.io
+      - docker-compose
+  stalwart:
+    Debian:
+      - docker.io
+      - docker-compose
+  zitadel:
+    Debian:
+      - docker.io
+      - docker-compose
+  operations:
+    Debian:
+      - docker.io
+      - docker-compose
+  migrate:
+    Debian:
+      - docker.io
+      - docker-compose
+      - rclone
+  migrate_minio:
+    Debian:
+      - docker.io
+      - docker-compose
+      - rclone
+      - mc
+  migration_validator:
+    Debian:
+      - docker.io
+      - docker-compose
+      - curl
+      - jq
+  export:
+    Debian:
+      - docker.io
+      - docker-compose
+      - rclone
+  import:
+    Debian:
+      - docker.io
+      - docker-compose
+      - rclone
+  compat:
+    Debian:
+      - docker.io
+      - docker-compose
+
+# Tag-based package mapping
+# Packages can be installed based on Ansible tags
+packages_by_tag:
+  # System tags
+  always:
+    Debian:
+      - curl
+      - wget
+      - git
+  packages:
+    Debian:
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+  # Security tags
+  security:
+    Debian:
+      - fail2ban
+      - ufw
+      - clamav
+  hardening:
+    Debian:
+      - fail2ban
+      - ufw
+      - clamav
+      - apparmor
+      - auditd
+  # Monitoring tags
+  monitoring:
+    Debian:
+      - prometheus
+      - grafana
+      - prometheus-node-exporter
+  prometheus:
+    Debian:
+      - prometheus
+      - prometheus-node-exporter
+  node_exporter:
+    Debian:
+      - prometheus-node-exporter
+  cadvisor:
+    Debian:
+      - docker.io
+  system:
+    Debian:
+      - htop
+      - btop
+      - sysstat
+      - lynis
+  # Infrastructure tags
+  infrastructure:
+    Debian:
+      - docker.io
+      - docker-compose
+  docker:
+    Debian:
+      - docker.io
+      - docker-compose
+  # Web service tags
+  proxy:
+    Debian:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+  nginx:
+    Debian:
+      - nginx
+      - nginx-module-headers-more
+  reverse-proxy:
+    Debian:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+  ssl:
+    Debian:
+      - certbot
+      - python3-certbot-nginx
+  # Storage tags
+  storage:
+    Debian:
+      - rclone
+      - rsync
+  minio:
+    Debian:
+      - docker.io
+      - docker-compose
+  object-storage:
+    Debian:
+      - docker.io
+      - docker-compose
+  backup:
+    Debian:
+      - rclone
+      - rsync
+      - tar
+      - gzip
+  # Development tags
+  development:
+    Debian:
+      - ghq
+      - git
+      - vim
+      - nano
+  git:
+    Debian:
+      - git
+      - ghq
+  repository:
+    Debian:
+      - git
+      - ghq
+  yamisskey:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+      - redis-tools
+  # Application tags
+  misskey:
+    Debian:
+      - docker.io
+      - docker-compose
+      - postgresql-client
+      - redis-tools
+  minecraft:
+    Debian:
+      - docker.io
+      - docker-compose
+      - playit
+  papermc:
+    Debian:
+      - docker.io
+      - docker-compose
+      - playit
+  geyser:
+    Debian:
+      - docker.io
+      - docker-compose
+      - playit
+  floodgate:
+    Debian:
+      - docker.io
+      - docker-compose
+      - playit
+  # Testing tags
+  test:
+    Debian:
+      - python3-pytest
+      - python3-tox
+      - docker.io
+  connectivity:
+    Debian:
+      - curl
+      - jq
+      - nmap
+  validation:
+    Debian:
+      - curl
+      - jq
+  migration:
+    Debian:
+      - docker.io
+      - docker-compose
+      - rclone
+  services:
+    Debian:
+      - docker.io
+      - docker-compose
+  # Performance tags
+  perf:
+    Debian:
+      - htop
+      - btop
+      - sysstat
+  # Application-specific tags
+  app:
+    Debian:
+      - docker.io
+      - docker-compose
+  service:
+    Debian:
+      - docker.io
+      - docker-compose
+  info:
+    Debian:
+      - curl
+      - jq
+
+# Base packages (always installed)
+packages_base:
+  Debian:
+    - curl
+    - wget
+    - openssh-client
+    - git
+    - net-tools
+    - nmap
+    - dnsutils
+    - htop
+    - btop
+    - sysstat
+    - lynis
+    - jq
+    - yq
+    - unzip
+    - zip
+    - tar
+    - gawk
+    - sed
+    - findutils
+    - coreutils
+    - rsync
+    - lsof
+    - tmux
+
+# Profile-based package sets
+packages_profiles:
   development:
     Debian:
       - ansible
@@ -70,9 +471,61 @@ packages_categories:
       - docker.io
       - docker-compose
       - python3-passlib
-      - nixpkgs-fmt
-      - statix
-  infrastructure:
+      - git
+      - ghq
+      - vim
+      - nano
+      - tree
+      - htop
+      - btop
+      - jq
+      - yq
+  server:
     Debian:
+      - prometheus
+      - rclone
+      - apparmor
+      - auditd
+      - fail2ban
+      - ufw
       - cloudflared
       - tailscale
+      - docker.io
+      - docker-compose
+      - nginx
+      - postgresql-client
+      - redis-tools
+  ai-server:
+    Debian:
+      - mecab
+      - mecab-ipadic
+      - python3
+      - python3-pip
+      - python3-dev
+      - python3-venv
+      - docker.io
+      - docker-compose
+      - htop
+      - btop
+      - jq
+      - yq
+  monitoring:
+    Debian:
+      - prometheus
+      - grafana
+      - prometheus-node-exporter
+      - docker.io
+      - docker-compose
+      - htop
+      - btop
+      - sysstat
+  storage:
+    Debian:
+      - rclone
+      - rsync
+      - tar
+      - gzip
+      - docker.io
+      - docker-compose
+      - postgresql-client
+      - redis-tools
