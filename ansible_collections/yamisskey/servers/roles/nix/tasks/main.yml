@@ -200,6 +200,8 @@
 - name: Apply Home Manager configuration
   become: false
   ansible.builtin.shell: |-
+    set -e
+    export HOME_MANAGER_CONFIG="{{ ansible_user_dir }}/.config/home-manager/home.nix"
     for script in \
       {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh \
       {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix-daemon.sh \
@@ -211,7 +213,12 @@
         break
       fi
     done
-    home-manager switch
-  environment: "{{ nix_user_environment }}"
+    home-manager switch --show-trace
+  environment: "{{ nix_user_environment | combine({
+      'HOME_MANAGER_CONFIG': ansible_user_dir ~ '/.config/home-manager/home.nix',
+      'NIX_PATH': 'home-manager=' ~ ansible_user_dir ~ '/.nix-defexpr/channels/home-manager:' ~ (ansible_env.NIX_PATH | default(''))
+    }) }}"
   register: home_manager_switch
-  changed_when: "'Building' in home_manager_switch.stderr"
+  changed_when: >-
+    'Activating' in (home_manager_switch.stdout | default('')) or
+    'Building' in (home_manager_switch.stderr | default(''))
