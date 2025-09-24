@@ -2,40 +2,42 @@
 
 Modern Ansible infrastructure management with SOPS secrets management.
 
-## 🚀 Quick Start
+## System Requirements
 
-### Prerequisites
+- Linux distribution providing a writable `systemd`
+- Python 3 available as `/usr/bin/python3`
 
-- make
-- sops
-- age
+## Prerequisites
 
-### System Requirements
+Install minimum required packages
+- [make](https://www.gnu.org/software/make/)
+- [age](https://github.com/FiloSottile/age)
+- [tailscale](https://tailscale.com/download/linux)
 
-- Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)
-- Python 3 available as `/usr/bin/python3`, `ansible` will be installed via `uv`.
-
-## Quick Start
-
-### 1. Prerequisites
-
-Ensure you have access via Tailscale SSH:
-
+Ensure servers can be reachedvia Tailscale SSH
 ```bash
 tailscale login
 sudo tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
 ```
 
-Access the server:
+Ensure you have access via Tailscale SSH
 ```bash
 tailscale ssh <hostname>
 ```
 
-### 2. Setup
+## Install
 
-Clone the repository:
 ```bash
 git clone https://github.com/yamisskey-dev/yamisskey-provision.git
 cd yamisskey-provision
+make install
+make inventory
+```
+
+`ansible` and `sops` will be installed.
+
+## Help
+
+```bash
 make help
 ```
