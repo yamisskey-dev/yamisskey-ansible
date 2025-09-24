@@ -1,8 +1,0 @@
----
-- name: nix playbook
-  hosts: all
-  become: false
-  gather_facts: true
-
-  roles:
-    - yamisskey.servers.nix
