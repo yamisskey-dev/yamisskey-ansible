@@ -5,11 +5,11 @@
   gather_facts: true
 
   pre_tasks:
-    - name: Prepare Nix environment
+    - name: Install system packages via packages role
       include_role:
-        name: yamisskey.servers.nix
+        name: yamisskey.servers.packages
       vars:
-        nix_home_manager_config: development
+        packages_profile: development
 
     - name: Create test directories
       file:

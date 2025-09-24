@@ -5,11 +5,11 @@
   gather_facts: true
   
   pre_tasks:
-    - name: Prepare Nix environment
+    - name: Install system packages via packages role
       include_role:
-        name: yamisskey.servers.nix
+        name: yamisskey.servers.packages
       vars:
-        nix_home_manager_config: development
+        packages_profile: development
 
     - name: Display Nix-based test environment status
       debug:
@@ -33,8 +33,6 @@
       
     - name: Verify Nix-managed packages are available
       shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
         fi
         which {{ item }}
       register: package_check

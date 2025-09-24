@@ -16,11 +16,11 @@
     truenas_skip_bucket_iam_setup: true
 
   pre_tasks:
-    - name: Prepare Nix environment
+    - name: Install system packages via packages role
       include_role:
-        name: yamisskey.servers.nix
+        name: yamisskey.servers.packages
       vars:
-        nix_home_manager_config: development
+        packages_profile: development
 
     - name: Copy midclt mock script
       copy:
@@ -28,10 +28,8 @@
         mode: '0755'
         content: "{{ lookup('file', playbook_dir ~ '/../../../..' ~ '/files/midclt-mock.py') }}"
 
-    - name: Verify Docker availability from Nix
+    - name: Verify Docker availability 
       shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
         fi
         command -v docker
       register: docker_check

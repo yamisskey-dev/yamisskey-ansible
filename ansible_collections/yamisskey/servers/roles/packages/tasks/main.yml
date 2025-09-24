@@ -1,13 +1,7 @@
 ---
 - name: Determine package profile
   ansible.builtin.set_fact:
-    packages_profile_effective: >-
-      {{
-        packages_profile
-        | default(nix_package_profile, true)
-        | default(nix_home_manager_config, true)
-        | default('server', true)
-      }}
+    packages_profile_effective: "{{ packages_profile | default('server') }}"
 
 - name: Initialize package selection
   ansible.builtin.set_fact:

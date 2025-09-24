@@ -5,18 +5,14 @@
   gather_facts: true
 
   pre_tasks:
-    - name: Prepare Nix environment
+    - name: Install system packages via packages role
       include_role:
-        name: yamisskey.servers.nix
+        name: yamisskey.servers.packages
       vars:
-        nix_home_manager_config: development
+        packages_profile: development
 
-    - name: Verify Docker availability from Nix
-      shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
-        fi
-        command -v docker
+    - name: Verify Docker availability
+      shell: command -v docker
       register: docker_check
       failed_when: docker_check.rc != 0
       changed_when: false

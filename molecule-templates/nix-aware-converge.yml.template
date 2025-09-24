@@ -1,47 +1,43 @@
 ---
-# Nix-only Molecule converge template
-# This template requires Nix environment and does not fall back to system package managers
+# System package-based Molecule converge template
+# This template uses system package managers for testing
 - name: Converge {{role_name}} role
   hosts: all
   become: true
   gather_facts: true
   
   pre_tasks:
-    - name: Prepare Nix environment
+    - name: Install system packages via packages role
       include_role:
-        name: yamisskey.servers.nix
+        name: yamisskey.servers.packages
       vars:
-        nix_home_manager_config: development
+        packages_profile: development
 
-    - name: Display Nix-based test environment status
+    - name: Display system package-based test environment status
       debug:
         msg: |
-          ✅ Nix-based Test Environment ({{role_name}}):
-          📦 All packages provided by Nix Flake
+          ✅ System Package-based Test Environment ({{role_name}}):
+          📦 All packages provided by system package manager
           🧪 Ready for infrastructure testing!
       tags:
         - always
 
     - name: Verify essential tools are available
-      shell: |
-        if [ -f /root/.nix-profile/etc/profile.d/nix.sh ]; then
-          . /root/.nix-profile/etc/profile.d/nix.sh
-        fi
-        {{ item }}
+      shell: "{{ item }}"
       register: tool_check
       failed_when: false
       changed_when: false
       loop:
         - "docker --version"
         - "python3 --version"
-        - "nix --version"
+        - "curl --version"
       tags:
         - verification
 
     - name: Display tool versions
       debug:
         msg: |
-          🔧 Available tools (Nix-managed):
+          🔧 Available tools (System-managed):
           {% for result in tool_check.results %}
           - {{ result.cmd[0] }}: {{ result.stdout if result.rc == 0 else 'not available' }}
           {% endfor %}
