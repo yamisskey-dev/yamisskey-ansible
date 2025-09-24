@@ -5,8 +5,7 @@ Modern Ansible infrastructure management with SOPS secrets management and Nix-ba
 ## 🚀 Quick Start
 
 ### Prerequisites
-- [Make](https://www.gnu.org/software/make/)
-- [direnv](https://direnv.net/)
+- Make
 
 ### System Requirements
 - Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)
