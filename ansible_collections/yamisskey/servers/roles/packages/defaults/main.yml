@@ -35,7 +35,6 @@ packages_install_methods:
     - ufw
     - curl
     - dnsutils
-    - tailscale
     - docker.io
     - docker-compose
     - nginx
@@ -99,6 +98,13 @@ packages_install_methods:
       filename: "playit-cloud"
       packages:
         - playit
+    tailscale:
+      gpg_key_url: "https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }}/{{ ansible_distribution_release | lower }}.noarmor.gpg"
+      gpg_key_file: "/etc/apt/trusted.gpg.d/tailscale-archive-keyring.gpg"
+      repo: "deb [signed-by=/etc/apt/trusted.gpg.d/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/{{ ansible_distribution | lower }} {{ ansible_distribution_release | lower }} main"
+      filename: "tailscale"
+      packages:
+        - tailscale
 
   # Manual downloads (GitHub releases, etc.)
   manual_download:
@@ -171,7 +177,6 @@ packages_by_role:
       - lynis
       - curl
       - dnsutils
-      - tailscale
   system_init:
     Debian:
       - curl
@@ -183,7 +188,6 @@ packages_by_role:
       - apt-transport-https
       - ca-certificates
       - cloudflared
-      - tailscale
       - docker.io
       - docker-compose
   watch:
@@ -674,7 +678,6 @@ packages_profiles:
       - ufw
       - curl
       - dnsutils
-      - tailscale
       - docker.io
       - docker-compose
       - nginx

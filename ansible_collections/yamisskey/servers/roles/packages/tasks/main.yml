@@ -55,7 +55,7 @@
       📦 Package Selection Summary:
       🎯 Profile: {{ packages_profile_effective }}
       🎭 Active Roles: {{ current_role_names | join(', ') }}
-      🏷️  Active Tags: {{ current_tags | join(', ') }}
+      🏷️ Active Tags: {{ current_tags | join(', ') }}
       📋 Total Packages: {{ packages_selected | length }}
       📦 Packages: {{ packages_selected | join(', ') }}
 
