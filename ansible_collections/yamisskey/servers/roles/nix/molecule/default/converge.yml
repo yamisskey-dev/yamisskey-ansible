@@ -13,22 +13,16 @@
     - name: Apply nix role
       include_role:
         name: yamisskey.servers.nix
-      vars:
-        nix_home_manager_config: development
-        home_manager_extra_packages:
-          - bat
-          - ripgrep
 
     - name: Display nix role result context
       debug:
-        msg: "Nix role applied with development profile and extra packages"
+        msg: "Nix role applied"
 
   post_tasks:
     - name: Capture Nix environment details
       shell: |
         . /root/.nix-profile/etc/profile.d/nix.sh
         nix --version
-        home-manager --version
       register: nix_env_details
       changed_when: false
 

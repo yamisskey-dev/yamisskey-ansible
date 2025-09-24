@@ -12,7 +12,6 @@ Modern Ansible infrastructure management with SOPS secrets management and Nix-ba
 ### System Requirements
 - Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)
 - Python 3 available as `/usr/bin/python3`, `ansible` will be installed via `uv`.
-- Nix [installed manually on hosts](https://nixos.org/download/); Molecule prepares it automatically inside test containers
 
 ### Automatic Environment Setup (Recommended)
 
