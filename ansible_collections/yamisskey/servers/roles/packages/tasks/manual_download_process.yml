@@ -1,0 +1,22 @@
+---
+- name: Check if {{ item.key }} is already installed
+  ansible.builtin.command: "which {{ item.key }}"
+  register: manual_check
+  failed_when: false
+  changed_when: false
+
+- name: Download {{ item.key }}
+  ansible.builtin.get_url:
+    url: "{{ item.value.download_url }}"
+    dest: "{{ item.value.install_path }}"
+    mode: "{{ item.value.mode }}"
+    owner: "{{ item.value.owner }}"
+    group: "{{ item.value.group }}"
+  become: true
+  when: manual_check.rc != 0
+
+- name: Verify {{ item.key }} installation
+  ansible.builtin.command: "{{ item.value.version_check }}"
+  register: manual_verify
+  changed_when: false
+  when: manual_check.rc != 0

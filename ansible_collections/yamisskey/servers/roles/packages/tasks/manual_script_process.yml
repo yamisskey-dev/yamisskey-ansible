@@ -1,0 +1,27 @@
+---
+- name: Check if {{ item.key }} is already installed
+  ansible.builtin.stat:
+    path: "{{ item.value.check_path }}"
+  register: script_check
+
+- name: Clone repository for {{ item.key }}
+  ansible.builtin.git:
+    repo: "{{ item.value.repo }}"
+    dest: "{{ item.value.dest }}"
+    depth: 1
+    version: master
+  when: not script_check.stat.exists
+
+- name: Run installation script for {{ item.key }}
+  ansible.builtin.shell: "{{ item.value.script }}"
+  args:
+    chdir: "{{ item.value.dest }}"
+    executable: /bin/bash
+  become: true
+  when: not script_check.stat.exists
+
+- name: Clean up {{ item.key }} repository
+  ansible.builtin.file:
+    path: "{{ item.value.dest }}"
+    state: absent
+  when: not script_check.stat.exists

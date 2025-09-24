@@ -13,51 +13,11 @@
 
 ### 1. Moleculeのインストール
 
-```bash
-# Nix環境ですべて自動インストール（direnvを推奨）
-direnv allow
-```
-
-**重要**: 全てのMoleculeテストは**Nix環境必須**です。テストは `nix develop` シェル内で実行してください。
-テストの実行前にflake.nixで定義されたロール固有パッケージセットが自動的にインストールされます。
-APTやその他のパッケージマネージャーは使用されません。
-
 ### 2. Moleculeテスト設定の追加
 
 ```bash
 # 全ロールにMolecule設定を追加（既に実行済み）
 ./molecule-templates/setup_molecule.sh
-```
-
-## 🧪 テストの実行
-
-**前提条件**: 全てのテストはNix環境で実行する必要があります。
-
-```bash
-# Nix開発環境に入る
-nix develop
-
-# 基本的なテスト実行
-yamisskey-provision test common
-
-# 構文チェックのみ
-yamisskey-provision test common syntax
-
-# コンバージテストのみ
-yamisskey-provision test minio converge
-
-# クリーンアップ
-yamisskey-provision test system-init cleanup
-```
-
-### 全ロールのテスト
-
-```bash
-# 全ロール（servers）の基本テスト
-yamisskey-provision test "" "" servers
-
-# 全ロール（appliances）の構文チェック
-yamisskey-provision test "" syntax appliances
 ```
 
 ## 📁 作成される構造
@@ -96,23 +56,6 @@ role_name/
 ```
 
 ## 🔧 トラブルシューティング
-
-### Nix環境の設定
-
-全てのMoleculeテストはNix環境必須です：
-
-```bash
-# Nix環境に入る
-nix develop
-
-# 必要なパッケージがインストールされていることを確認
-which docker ansible molecule
-
-# flake.nixの内容確認
-nix flake show
-```
-
-Dockerは全てNix経由で提供されます。APTインストールは不要です。
 
 ### 権限の問題
 

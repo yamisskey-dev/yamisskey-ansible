@@ -1,26 +1,8 @@
 ---
-- name: Check if running in Nix environment
-  shell: command -v nix >/dev/null 2>&1
-  register: nix_available
-  failed_when: false
-  changed_when: false
-
-- name: Ensure Nix environment for Docker setup
-  fail:
-    msg: |
-      ❌ Docker setup requires Nix environment!
-      
-      📋 Docker is now managed via Nix Flake:
-      - docker: Available via Home Manager
-      - docker-compose: Available via Home Manager
-      
-      🚀 Run in nix develop environment.
-  when: nix_available.rc != 0
-
 - name: Display Docker package status
   debug:
     msg: |
-      ✅ Docker packages managed via Nix Flake
+      ✅ Docker packages managed via system packages
       📦 Available tools: docker, docker-compose
       🐳 Ready for container operations!
 

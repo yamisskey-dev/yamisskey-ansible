@@ -1,0 +1,8 @@
+---
+- name: Process manual downloads
+  ansible.builtin.include_tasks: manual_download_process.yml
+  loop: "{{ packages_install_methods.manual_download | dict2items | list }}"
+  when: 
+    - packages_install_methods.manual_download is defined
+    - packages_selected is defined
+    - item.key in packages_selected

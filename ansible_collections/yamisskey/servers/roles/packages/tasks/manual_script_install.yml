@@ -1,0 +1,8 @@
+---
+- name: Process manual scripts
+  ansible.builtin.include_tasks: manual_script_process.yml
+  loop: "{{ packages_install_methods.manual_script | dict2items | list }}"
+  when: 
+    - packages_install_methods.manual_script is defined
+    - packages_selected is defined
+    - item.key in packages_selected
