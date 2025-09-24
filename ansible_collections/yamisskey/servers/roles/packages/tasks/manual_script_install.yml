@@ -1,9 +1,14 @@
 ---
+- name: Check if manual script packages are needed
+  ansible.builtin.set_fact:
+    needed_scripts: "{{ packages_install_methods.manual_script | dict2items | selectattr('key', 'in', packages_selected) | list }}"
+
 - name: Check if {{ item.key }} is already installed
   ansible.builtin.stat:
     path: "{{ item.value.check_path }}"
   register: script_check
-  loop: "{{ packages_install_methods.manual_script | dict2items }}"
+  loop: "{{ needed_scripts }}"
+  when: needed_scripts | length > 0
 
 - name: Clone repository for {{ item.key }}
   ansible.builtin.git:
@@ -11,8 +16,10 @@
     dest: "{{ item.value.dest }}"
     depth: 1
     version: master
-  when: not item.item.script_check.stat.exists
-  loop: "{{ packages_install_methods.manual_script | dict2items }}"
+  when: 
+    - needed_scripts | length > 0
+    - not item.item.script_check.stat.exists
+  loop: "{{ needed_scripts }}"
 
 - name: Run installation script for {{ item.key }}
   ansible.builtin.shell: "{{ item.value.script }}"
@@ -20,12 +27,16 @@
     chdir: "{{ item.value.dest }}"
     executable: /bin/bash
   become: true
-  when: not item.item.script_check.stat.exists
-  loop: "{{ packages_install_methods.manual_script | dict2items }}"
+  when: 
+    - needed_scripts | length > 0
+    - not item.item.script_check.stat.exists
+  loop: "{{ needed_scripts }}"
 
 - name: Clean up {{ item.key }} repository
   ansible.builtin.file:
     path: "{{ item.value.dest }}"
     state: absent
-  when: not item.item.script_check.stat.exists
-  loop: "{{ packages_install_methods.manual_script | dict2items }}"
+  when: 
+    - needed_scripts | length > 0
+    - not item.item.script_check.stat.exists
+  loop: "{{ needed_scripts }}"

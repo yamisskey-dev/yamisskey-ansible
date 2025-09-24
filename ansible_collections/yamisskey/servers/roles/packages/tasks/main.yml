@@ -9,7 +9,7 @@
 
 - name: Get current play role names
   ansible.builtin.set_fact:
-    current_role_names: "{{ ansible_play_role_names | default([]) }}"
+    current_role_names: "{{ ansible_play_role_names | default([]) | map('regex_replace', '^yamisskey\\.servers\\.', '') | list }}"
 
 - name: Get current play tags
   ansible.builtin.set_fact:
@@ -75,6 +75,8 @@
   when: 
     - packages_install_methods.apt_repo is defined
     - ansible_os_family == "Debian"
+    - packages_selected is defined
+    - packages_selected | length > 0
   register: apt_repo_install_result
 
 - name: Install packages via manual download

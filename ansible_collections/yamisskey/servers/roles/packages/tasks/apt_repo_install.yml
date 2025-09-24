@@ -1,11 +1,16 @@
 ---
+- name: Check if repository packages are needed
+  ansible.builtin.set_fact:
+    needed_repos: "{{ packages_install_methods.apt_repo | dict2items | selectattr('value.packages', 'intersect', packages_selected) | list }}"
+
 - name: Add GPG key for {{ item.key }}
   ansible.builtin.get_url:
     url: "{{ item.value.gpg_key_url }}"
     dest: "{{ item.value.gpg_key_file }}"
     mode: '0644'
   become: true
-  loop: "{{ packages_install_methods.apt_repo | dict2items }}"
+  loop: "{{ needed_repos }}"
+  when: needed_repos | length > 0
 
 - name: Add APT repository for {{ item.key }}
   ansible.builtin.apt_repository:
@@ -13,11 +18,13 @@
     filename: "{{ item.value.filename }}"
     update_cache: true
   become: true
-  loop: "{{ packages_install_methods.apt_repo | dict2items }}"
+  loop: "{{ needed_repos }}"
+  when: needed_repos | length > 0
 
 - name: Install packages from {{ item.key }} repository
   ansible.builtin.apt:
     name: "{{ item.value.packages }}"
     state: present
   become: true
-  loop: "{{ packages_install_methods.apt_repo | dict2items }}"
+  loop: "{{ needed_repos }}"
+  when: needed_repos | length > 0
