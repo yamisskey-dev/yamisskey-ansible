@@ -7,47 +7,10 @@ packages_extra: []      # Additional packages to install explicitly
 packages_install_methods:
   # Standard APT packages
   apt:
-    - btop
-    - net-tools
-    - nmap
-    - inetutils-traceroute
-    - rsync
-    - zip
-    - tor
-    - mecab
-    - libmecab-dev
-    - mecab-ipadic-utf8
-    - prometheus
-    - rclone
-    - fail2ban
-    - unattended-upgrades
-    - debsums
-    - apt-show-versions
-    - clamav
-    - clamav-daemon
-    - lynis
-    - apparmor
-    - auditd
-    - sysstat
-    - python3-passlib
-    - rsyslog
-    - logrotate
-    - ufw
+    # Basic system tools
     - curl
-    - dnsutils
-    - docker.io
-    - docker-compose
-    - nginx
-    - postgresql-client
-    - redis-tools
-    - htop
-    - btop
-    - jq
-    - vim
-    - nano
-    - tree
-    - git
     - wget
+    - git
     - gnupg
     - ca-certificates
     - apt-transport-https
@@ -59,35 +22,70 @@ packages_install_methods:
     - tar
     - gzip
     - unzip
+    - zip
     - gawk
     - sed
     - findutils
     - coreutils
-    - ansible
-    - ansible-lint
-    - yamllint
+    - rsync
+    - tree
+    - jq
+    - vim
+    - nano
+    - htop
+    - btop
+    - net-tools
+    - nmap
+    - inetutils-traceroute
+    - dnsutils
+    - sysstat
+    # Python environment
     - python3
     - python3-pip
     - python3-dev
     - python3-venv
+    - python3-passlib
+    # Development and testing
     - python3-pytest
     - python3-tox
+    - ansible
+    - ansible-lint
+    - yamllint
+    # Container platform
     - docker.io
     - docker-compose
-    - playit
+    # Database clients
+    - postgresql-client
+    - redis-tools
+    # Security tools
+    - fail2ban
+    - unattended-upgrades
+    - debsums
+    - apt-show-versions
+    - clamav
+    - clamav-daemon
+    - lynis
+    - apparmor
+    - auditd
+    - ufw
+    - rsyslog
+    - logrotate
+    # AI/NLP tools
+    - mecab
+    - libmecab-dev
+    - mecab-ipadic-utf8
+    # Monitoring
+    - prometheus
+    - prometheus-node-exporter
+    - grafana
+    # Storage and backup
+    - rclone
+    # Web server
+    - nginx
     - certbot
     - python3-certbot-nginx
-    - libapache2-mod-security2
-    - nginx-module-headers-more
-    - postgresql
-    - postgresql-contrib
-    - mysql-server
-    - mysql-client
-    - redis-server
-    - redis-tools
-    - grafana
-    - prometheus-node-exporter
-    - node-exporter
+    # Misc utilities
+    - tor
 
   # APT repositories (with GPG keys)
   apt_repo:
@@ -310,7 +308,7 @@ packages_by_role:
       - htop
       - btop
       - jq
-      -   # Application-specific roles
+ # Application-specific roles
   minecraft:
     Debian:
       - docker.io
@@ -617,7 +615,7 @@ packages_base:
     - sysstat
     - lynis
     - jq
-    -     - unzip
+    - unzip
     - zip
     - tar
     - gawk
@@ -646,7 +644,7 @@ packages_profiles:
       - htop
       - btop
       - jq
-      -       - curl
+      - curl
       - wget
   server:
     Debian:
@@ -698,7 +696,7 @@ packages_profiles:
       - htop
       - btop
       - jq
-      -       - curl
+      - curl
       - wget
   monitoring:
     Debian:

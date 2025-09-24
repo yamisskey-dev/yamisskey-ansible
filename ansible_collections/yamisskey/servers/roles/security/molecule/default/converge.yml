@@ -9,7 +9,6 @@
       include_role:
         name: yamisskey.servers.packages
       vars:
-        packages_profile: development
 
   tasks:
     - name: Apply security role
@@ -23,8 +22,7 @@
         security_install_crowdsec: false
         
     - name: Verify security packages are available
-      shell: |
-        fi
+      shell: command -v docker
         which {{ item }}
       register: security_package_check
       failed_when: false

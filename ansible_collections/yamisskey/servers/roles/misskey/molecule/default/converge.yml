@@ -13,12 +13,9 @@
       include_role:
         name: yamisskey.servers.packages
       vars:
-        packages_profile: development
 
     - name: Verify Docker availability 
-      shell: |
-        fi
-        command -v docker
+      shell: command -v docker
       register: docker_check
       failed_when: docker_check.rc != 0
       changed_when: false
@@ -37,7 +34,6 @@
         append: true
 
     - name: Create test directories
-      file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
@@ -51,7 +47,6 @@
       vars:
         ansible_user: "root"
 
-    - name: Basic role verification
       debug:
         msg: "misskey role applied successfully"
 

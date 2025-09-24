@@ -9,7 +9,6 @@
       include_role:
         name: yamisskey.servers.packages
       vars:
-        packages_profile: development
 
   tasks:
     - name: Apply common role
@@ -18,15 +17,12 @@
       vars:
         test_mode: true
         
-    - name: Create test directory for verification
-      file:
         path: /tmp/test
         state: directory
         mode: '0755'
       
     - name: Verify packages are available
-      shell: |
-        fi
+      shell: command -v docker
         which {{ item }}
       register: package_check
       failed_when: false

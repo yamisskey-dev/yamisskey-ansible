@@ -29,9 +29,7 @@
         content: "{{ lookup('file', playbook_dir ~ '/../../../..' ~ '/files/midclt-mock.py') }}"
 
     - name: Verify Docker availability 
-      shell: |
-        fi
-        command -v docker
+      shell: command -v docker
       register: docker_check
       failed_when: docker_check.rc != 0
       changed_when: false

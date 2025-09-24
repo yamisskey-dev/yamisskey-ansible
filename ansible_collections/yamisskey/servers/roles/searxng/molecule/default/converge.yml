@@ -9,12 +9,9 @@
       include_role:
         name: yamisskey.servers.packages
       vars:
-        packages_profile: development
 
     - name: Verify Docker availability 
-      shell: |
-        fi
-        command -v docker
+      shell: command -v docker
       register: docker_check
       failed_when: docker_check.rc != 0
       changed_when: false
@@ -27,7 +24,6 @@
       failed_when: false
 
     - name: Create test directories
-      file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
@@ -37,7 +33,6 @@
     - name: Prepare mock SearXNG repository
       block:
         - name: Ensure repository structure exists
-          file:
             path: "{{ searxng_repo }}/{{ item }}"
             state: directory
             mode: '0755'
@@ -45,7 +40,6 @@
             - ""
             - "searxng"
 
-        - name: Create mock docker-compose file
           copy:
             dest: "{{ searxng_repo }}/docker-compose.yaml"
             mode: '0644'
@@ -55,7 +49,6 @@
                   image: nginx:alpine
                   command: ["/bin/sh", "-c", "sleep 365d"]
 
-        - name: Create mock settings file
           copy:
             dest: "{{ searxng_repo }}/searxng/settings.yml"
             mode: '0644'
@@ -95,7 +88,6 @@
       vars:
         ansible_user: "root"
 
-    - name: Basic role verification
       debug:
         msg: "searxng role applied successfully"
 

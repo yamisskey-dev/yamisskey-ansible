@@ -9,7 +9,6 @@
       include_role:
         name: yamisskey.servers.packages
       vars:
-        packages_profile: development
 
     - name: Verify Docker availability
       shell: command -v docker
@@ -25,7 +24,6 @@
       failed_when: false
 
     - name: Create test directories
-      file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
@@ -39,7 +37,6 @@
       vars:
         ansible_user: "root"
 
-    - name: Basic role verification
       debug:
         msg: "minecraft role applied successfully"
 
