@@ -3,16 +3,30 @@
 
 # Creation rules for different file types and paths
 creation_rules:
-  # Servers secrets - using Age for modern encryption
-  - path_regex: deploy/servers/group_vars/vault\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-
-  # Appliances secrets
-  - path_regex: deploy/appliances/group_vars/vault\.yml$
+  # Legacy vault files (group_vars)
+  - path_regex: deploy/.*/group_vars/vault\.yml$
     age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
 
   # Host-specific secrets
   - path_regex: deploy/.*/host_vars/.*\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+  # Role-specific secrets files (vars and defaults)
+  - path_regex: ansible_collections/.*/roles/.*/vars/secrets\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+  
+  - path_regex: ansible_collections/.*/roles/.*/defaults/secrets\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+  # Service-specific secrets files
+  - path_regex: .*/secrets\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+
+  # Any file with sensitive suffix
+  - path_regex: .*\.secret\.yml$
+    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+  
+  - path_regex: .*\.encrypted\.yml$
     age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
 
   # Development and testing secrets

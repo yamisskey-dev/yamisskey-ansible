@@ -1,6 +1,6 @@
 .PHONY: help install inventory run check list logs backup deploy test
 .PHONY: build publish sanity
-.PHONY: sops-install sops-edit sops-view sops-status sops-updatekeys
+.PHONY: secrets
 
 ## Configuration - Modern Collections Architecture
 COLLECTION_NS := yamisskey
@@ -28,7 +28,7 @@ COLLS := servers appliances
 VERSION ?= 1.0.0
 
 # Secret management
-SOPS_BIN ?= $(shell command -v sops 2>/dev/null)
+SOPS_BIN ?= $(shell [ -x "$(SHIM_DIR)/sops" ] && echo "$(SHIM_DIR)/sops" || command -v sops 2>/dev/null)
 SOPS_BIN := $(if $(SOPS_BIN),$(SOPS_BIN),sops)
 AGE_BIN ?= $(shell command -v age 2>/dev/null)
 AGE_BIN := $(if $(AGE_BIN),$(AGE_BIN),age)
@@ -119,8 +119,18 @@ install:
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible "$$@"'          > "$(SHIM_DIR)/ansible";           chmod +x "$(SHIM_DIR)/ansible"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-playbook "$$@"' > "$(SHIM_DIR)/ansible-playbook";   chmod +x "$(SHIM_DIR)/ansible-playbook"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-galaxy "$$@"'   > "$(SHIM_DIR)/ansible-galaxy";     chmod +x "$(SHIM_DIR)/ansible-galaxy"
-	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-vault "$$@"'    > "$(SHIM_DIR)/ansible-vault";      chmod +x "$(SHIM_DIR)/ansible-vault"
-	@echo "📦 Installing Galaxy collections to $(GALAXY_DIR) ..."
+	@echo "🔐 Installing SOPS for secrets management..."
+	@if ! command -v sops >/dev/null 2>&1; then \
+		echo "📥 Downloading SOPS v3.10.2..."; \
+		curl -LO https://github.com/getsops/sops/releases/download/v3.10.2/sops-v3.10.2.linux.amd64; \
+		echo "📦 Installing SOPS to $(SHIM_DIR)/sops..."; \
+		mv sops-v3.10.2.linux.amd64 "$(SHIM_DIR)/sops"; \
+		chmod +x "$(SHIM_DIR)/sops"; \
+		echo "✅ SOPS installed successfully"; \
+	else \
+		echo "✅ SOPS already installed: $$(sops --version)"; \
+	fi
+	@echo "� Installing Galaxy collections to $(GALAXY_DIR) ..."
 	@ANSIBLE_CONFIG="$(REPO_ROOT)/ansible.cfg" \
 	ANSIBLE_GALAXY_CACHE_DIR="$(REPO_ROOT)/.vendor/.cache" \
 	ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" \
@@ -132,6 +142,9 @@ install:
 	@ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible-galaxy collection list | grep yamisskey || true
 	@echo "🧪 Molecule runtime (uvx) check:"
 	@$(MOLECULE) --version && echo "✅ Molecule available via uvx" || echo "⚠️ Molecule check failed (ensure Docker is available)"
+	@echo "🔐 SOPS/Age verification:"
+	@if command -v sops >/dev/null 2>&1 || [ -x "$(SHIM_DIR)/sops" ]; then echo "✅ SOPS available"; else echo "❌ SOPS not found"; fi
+	@if command -v age >/dev/null 2>&1; then echo "✅ Age available: $$(age --version)"; else echo "❌ Age not found"; fi
 
 inventory:
 	@if [ "$(TYPE)" = "local" ]; then \
@@ -252,6 +265,112 @@ test:
 		for r in $$ROLES; do role_name=$$(basename "$$r"); echo "📋 Testing $$role_name..."; (cd "$$r" && $(MOLECULE) $$SUBCMD); if [ -n "$$EXTRA" ]; then (cd "$$r" && $(MOLECULE) $$EXTRA); fi; done; \
 	fi
 
+# === Secrets Management (SOPS) ===
+secrets:
+	@test -n "$(OPERATION)" || (echo "❌ Usage: make secrets OPERATION=<install|edit|view|status|updatekeys> [TARGET=servers|appliances] [FILE=path/to/file.yml]" && exit 1)
+	@OPERATION_EFF="$(OPERATION)"; TARGET_EFF="$(TARGET)"; FILE_EFF="$(FILE)"; [ -n "$$TARGET_EFF" ] || TARGET_EFF=servers; \
+	case "$$OPERATION_EFF" in \
+		install) \
+			echo "🔧 Installing SOPS and Age..."; \
+			if command -v sops >/dev/null 2>&1; then echo "✅ SOPS already installed: $$(sops --version)"; \
+			else echo "❌ SOPS not found. Install from: https://github.com/getsops/sops"; fi; \
+			if command -v age >/dev/null 2>&1; then echo "✅ Age already installed: $$(age --version)"; \
+			else echo "❌ Age not found. Install from: https://github.com/FiloSottile/age"; fi; \
+			if [ -f "$(AGE_KEY_FILE)" ]; then echo "✅ Age key file found: $(AGE_KEY_FILE)"; \
+			else echo "❌ Age key file missing: $(AGE_KEY_FILE)"; fi ;; \
+		edit) \
+			echo "✏️  Editing secrets..."; \
+			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
+			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
+			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
+			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
+			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
+			$(SOPS_BIN) "$$SOPS_FILE_PATH" ;; \
+		view) \
+			echo "👁️  Viewing secrets..."; \
+			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
+			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
+			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
+			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
+			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
+			$(SOPS_BIN) -d "$$SOPS_FILE_PATH" ;; \
+		status) \
+			echo "🔍 Validating secrets..."; \
+			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
+			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
+			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
+			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
+			echo "📄 File: $$SOPS_FILE_PATH"; \
+			if grep -q "sops:" "$$SOPS_FILE_PATH"; then echo "✅ SOPS metadata found"; \
+			else echo "❌ Not a SOPS-encrypted file"; exit 1; fi; \
+			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
+			if $(SOPS_BIN) -d "$$SOPS_FILE_PATH" >/dev/null 2>&1; then echo "✅ Decryption successful"; \
+			else echo "❌ Decryption failed"; exit 1; fi ;; \
+		updatekeys) \
+			echo "🔄 Updating encryption keys..."; \
+			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
+			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
+			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
+			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
+			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
+			$(SOPS_BIN) updatekeys "$$SOPS_FILE_PATH" ;; \
+		migrate) \
+			echo "🔄 Migrating legacy secrets to SOPS format..."; \
+			if [ -n "$$FILE_EFF" ]; then LEGACY_FILE="$$FILE_EFF"; \
+			else echo "❌ FILE parameter required for migrate operation. Use: make secrets OPERATION=migrate FILE=path/to/secrets.yml"; exit 1; fi; \
+			if [ ! -f "$$LEGACY_FILE" ]; then echo "❌ Legacy secrets file not found: $$LEGACY_FILE"; exit 1; fi; \
+			if grep -q "sops:" "$$LEGACY_FILE"; then echo "⚠️  File already appears to be SOPS-encrypted: $$LEGACY_FILE"; exit 1; fi; \
+			SOPS_FILE="$${LEGACY_FILE%.yml}.sops.yml"; \
+			if [ -f "$$SOPS_FILE" ]; then echo "❌ SOPS file already exists: $$SOPS_FILE"; exit 1; fi; \
+			echo "📄 Migrating: $$LEGACY_FILE → $$SOPS_FILE"; \
+			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
+			$(SOPS_BIN) -e "$$LEGACY_FILE" > "$$SOPS_FILE"; \
+			if [ $$? -eq 0 ]; then echo "✅ Migration successful: $$SOPS_FILE"; \
+			echo "⚠️  Please verify the migrated file and remove the legacy file manually: $$LEGACY_FILE"; \
+			else echo "❌ Migration failed"; exit 1; fi ;; \
+		migrate-role) \
+			echo "🔄 Migrating all secrets in role..."; \
+			if [ -z "$$ROLE" ]; then echo "❌ ROLE parameter required. Use: make secrets OPERATION=migrate-role ROLE=minio"; exit 1; fi; \
+			ROLES_DIR="$(COLLECTIONS_DIR)/$(TARGET)/roles"; \
+			ROLE_DIR="$$ROLES_DIR/$$ROLE"; \
+			if [ ! -d "$$ROLE_DIR" ]; then echo "❌ Role directory not found: $$ROLE_DIR"; exit 1; fi; \
+			SECRETS_FILES=$$(find "$$ROLE_DIR" -name "secrets.yml" -type f 2>/dev/null); \
+			if [ -z "$$SECRETS_FILES" ]; then echo "⚠️  No secrets.yml files found in role: $$ROLE"; exit 0; fi; \
+			echo "📋 Found secrets files in $$ROLE:"; echo "$$SECRETS_FILES" | sed 's/^/  - /'; \
+			for file in $$SECRETS_FILES; do \
+				if ! grep -q "sops:" "$$file"; then \
+					echo "🔄 Migrating: $$file"; \
+					$(MAKE) secrets OPERATION=migrate FILE="$$file" TARGET=$(TARGET); \
+				else echo "⏭️  Skipping already encrypted: $$file"; fi; \
+			done ;; \
+		migrate-all) \
+			echo "🔄 Migrating all legacy secrets in project..."; \
+			ROLES_DIR="$(COLLECTIONS_DIR)/$(TARGET)/roles"; \
+			SECRETS_FILES=$$(find "$$ROLES_DIR" -name "secrets.yml" -type f 2>/dev/null); \
+			if [ -z "$$SECRETS_FILES" ]; then echo "⚠️  No secrets.yml files found in $(TARGET)"; exit 0; fi; \
+			echo "📋 Found legacy secrets files:"; echo "$$SECRETS_FILES" | sed 's/^/  - /'; \
+			for file in $$SECRETS_FILES; do \
+				if ! grep -q "sops:" "$$file"; then \
+					echo "🔄 Migrating: $$file"; \
+					$(MAKE) secrets OPERATION=migrate FILE="$$file" TARGET=$(TARGET); \
+				else echo "⏭️  Skipping already encrypted: $$file"; fi; \
+			done ;; \
+		validate-migration) \
+			echo "🔍 Validating migration status..."; \
+			ROLES_DIR="$(COLLECTIONS_DIR)/$(TARGET)/roles"; \
+			LEGACY_FILES=$$(find "$$ROLES_DIR" -name "secrets.yml" -type f -exec grep -L "sops:" {} \; 2>/dev/null); \
+			SOPS_FILES=$$(find "$$ROLES_DIR" -name "*.sops.yml" -type f 2>/dev/null); \
+			echo "📊 Migration Status Report:"; \
+			if [ -n "$$LEGACY_FILES" ]; then echo "❌ Legacy files (need migration):"; echo "$$LEGACY_FILES" | sed 's/^/  - /'; else echo "✅ No legacy secrets.yml files found"; fi; \
+			if [ -n "$$SOPS_FILES" ]; then echo "✅ SOPS encrypted files:"; echo "$$SOPS_FILES" | sed 's/^/  - /'; else echo "⚠️  No SOPS files found"; fi ;; \
+		*) \
+			echo "❌ Invalid OPERATION. Use: install, edit, view, status, updatekeys, migrate, migrate-role, migrate-all, validate-migration"; exit 1 ;; \
+	esac
+
 help:
 	@echo "🚀 yamisskey-provision: Unified Ansible Infrastructure Management"
 	@echo "================================================================="
@@ -260,14 +379,22 @@ help:
 	@echo "  make install                         Install uv toolchain + Galaxy collections"
 	@echo "  make inventory [TARGET=servers]      Create inventory from template"
 	@echo ""
-	@echo "🔐 Secrets (SOPS)"
-	@echo "  make sops-install                    Check/install SOPS and Age"
-	@echo "  make sops-edit [TARGET=servers]      Edit encrypted secrets"
-	@echo "  make sops-view [TARGET=servers]      View decrypted secrets"
-	@echo "  make sops-status [TARGET=servers]    Validate secret configuration"
-	@echo "  make sops-updatekeys [TARGET=servers] Rotate encryption recipients"
+	@echo "🔐 Secrets Management (SOPS)"
+	@echo "  make secrets OPERATION=install       Check/install SOPS and Age"
+	@echo "  make secrets OPERATION=edit [TARGET=servers]     Edit encrypted secrets"
+	@echo "  make secrets OPERATION=view [TARGET=servers]     View decrypted secrets"
+	@echo "  make secrets OPERATION=status [TARGET=servers]   Validate secret configuration"
+	@echo "  make secrets OPERATION=updatekeys [TARGET=servers] Rotate encryption recipients"
+	@echo "  make secrets OPERATION=edit FILE=path/to/file.yml # Edit any YAML file with SOPS"
+	@echo "  make secrets OPERATION=view FILE=role/secrets.yml # View any encrypted YAML file"
 	@echo ""
-	@echo "🔍 Discovery & Status"
+	@echo "🔄 Migration Operations (Legacy secrets.yml → SOPS)"
+	@echo "  make secrets OPERATION=migrate FILE=path/to/secrets.yml    # Migrate single file"
+	@echo "  make secrets OPERATION=migrate-role ROLE=minio             # Migrate entire role"
+	@echo "  make secrets OPERATION=migrate-all                         # Migrate all legacy files"
+	@echo "  make secrets OPERATION=validate-migration                  # Check migration status"
+	@echo ""
+	@echo "� Discovery & Status"
 	@echo "  make status                          Health check (Tailscale, DNS, services)"
 	@echo "  make list [TARGET=servers]           List available playbooks"
 	@echo ""
@@ -285,8 +412,11 @@ help:
 	@echo "  make logs                            View recent log files"
 	@echo ""
 	@echo "⚙️ Common Usage Examples"
-	@echo "  make sops-edit TARGET=servers               # Edit server secrets"
-	@echo "  make sops-status TARGET=appliances          # Verify appliance secrets"
+	@echo "  make secrets OPERATION=edit TARGET=servers       # Edit server secrets"
+	@echo "  make secrets OPERATION=status TARGET=appliances  # Verify appliance secrets"
+	@echo "  make secrets OPERATION=edit FILE=ansible_collections/yamisskey/servers/roles/minio/vars/secrets.yml"
+	@echo "  make secrets OPERATION=validate-migration        # Check what needs migration"
+	@echo "  make secrets OPERATION=migrate-role ROLE=minio   # Migrate minio role secrets"
 	@echo "  make run PLAYBOOK=common LIMIT=caspar        # Run common setup on caspar"
 	@echo "  make secure PLAYBOOK=monitor LIMIT=caspar    # Secure monitor deployment"
 	@echo "  make check PLAYBOOK=security TARGET=servers  # Preview security changes"
@@ -294,6 +424,8 @@ help:
 	@echo ""
 	@echo "📋 Environment Variables"
 	@echo "  TARGET     servers|appliances (default: servers)"
+	@echo "  FILE       Path to specific YAML file for flexible SOPS management"
+	@echo "  ROLE       Role name for role-specific operations (e.g., minio, matrix)"
 	@echo "  LIMIT      Restrict to specific hosts (e.g., caspar,balthasar)"
 	@echo "  TAGS       Run specific tags only (e.g., install,config)"
 	@echo "  PLAYBOOK   Single playbook name"

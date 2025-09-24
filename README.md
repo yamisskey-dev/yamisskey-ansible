@@ -37,4 +37,5 @@ Clone the repository:
 ```bash
 git clone https://github.com/yamisskey-dev/yamisskey-provision.git
 cd yamisskey-provision
+make help
 ```
