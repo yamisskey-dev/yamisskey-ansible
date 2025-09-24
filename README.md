@@ -15,12 +15,6 @@ Modern Ansible infrastructure management with SOPS secrets management.
 - Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)
 - Python 3 available as `/usr/bin/python3`, `ansible` will be installed via `uv`.
 
-## 📦 What's Included
-
-- **Ansible 2.17+** with complete ecosystem
-- **SOPS + Age** for modern secrets management
-- **Testing tools** (molecule, ansible-lint)
-
 ## Quick Start
 
 ### 1. Prerequisites
