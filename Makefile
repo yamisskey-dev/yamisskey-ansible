@@ -137,7 +137,7 @@ inventory:
 	@if [ "$(TYPE)" = "local" ]; then \
 		echo "📋 Creating self-provisioning inventory for current host..."; \
 		INV_PATH="$(INV)"; \
-		TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example.local"; \
+		TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.local.template"; \
 		if [ ! -f "$$TEMPLATE_PATH" ]; then echo "❌ Local template not found: $$TEMPLATE_PATH"; exit 1; fi; \
 		if [ -f "$$INV_PATH" ]; then echo "⚠️  Inventory already exists. Creating backup..."; cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-local-$(TIMESTAMP).bak"; fi; \
 		CURRENT_HOST=$$(hostname); CURRENT_USER=$$(whoami); \
@@ -152,7 +152,7 @@ inventory:
 		echo "✅ Local inventory created at $$INV_PATH"; \
 	else \
 		echo "📋 Creating $(TARGET) inventory from template..."; \
-		INV_PATH="$(INV)"; TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.example"; \
+		INV_PATH="$(INV)"; TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.template"; \
 		if [ ! -f "$$TEMPLATE_PATH" ]; then echo "❌ Template not found: $$TEMPLATE_PATH"; exit 1; fi; \
 		if [ -f "$$INV_PATH" ]; then echo "⚠️  Inventory already exists. Creating backup..."; cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; fi; \
 		echo "📄 Processing template with Tailscale IPs..."; \
