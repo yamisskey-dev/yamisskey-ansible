@@ -3,122 +3,39 @@
   hosts: all
   become: true
   gather_facts: true
-  vars:
-    molecule_apt_env:
-      TMPDIR: /var/tmp
-  
+
   pre_tasks:
-    - name: Ensure test secrets exist on controller
-      when: inventory_hostname == (ansible_play_hosts_all | first)
-      block:
-        - name: Create parent directory for secrets
-          file:
-            path: "{{ synapse_secrets_file | dirname }}"
-            state: directory
-            mode: '0755'
-        - name: Write deterministic Synapse secrets
-          copy:
-            dest: "{{ synapse_secrets_file }}"
-            mode: '0600'
-            content: |
-              postgresql:
-                user: synapse
-                password: synapse-pass
-                database: synapse
-                host: localhost
-              registration_shared_secret: reg-secret
-              macaroon_secret_key: macaroon-secret
-              form_secret: form-secret
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
 
-    - name: Update apt cache safely
-      apt:
-        update_cache: true
-        cache_valid_time: 3600
-        allow_unauthenticated: true
-        force_apt_get: true
-      retries: 3
-      delay: 10
-      register: apt_update_result
-      failed_when: false
-      environment: "{{ molecule_apt_env }}"
+    - name: Install system packages via packages role
+      include_role:
+        name: yamisskey.servers.packages
+      vars:
+        packages_profile: development
 
-    - name: Create keyrings directory for Docker
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: '0755'
-      when: apt_update_result is not failed
+    - name: Verify Docker availability 
+      shell: |
+        fi
+        command -v docker
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      changed_when: false
 
-    - name: Add Docker GPG key
-      get_url:
-        url: "https://download.docker.com/linux/ubuntu/gpg"
-        dest: /etc/apt/keyrings/docker.asc
-        mode: '0644'
-      environment: "{{ molecule_apt_env }}"
-      when: apt_update_result is not failed
-
-    - name: Set Docker GPG key permissions
-      file:
-        path: /etc/apt/keyrings/docker.asc
-        mode: 'a+r'
-      when: apt_update_result is not failed
-
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-        filename: docker
-        state: present
-        update_cache: false
-      environment: "{{ molecule_apt_env }}"
-      when: apt_update_result is not failed
-
-    - name: Install Docker for testing
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
-        state: present
-        update_cache: true
-        allow_unauthenticated: true
-        force_apt_get: true
-      when: apt_update_result is not failed
-      environment: "{{ molecule_apt_env }}"
-      
-    - name: Install Docker for testing (fallback - use system packages)
-      apt:
-        name:
-          - docker.io
-          - docker-compose-plugin
-        state: present
-        update_cache: false
-        allow_unauthenticated: true
-      when: apt_update_result is failed
-      environment: "{{ molecule_apt_env }}"
-      
-    - name: Start Docker service
+    - name: Start Docker service (if available)
       service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
-    - name: Install required Python packages
-      pip:
-        name:
-          - docker
-          - docker-compose
-          - requests
-        state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -132,9 +49,8 @@
       include_role:
         name: yamisskey.servers.matrix
       vars:
-        # Test-specific configuration will be added here
         ansible_user: "root"
-        
+
     - name: Basic role verification
       debug:
         msg: "matrix role applied successfully"
@@ -144,7 +60,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

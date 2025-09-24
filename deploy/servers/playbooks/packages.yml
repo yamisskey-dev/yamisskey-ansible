@@ -1,0 +1,5 @@
+- name: Packages
+  hosts: all
+  become: true
+  roles:
+    - yamisskey.servers.packages

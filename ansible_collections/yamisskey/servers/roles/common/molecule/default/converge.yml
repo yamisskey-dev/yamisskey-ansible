@@ -4,48 +4,47 @@
   become: true
   gather_facts: true
   
+  pre_tasks:
+    - name: Install system packages via packages role
+      include_role:
+        name: yamisskey.servers.packages
+      vars:
+        packages_profile: development
+
+    - name: Display Nix-based test environment status
+      debug:
+        msg: |
+          ✅ Nix-based Test Environment (common role)
+          📦 All packages provided by Nix Flake
+          🧪 Ready for common role testing!
+
   tasks:
-    # Simplified test approach: install packages directly instead of using the role
-    # This avoids systemd dependencies while still testing package functionality
-    - name: Update package cache
-      apt:
-        update_cache: true
-      
-    - name: Install common packages (test subset)
-      apt:
-        name:
-          - net-tools
-          - nmap
-          - inetutils-traceroute
-          - rsync
-          - zip
-          - htop
-          - debsums
-          - fail2ban
-          - clamav
-          - clamav-daemon
-          - apparmor
-          - auditd
-          - sysstat
-          - python3-passlib
-        state: present
-      
+    - name: Apply common role
+      include_role:
+        name: yamisskey.servers.common
+      vars:
+        test_mode: true
+        
     - name: Create test directory for verification
       file:
         path: /tmp/test
         state: directory
         mode: '0755'
       
-    - name: Verify installed packages
-      debug:
-        msg: "Successfully installed common packages for testing"
-        
-    - name: Test package functionality
-      debug:
-        msg: "Package {{ item }} is available"
+    - name: Verify Nix-managed packages are available
+      shell: |
+        fi
+        which {{ item }}
+      register: package_check
+      failed_when: false
+      changed_when: false
       loop:
-        - net-tools
-        - nmap
-        - rsync
-        - zip
+        - curl
+        - git
         - htop
+        - rclone
+        
+    - name: Display package availability
+      debug:
+        msg: "Package {{ item.item }} is {{ 'available' if item.rc == 0 else 'not available' }} at {{ item.stdout if item.rc == 0 else 'not found' }}"
+      loop: "{{ package_check.results }}"

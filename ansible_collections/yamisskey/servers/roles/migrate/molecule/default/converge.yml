@@ -3,108 +3,39 @@
   hosts: all
   become: true
   gather_facts: true
-  
-  pre_tasks:
-    - name: Ensure MinIO secrets directory exists
-      when: inventory_hostname == (ansible_play_hosts_all | first)
-      file:
-        path: "{{ minio_secrets_file | dirname }}"
-        state: directory
-        mode: '0755'
 
-    - name: Ensure MinIO secrets exist for testing
-      when: inventory_hostname == (ansible_play_hosts_all | first)
-      copy:
-        dest: "{{ minio_secrets_file }}"
-        mode: '0600'
-        content: |
-          minio:
-            root_user: test-root
-            root_password: test-root-password
-            misskey_s3_access_key: test-access
-            misskey_s3_secret_key: test-secret
-            kms_master_key: test-kms
+  pre_tasks:
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
+
+    - name: Install system packages via packages role
+      include_role:
+        name: yamisskey.servers.packages
+      vars:
+        packages_profile: development
+
+    - name: Verify Docker availability 
+      shell: |
+        fi
+        command -v docker
+      register: docker_check
+      failed_when: docker_check.rc != 0
       changed_when: false
 
-    - name: Update apt cache safely
-      apt:
-        update_cache: true
-        cache_valid_time: 3600
-      retries: 3
-      delay: 10
-      register: apt_update_result
-      failed_when: false
-
-    - name: Create keyrings directory for Docker
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: '0755'
-      when: apt_update_result is not failed
-
-    - name: Add Docker GPG key
-      get_url:
-        url: "https://download.docker.com/linux/ubuntu/gpg"
-        dest: /etc/apt/keyrings/docker.asc
-        mode: '0644'
-      when: apt_update_result is not failed
-
-    - name: Set Docker GPG key permissions
-      file:
-        path: /etc/apt/keyrings/docker.asc
-        mode: 'a+r'
-      when: apt_update_result is not failed
-
-    - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
-        filename: docker
-        state: present
-      when: apt_update_result is not failed
-
-    - name: Install Docker for testing
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
-        state: present
-        update_cache: true
-      when: apt_update_result is not failed
-      
-    - name: Install Docker for testing (fallback - use system packages)
-      apt:
-        name:
-          - docker.io
-          - docker-compose-plugin
-        state: present
-        update_cache: false
-        allow_unauthenticated: true
-      when: apt_update_result is failed
-      
-    - name: Start Docker service
+    - name: Start Docker service (if available)
       service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
-    - name: Install required Python packages
-      pip:
-        name:
-          - docker
-          - docker-compose
-          - requests
-        state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -114,102 +45,12 @@
         - /tmp/test
 
   tasks:
-    - name: Create mock MinIO client for testing
-      shell: |
-        cat > /usr/local/bin/mc << 'EOF'
-        #!/bin/bash
-        case "$1" in
-          "alias")
-            echo "Added \`$3\` successfully."
-            exit 0
-            ;;
-          "ls")
-            if [[ "$2" == *"files"* ]]; then
-              echo "[2023-09-17 15:00:00 JST]     0B STANDARD test-file-1.jpg"
-              echo "[2023-09-17 15:00:00 JST]     0B STANDARD test-file-2.jpg"
-            elif [[ "$2" == *"assets"* ]]; then
-              echo "[2023-09-17 15:00:00 JST]     0B STANDARD test-asset-1.png"
-            else
-              echo ""
-            fi
-            exit 0
-            ;;
-          "du")
-            echo "100B"
-            exit 0
-            ;;
-          "mirror")
-            echo "Copied files successfully"
-            exit 0
-            ;;
-          "--version")
-            echo "mc version RELEASE.2023-01-01T00-00-00Z"
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-        EOF
-        chmod +x /usr/local/bin/mc
-      changed_when: false
-      
-    - name: Create mock source secrets on source host
-      copy:
-        content: |
-          minio:
-            root_user: "sourceuser"
-            root_password: "sourcepass"
-        dest: "/opt/minio/secrets.yml"
-        mode: '0600'
-      changed_when: false
-      
-    - name: Mock HTTP health checks for migrate role
-      shell: |
-        # Start a simple HTTP server for health checks
-        python3 -c "
-        import http.server
-        import socketserver
-        import threading
-        import time
-        
-        class HealthHandler(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                if '/minio/health/live' in self.path:
-                    self.send_response(200)
-                    self.end_headers()
-                    self.wfile.write(b'OK')
-                else:
-                    self.send_response(404)
-                    self.end_headers()
-        
-        def start_server(port):
-            with socketserver.TCPServer(('', port), HealthHandler) as httpd:
-                httpd.serve_forever()
-        
-        # Start health check servers in background
-        threading.Thread(target=start_server, args=(9000,), daemon=True).start()
-        time.sleep(1)  # Give servers time to start
-        " &
-        sleep 2
-      changed_when: false
-      
-    - name: Test migrate role with mocked dependencies
-      debug:
-        msg: "Testing migrate role with mocked MinIO dependencies"
+    - name: Apply migrate role
+      include_role:
+        name: yamisskey.servers.migrate
       vars:
-        # Test-specific configuration
-        source_minio_host: "migrate-test-instance"
-        source_minio_port: 9000
-        target_minio_port: 9000
-        migration_temp_dir: "/tmp/test-migration"
-        minio_bucket_name_for_misskey: "files"
-        minio_bucket_name_for_outline: "assets"
-        minio_secrets_file: "/opt/minio/secrets.yml"
         ansible_user: "root"
-        ansible_default_ipv4:
-          address: "127.0.0.1"
-        
+
     - name: Basic role verification
       debug:
         msg: "migrate role applied successfully"
@@ -219,7 +60,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

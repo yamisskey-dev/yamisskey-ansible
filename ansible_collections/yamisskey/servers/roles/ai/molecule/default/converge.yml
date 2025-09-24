@@ -3,32 +3,64 @@
   hosts: all
   become: true
   gather_facts: true
-  
-  tasks:
-    # Simplified test approach: basic functionality test without systemd dependencies
-    # This provides a baseline test that can be customized per role as needed
-    - name: Update package cache
-      apt:
-        update_cache: true
-      
-    - name: Install basic test packages
-      apt:
-        name:
-          - curl
-          - wget
-          - net-tools
-        state: present
-      
-    - name: Basic role verification
-      debug:
-        msg: "ai role test environment ready"
-        
-    - name: Create test directory for verify step
+
+  pre_tasks:
+    - name: Wait for instance SSH availability
+      wait_for_connection:
+        timeout: 30
+
+    - name: Install system packages via packages role
+      include_role:
+        name: yamisskey.servers.packages
+      vars:
+        packages_profile: development
+
+    - name: Verify Docker availability 
+      shell: |
+        fi
+        command -v docker
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      changed_when: false
+
+    - name: Start Docker service (if available)
+      service:
+        name: docker
+        state: started
+        enabled: true
+      failed_when: false
+
+    - name: Add test user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: Create test directories
       file:
-        path: /tmp/test
+        path: "{{ item }}"
         state: directory
         mode: '0755'
+      loop:
+        - /tmp/test
 
-    - name: Test basic functionality
+  tasks:
+    - name: Apply ai role
+      include_role:
+        name: yamisskey.servers.ai
+      vars:
+        ansible_user: "root"
+
+    - name: Basic role verification
       debug:
-        msg: "Role ai basic tests completed successfully"
+        msg: "ai role applied successfully"
+
+  post_tasks:
+    - name: Show test environment status
+      shell: echo "Test environment setup completed"
+      register: test_status
+      changed_when: false
+
+    - name: Display test status
+      debug:
+        var: test_status.stdout

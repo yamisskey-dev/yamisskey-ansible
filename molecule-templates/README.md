@@ -18,11 +18,9 @@
 direnv allow
 ```
 
-Molecule テストは既定で `geerlingguy/docker-ubuntu2204-ansible:latest` イメージを使用します。
-`prepare.yml` では apt で Nix インストーラの前提パッケージを導入し、公式インストーラ
-(`curl -L https://nixos.org/nix/install | sh -s -- --no-daemon`) を実行して Nix を追加します。
-Nix は必要なロールで選択的に利用しつつ、システムの Python や systemd は Ubuntu 標準の
-ものを使用する形に戻しています。
+**重要**: 全てのMoleculeテストは**Nix環境必須**です。テストは `nix develop` シェル内で実行してください。
+テストの実行前にflake.nixで定義されたロール固有パッケージセットが自動的にインストールされます。
+APTやその他のパッケージマネージャーは使用されません。
 
 ### 2. Moleculeテスト設定の追加
 
@@ -33,9 +31,12 @@ Nix は必要なロールで選択的に利用しつつ、システムの Python
 
 ## 🧪 テストの実行
 
-### 単一ロールのテスト
+**前提条件**: 全てのテストはNix環境で実行する必要があります。
 
 ```bash
+# Nix開発環境に入る
+nix develop
+
 # 基本的なテスト実行
 yamisskey-provision test common
 
@@ -96,17 +97,22 @@ role_name/
 
 ## 🔧 トラブルシューティング
 
-### Dockerの設定
+### Nix環境の設定
 
-MoleculeはデフォルトでDockerを使用します。以下を確認してください：
+全てのMoleculeテストはNix環境必須です：
 
 ```bash
-# Dockerが実行中であることを確認
-sudo systemctl status docker
+# Nix環境に入る
+nix develop
 
-# Dockerグループに追加（必要に応じて）
-sudo usermod -aG docker $USER
+# 必要なパッケージがインストールされていることを確認
+which docker ansible molecule
+
+# flake.nixの内容確認
+nix flake show
 ```
+
+Dockerは全てNix経由で提供されます。APTインストールは不要です。
 
 ### 権限の問題
 

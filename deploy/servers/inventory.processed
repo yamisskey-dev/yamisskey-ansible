@@ -14,25 +14,25 @@ game_servers
 
 # --- Social & Apps (Main Production) ---
 [social_servers]
-balthasar ansible_host=BALTHASAR_IP_PLACEHOLDER
+balthasar ansible_host=100.82.87.10
 
 # --- Security & Monitoring Hub ---
 [monitoring_servers]
-caspar ansible_host=CASPAR_IP_PLACEHOLDER
+caspar ansible_host=100.72.71.32
 
 # --- External Proxy Services ---
 [proxy_servers]
-linode-proxy ansible_host=LINODE_IP_PLACEHOLDER
+linode-proxy ansible_host=100.84.18.109
 
 # --- Storage Servers ---
 [storage_servers]
 # Note: joseph is managed via appliances inventory
 # リンク用に定義（実際の管理は deploy/appliances/inventory で行う）
-joseph ansible_host=JOSEPH_IP_PLACEHOLDER
+joseph ansible_host=100.71.230.1
 
 # --- Game & Special Services ---
 [game_servers]
-raspberrypi ansible_host=RASPBERRY_IP_PLACEHOLDER
+raspberrypi ansible_host=100.99.164.14
 
 # === Development/Testing ===
 [development]
@@ -42,14 +42,14 @@ raspberrypi ansible_host=RASPBERRY_IP_PLACEHOLDER
 
 # === Local Testing ===
 [local]
-HOSTNAME_PLACEHOLDER ansible_connection=local
+LAPTOP-GUCJRRM7 ansible_connection=local
 
 # ========================================
 # Global Variables - 必須設定項目
 # ========================================
 [all:vars]
 # --- Basic Connection Settings ---
-ansible_user=USER_PLACEHOLDER
+ansible_user=taka
 ansible_python_interpreter=/usr/bin/python3
 ansible_become=true
 ansible_become_method=sudo
@@ -57,13 +57,13 @@ ansible_become_user=root
 
 # --- Network Configuration (必須) ---
 # Internal network range
-internal_network=NETWORK_PLACEHOLDER
+internal_network=100.64.0.0/10
 external_interface=eth0
 internal_interface=eth1
 
 # --- Domain Configuration (必須) ---
-primary_domain=DOMAIN_PLACEHOLDER
-misskey_domain=DOMAIN_PLACEHOLDER
+primary_domain=yami.ski
+misskey_domain=yami.ski
 
 # --- Cloudflare Tunnel Configuration (必須) ---
 # これらの値は group_vars/vault.yml で暗号化してください

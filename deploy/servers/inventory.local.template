@@ -1,14 +1,14 @@
 # ========================================
 # Local Self-Provisioning Inventory Template
-# Generated: TIMESTAMP_PLACEHOLDER
-# Hostname: HOSTNAME_PLACEHOLDER
+# Generated: TIMESTAMP
+# Hostname: HOSTNAME
 # ========================================
 
 [local]
 localhost ansible_connection=local ansible_become=true
 
 # Host group based on detected/specified role
-[HOST_ROLE_PLACEHOLDER_servers]
+[HOST_ROLE_servers]
 localhost ansible_connection=local ansible_become=true
 
 # Compatibility groups for existing playbooks
@@ -26,25 +26,25 @@ localhost ansible_connection=local ansible_become=true
 
 # Global settings for local execution
 [all:vars]
-ansible_user=USER_PLACEHOLDER
+ansible_user=USER
 ansible_python_interpreter=/usr/bin/python3
 ansible_become=true
 ansible_become_method=sudo
 ansible_become_user=root
 
 # Network Configuration
-primary_domain=DOMAIN_PLACEHOLDER
-misskey_domain=DOMAIN_PLACEHOLDER
-internal_network=NETWORK_PLACEHOLDER
+primary_domain=DOMAIN
+misskey_domain=DOMAIN
+internal_network=NETWORK
 
 # Host-specific settings
-host_roles=HOST_ROLE_PLACEHOLDER_server
+host_roles=HOST_ROLE_server
 service_priority=primary
 security_level=high
 deploy_environment=production
 
 # Auto-detected system info
-host_hostname=HOSTNAME_PLACEHOLDER
-host_ip=HOST_IP_PLACEHOLDER
+host_hostname=HOSTNAME
+host_ip=HOST_IP
 auto_generated=true
-generated_date=GENERATED_DATE_PLACEHOLDER
+generated_date=GENERATED_DATE

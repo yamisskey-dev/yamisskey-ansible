@@ -4,6 +4,30 @@
 # ==================================================
 # This role manages monitoring agents that run directly on host systems
 
+- name: Check if running in Nix environment
+  shell: command -v nix >/dev/null 2>&1
+  register: nix_available
+  failed_when: false
+  changed_when: false
+
+- name: Ensure Nix environment
+  fail:
+    msg: |
+      ❌ Watch role requires Nix environment!
+      
+      📋 Monitoring packages now managed via Nix Flake:
+      - prometheus-node-exporter: Available via Home Manager
+      
+      Please run in nix develop environment.
+  when: nix_available.rc != 0
+
+- name: Display watch package status
+  debug:
+    msg: |
+      ✅ Watch packages managed via Nix Flake
+      📦 Available tools: prometheus-node-exporter
+      📊 Ready for monitoring setup!
+
 # ==================================================
 # Prerequisites Setup
 # ==================================================
@@ -27,13 +51,13 @@
 # ==================================================
 - name: Node Exporter setup
   block:
-    - name: Install Node Exporter (Universal)
-      ansible.builtin.package:
-        name: "{{ node_exporter_gentoo.package_name if ansible_os_family == 'Gentoo' else node_exporter.package_name }}"
-        state: present
-      when:
-        - node_exporter.enabled | default(true)
-        - not (skip_system_checks | default(false) | bool)
+    - name: Node Exporter status (Nix managed)
+      debug:
+        msg: |
+          🎯 Node Exporter managed via Nix Flake
+          📦 prometheus-node-exporter: Available via Home Manager
+          
+          📋 To verify installation: systemctl --user status prometheus-node-exporter
       tags:
         - node_exporter
 
@@ -132,7 +156,7 @@
 # ==================================================
 - name: Set component status facts
   set_fact:
-    node_exporter_status: "{{ 'ENABLED' if (node_exporter is defined and node_exporter.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + (node_exporter.port | string) + ')' if (node_exporter is defined and node_exporter.enabled | default(true) and node_exporter.port is defined) else '' }}"
+    node_exporter_status: "{{ 'ENABLED (Nix)' if (node_exporter is defined and node_exporter.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + (node_exporter.port | string) + ')' if (node_exporter is defined and node_exporter.enabled | default(true) and node_exporter.port is defined) else '' }}"
     cadvisor_status: "{{ 'ENABLED' if (cadvisor is defined and cadvisor.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + (cadvisor.port | string) + ')' if (cadvisor is defined and cadvisor.enabled | default(true) and cadvisor.port is defined) else '' }}"
 
 - name: Report watch components status

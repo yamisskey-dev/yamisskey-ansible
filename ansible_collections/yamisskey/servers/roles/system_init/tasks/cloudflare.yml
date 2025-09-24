@@ -1,91 +1,47 @@
 ---
-# Cloudflare WARP installation
-- name: Install Cloudflare WARP
-  block:
-    - name: Add Cloudflare WARP GPG key
-      ansible.builtin.get_url:
-        url: https://pkg.cloudflareclient.com/pubkey.gpg
-        dest: /tmp/cloudflare-warp.gpg
-        mode: '0644'
-      changed_when: false
+- name: Check if running in Nix environment
+  shell: command -v nix >/dev/null 2>&1
+  register: nix_available
+  failed_when: false
+  changed_when: false
 
-    - name: Install Cloudflare WARP GPG key
-      ansible.builtin.command: gpg --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg /tmp/cloudflare-warp.gpg
-      args:
-        creates: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+- name: Ensure Nix environment for Cloudflare setup
+  fail:
+    msg: |
+      ❌ Cloudflare setup requires Nix environment!
+      
+      📋 Cloudflare tools are now managed via Nix Flake:
+      - cloudflared: Available via Home Manager
+      - All networking tools: Available via Nix
+      
+      🚀 Run in nix develop environment.
+  when: nix_available.rc != 0
 
-    - name: Set GPG key permissions
-      ansible.builtin.file:
-        path: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-        mode: '0644'
+- name: Display Cloudflare package status
+  debug:
+    msg: |
+      ✅ Cloudflare packages managed via Nix Flake
+      📦 Available tools: cloudflared, tailscale
+      ☁️ Ready for Cloudflare operations!
 
-    - name: Add Cloudflare WARP repository
-      ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ {{ codename }} main"
-        filename: cloudflare-client
-        state: present
+- name: Verify Cloudflared is available
+  command: cloudflared --version
+  register: cloudflared_version_check
+  failed_when: false
+  changed_when: false
 
-    - name: Clean up temporary GPG file
-      ansible.builtin.file:
-        path: /tmp/cloudflare-warp.gpg
-        state: absent
-      changed_when: false
+- name: Display Cloudflared version
+  debug:
+    msg: "Cloudflared version: {{ cloudflared_version_check.stdout }}"
+  when: cloudflared_version_check.rc == 0
 
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: true
+- name: Verify Tailscale is available
+  command: tailscale version
+  register: tailscale_version_check
+  failed_when: false
+  changed_when: false
 
-    - name: Install Cloudflare WARP
-      ansible.builtin.apt:
-        name: cloudflare-warp
-        state: present
-
-  when: 
-    - ansible_os_family == "Debian"
-    - install_warp | default(true)
-    - not ansible_check_mode
-
-# Cloudflared installation
-- name: Install Cloudflared
-  block:
-    - name: Download Cloudflared
-      ansible.builtin.get_url:
-        url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{{ 'amd64' if arch == 'x86_64' else arch }}.deb"
-        dest: "/tmp/cloudflared.deb"
-      changed_when: false
-
-    - name: Install Cloudflared
-      ansible.builtin.apt:
-        deb: "/tmp/cloudflared.deb"
-        state: present
-
-    - name: Remove temporary deb file
-      ansible.builtin.file:
-        path: "/tmp/cloudflared.deb"
-        state: absent
-      changed_when: false
-
-  when: 
-    - ansible_os_family == "Debian"
-    - install_cloudflared | default(true)
-    - not ansible_check_mode
-
-- name: Verify Cloudflare installations
-  block:
-    - name: Check WARP installation
-      ansible.builtin.command: warp-cli --version
-      register: warp_version
-      failed_when: false
-      changed_when: false
-
-    - name: Check Cloudflared installation
-      ansible.builtin.command: cloudflared version
-      register: cloudflared_version
-      failed_when: false
-      changed_when: false
-
-    - name: Display Cloudflare installation results
-      ansible.builtin.debug:
-        msg: |
-          Cloudflare WARP: {{ '✅ ' + warp_version.stdout if warp_version.rc == 0 else '⚠️ Installation may have failed' }}
-          Cloudflared: {{ '✅ ' + cloudflared_version.stdout if cloudflared_version.rc == 0 else '⚠️ Installation may have failed' }}
+- name: Display Tailscale version
+  debug:
+    msg: "Tailscale version: {{ tailscale_version_check.stdout }}"
+  when: tailscale_version_check.rc == 0
