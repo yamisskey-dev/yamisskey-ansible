@@ -392,9 +392,7 @@
       ==============================================
 
       🚀 Basic migration (default: source→destination):
-      ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/migrate.yml \
-        -e "migrate_source=balthasar migrate_target=raspberrypi" \
-        --limit raspberrypi --ask-become-pass
+      make migrate
 
       🎯 Flexible host migration:
       ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/migrate.yml \

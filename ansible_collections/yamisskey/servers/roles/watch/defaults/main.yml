@@ -22,8 +22,8 @@ node_exporter:
   
 # Gentoo-specific package names
 node_exporter_gentoo:
-  package_name: app-metrics/node_exporter
-  service_name: node_exporter
+  package_name: prometheus-node_exporter
+  service_name: prometheus-node_exporter
 
 # ==================================================
 # cAdvisor Configuration
@@ -37,15 +37,10 @@ cadvisor:
   
 
 # ==================================================
-# Network Configuration for Monitor/Watch Coupling
+# Monitor Network Configuration
 # ==================================================
-# Each role manages its own network but can reference the other
 monitor_network:
   name: monitor
-  create: true
-
-watch_network:
-  name: watch
   create: true
 
 # ==================================================

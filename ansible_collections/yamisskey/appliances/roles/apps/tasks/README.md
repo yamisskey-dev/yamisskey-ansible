@@ -7,5 +7,5 @@
 
 使い方:
 - プレイブックからロールが呼び出されると、ここにあるタスクが実行されます。
-- 変更時は関連プレイブックで確認: `yamisskey-provision check migrate-minio-truenas TARGET=appliances`
+- 変更時は関連プレイブックで確認: `make check PLAYBOOK=migrate-minio-truenas TARGET=appliances`
 

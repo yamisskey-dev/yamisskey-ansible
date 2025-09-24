@@ -1,21 +1,46 @@
 ---
-- name: Display Docker package status
-  debug:
-    msg: |
-      ✅ Docker packages managed via system packages
-      📦 Available tools: docker, docker-compose
-      🐳 Ready for container operations!
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: not ansible_check_mode
 
-- name: Verify Docker is available
-  command: docker --version
-  register: docker_version_check
-  failed_when: false
-  changed_when: false
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: "https://download.docker.com/linux/{{ os_name }}/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+  when: not ansible_check_mode
 
-- name: Display Docker version
-  debug:
-    msg: "Docker version: {{ docker_version_check.stdout }}"
-  when: docker_version_check.rc == 0
+- name: Set Docker GPG key permissions
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.asc
+    mode: 'a+r'
+  when: not ansible_check_mode
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if arch == 'x86_64' else arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ os_name }} {{ codename }} stable"
+    filename: docker
+    state: present
+  when: not ansible_check_mode
+
+- name: Update apt cache for Docker
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Docker packages
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+  when: not ansible_check_mode
 
 - name: Add user to docker group
   ansible.builtin.user:

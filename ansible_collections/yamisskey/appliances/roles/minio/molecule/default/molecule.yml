@@ -7,31 +7,15 @@ platforms:
   - name: truenas-test
     image: geerlingguy/docker-ubuntu2204-ansible:latest
     pre_build_image: true
-    cgroupns_mode: host
     privileged: true
-    security_opts:
-      - seccomp=unconfined
     volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-      - /var/run/docker.sock:/var/run/docker.sock
-    tmpfs:
-      - /run
-      - /run/lock
-      - /tmp
-    command: /lib/systemd/systemd
-    environment:
-      container: docker
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
 provisioner:
   name: ansible
-  playbooks:
-    prepare: prepare.yml
   config_options:
     defaults:
       callbacks_enabled: timer,profile_tasks
   inventory:
-    group_vars:
-      all:
-        ansible_python_interpreter: /usr/bin/python3
     host_vars:
       truenas-test:
         truenas_pool_name: tank

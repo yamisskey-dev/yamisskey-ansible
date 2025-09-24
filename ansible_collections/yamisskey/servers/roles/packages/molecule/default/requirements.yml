@@ -1,7 +1,0 @@
----
-# Molecule test requirements for packages role
-collections:
-  - name: community.docker
-    version: ">=3.10.2"
-  - name: ansible.posix
-    version: ">=1.4.0"

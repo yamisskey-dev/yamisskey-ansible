@@ -6,6 +6,6 @@
 - 実行: プレイブックからロールを呼び出すと実行されます。
 
 確認/実行例:
-- `yamisskey-provision check ai`
-- `yamisskey-provision run ai`
+- `make check PLAYBOOK=ai`
+- `make run PLAYBOOK=ai`
 

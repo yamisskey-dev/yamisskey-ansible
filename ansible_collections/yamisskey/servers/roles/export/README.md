@@ -2,5 +2,5 @@
 
 エクスポート（バックアップ・データ出力）処理をまとめたロールです。
 
-- 呼び出し例: `yamisskey-provision run export`
+- 呼び出し例: `make run PLAYBOOK=export`
 

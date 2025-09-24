@@ -8,4 +8,4 @@
 - リポジトリ: `summaly_repo`, `summaly_dir`
 
 関連プレイブック:
-- `yamisskey-provision run misskey-proxy`
+- `make run PLAYBOOK=misskey-proxy`

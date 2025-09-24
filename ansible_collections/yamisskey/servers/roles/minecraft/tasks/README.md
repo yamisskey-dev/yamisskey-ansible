@@ -14,5 +14,5 @@
 - 任意の PlayIt.gg セットアップ補助（APT レポジトリ追加など）
 
 実行例:
-- 確認: `yamisskey-provision check minecraft`
-- 実行: `yamisskey-provision run minecraft`
+- 確認: `make check PLAYBOOK=minecraft`
+- 実行: `make run PLAYBOOK=minecraft`

@@ -20,23 +20,23 @@ MinIO用のCloudflare Tunnel設定を管理するAnsibleロールです。
 
 ```bash
 # Cloudflaredプレイブック実行
-yamisskey-provision run cloudflared
+make run PLAYBOOK=cloudflared
 
 # ドライラン（変更内容確認）
-yamisskey-provision check cloudflared
+make check PLAYBOOK=cloudflared
 
 # 特定のタグのみ実行
-yamisskey-provision run cloudflared TAGS=config
+make run PLAYBOOK=cloudflared TAGS=config
 ```
 
 ### 2. 手動セットアップ（プロジェクトREADME.md準拠）
 
 ```bash
 # Ansibleインストール
-yamisskey-provision --help
+make install
 
 # インベントリ作成
-yamisskey-provision inventory servers
+make inventory
 
 # ログインと認証
 cloudflared tunnel login
@@ -84,7 +84,7 @@ Internet → Cloudflare → Cloudflared → Nginx(8080) → MinIO(9000)
 
 - **MinIOロール**: MinIOサービスが動作中
 - **ModSecurity-Nginxロール**: Nginxプロキシが設定済み
-- **yamisskey-provision --help**: Cloudflaredバイナリインストール済み
+- **make install**: Cloudflaredバイナリインストール済み
 
 ## トラブルシューティング
 

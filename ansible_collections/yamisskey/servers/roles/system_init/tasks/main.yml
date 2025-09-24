@@ -10,14 +10,6 @@
   tags:
     - always
 
-- name: Display package management strategy
-  debug:
-    msg: |
-      🏗️ System Initialization Strategy:
-      📦 System package manager - installing via distribution packages
-  tags:
-    - always
-
 - name: Update apt package index
   ansible.builtin.apt:
     update_cache: true
@@ -25,15 +17,6 @@
   when:
     - ansible_os_family == "Debian"
     - not (test_mode | default(false))
-  tags:
-    - packages
-
-- name: Install system packages via packages role
-  include_role:
-    name: yamisskey.servers.packages
-  vars:
-    packages_profile: "server"
-  when: not (test_mode | default(false))
   tags:
     - packages
 
@@ -46,37 +29,52 @@
   tags:
     - always
 
-- name: Apply common role for additional configuration
+- name: Apply common role for necessary packages
   ansible.builtin.include_role:
     name: yamisskey.servers.common
-  when:
+  when: 
     - not (test_mode | default(false))
     - common_playbook_check.stat.exists
   tags:
     - packages
     - common
 
+- name: Install base packages if common playbook not available
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+      - git
+      - gnupg
+      - lsb-release
+      - software-properties-common
+      - apt-transport-https
+      - ca-certificates
+    state: present
+    update_cache: true
+  when: 
+    - not (test_mode | default(false))
+    - not common_playbook_check.stat.exists 
+    - ansible_os_family == "Debian"
+  tags:
+    - packages
+    - base
+
 - name: Install Docker
   ansible.builtin.include_tasks: docker.yml
-  when:
-    - install_docker | default(true)
-    - not (test_mode | default(false))
+  when: install_docker | default(true)
   tags:
     - docker
 
 - name: Install Tailscale
   ansible.builtin.include_tasks: tailscale.yml
-  when:
-    - install_tailscale | default(true)
-    - not (test_mode | default(false))
+  when: install_tailscale | default(true)
   tags:
     - tailscale
 
 - name: Install Cloudflare products
   ansible.builtin.include_tasks: cloudflare.yml
-  when:
-    - install_cloudflare | default(true)
-    - not (test_mode | default(false))
+  when: install_cloudflare | default(true)
   tags:
     - cloudflare
 

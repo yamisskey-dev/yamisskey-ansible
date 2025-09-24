@@ -1,10 +1,23 @@
 ---
-- name: Display security package status
-  ansible.builtin.debug:
-    msg: |
-      ✅ Security packages managed via system packages
-      📦 Available tools: fail2ban, ufw, dnscrypt-proxy, clamav
-      🔒 Ready for security configuration!
+- name: Ensure required packages are installed
+  ansible.builtin.apt:
+    name: "{{ item }}"
+  loop:
+    - rsyslog
+    - logrotate
+    - ufw
+    - fail2ban
+    - lynis
+    - curl
+    - dnsutils
+  become: true
+
+- name: Ensure tailscale is installed (optional)
+  ansible.builtin.apt:
+    name: tailscale
+    state: present
+  when: install_tailscale | default(false)
+  become: true
 
 - name: Check if tailscale CLI is available
   ansible.builtin.command: command -v tailscale
@@ -281,12 +294,29 @@
     msg: '{{ result.stdout | default("fail2ban not available in test environment") }}'
   when: security_manage_fail2ban_service | default(true)
 
-- name: CrowdSec Configuration
+- name: Install and Configure CrowdSec with Firewall Bouncer
   become: true
   when:
     - security_install_crowdsec | default(true)
     - not (ansible_virtualization_type is defined and ansible_virtualization_type == "docker")
   block:
+    - name: Add CrowdSec repository
+      ansible.builtin.shell: |
+        curl -s https://install.crowdsec.net | sudo sh
+      register: crowdsec_repo_install
+      changed_when: true
+
+    - name: Install CrowdSec package
+      ansible.builtin.apt:
+        name: crowdsec
+        state: present
+        update_cache: yes
+      register: crowdsec_install
+
+    - name: Install firewall bouncer
+      ansible.builtin.apt:
+        name: crowdsec-firewall-bouncer
+
     - name: Create required directories
       ansible.builtin.file:
         path: "{{ item }}"
@@ -443,10 +473,6 @@
 
 - name: Setup dnscrypt-proxy (System Install)
   block:
-    - name: Skip dnscrypt-proxy installation
-      debug:
-        msg: |
-          🎯 Installing dnscrypt-proxy via system packages
     - name: Install dnscrypt-proxy
       ansible.builtin.package:
         name: dnscrypt-proxy

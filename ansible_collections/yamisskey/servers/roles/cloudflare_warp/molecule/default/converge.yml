@@ -10,6 +10,7 @@
         timeout: 30
         
     - name: Ensure Ansible temporary directory exists
+      file:
         path: /tmp/.ansible-tmp
         state: directory
         mode: '1777'
@@ -34,6 +35,7 @@
           register: mock_warp_cli_stat
           
         - name: Create mock warp-cli command
+          file:
             path: /usr/local/bin/warp-cli
             state: touch
             mode: '0755'
@@ -96,10 +98,13 @@
             dest: /usr/local/bin/warp-cli
             mode: '0755'
             
+        - name: Check if mock systemd service file exists
           stat:
             path: /etc/systemd/system/warp-svc.service
           register: mock_systemd_service_stat
           
+        - name: Create mock systemd service file
+          file:
             path: /etc/systemd/system/warp-svc.service
             state: touch
             mode: '0644'
@@ -139,6 +144,7 @@
     - name: Include cloudflare-warp tasks
       include_tasks: ../../tasks/main.yml
       vars:
+        # Test-specific configuration will be added here
         ansible_user: "root"
         # Cloudflare WARP role variables
         warp_service_name: "warp-svc.service"
@@ -152,6 +158,7 @@
         # Test environment flags
         test_mode: true
         
+    - name: Basic role verification
       debug:
         msg: "cloudflare-warp role applied successfully"
 

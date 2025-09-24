@@ -1,61 +1,256 @@
 ---
-- name: Converge modsecurity_nginx role
+- name: Converge ModSecurity-nginx role
   hosts: all
   become: true
   gather_facts: true
-
+  vars:
+    molecule_apt_env:
+      TMPDIR: /var/tmp
+  
   pre_tasks:
-    - name: Wait for instance SSH availability
-      wait_for_connection:
-        timeout: 30
+    - name: Update apt cache safely
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        allow_unauthenticated: true
+        force_apt_get: true
+      retries: 3
+      delay: 10
+      register: apt_update_result
+      failed_when: false
+      environment: "{{ molecule_apt_env }}"
 
-    - name: Install system packages via packages role
-      include_role:
-        name: yamisskey.servers.packages
-      vars:
+    - name: Create keyrings directory for Docker
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: apt_update_result is not failed
 
-    - name: Verify Docker availability 
-      shell: command -v docker
-      register: docker_check
-      failed_when: docker_check.rc != 0
-      changed_when: false
+    - name: Add Docker GPG key
+      get_url:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+      environment: "{{ molecule_apt_env }}"
+      when: apt_update_result is not failed
 
-    - name: Start Docker service (if available)
+    - name: Set Docker GPG key permissions
+      file:
+        path: /etc/apt/keyrings/docker.asc
+        mode: 'a+r'
+      when: apt_update_result is not failed
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
+        filename: docker
+        state: present
+        update_cache: false
+      environment: "{{ molecule_apt_env }}"
+      when: apt_update_result is not failed
+
+    - name: Install Docker for testing
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+        allow_unauthenticated: true
+        force_apt_get: true
+      when: apt_update_result is not failed
+      environment: "{{ molecule_apt_env }}"
+      
+    - name: Install Docker for testing (fallback - use system packages)
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: false
+        allow_unauthenticated: true
+      when: apt_update_result is failed
+      environment: "{{ molecule_apt_env }}"
+      
+    - name: Start Docker service
       service:
         name: docker
         state: started
         enabled: true
       failed_when: false
+        
+    - name: Wait for Docker daemon socket
+      wait_for:
+        path: /var/run/docker.sock
+        state: present
+        delay: 2
+        sleep: 2
+        timeout: 120
+      failed_when: false
+      register: docker_socket_wait
+      
+    - name: Alternative Docker socket check
+      stat:
+        path: /var/run/docker.sock
+      register: docker_socket_stat
+      when: docker_socket_wait is failed
+      
+    - name: Force Docker restart if socket not available
+      service:
+        name: docker
+        state: restarted
+      when:
+        - docker_socket_wait is failed
+        - not docker_socket_stat.stat.exists
+      failed_when: false
+        
+    - name: Verify Docker is running
+      command: docker version
+      register: docker_version
+      failed_when: false
+      changed_when: false
+      
+    - name: Display Docker version for debugging
+      debug:
+        var: docker_version.stdout_lines
+      when: docker_version.rc == 0
 
     - name: Add test user to docker group
       user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
+        
+    - name: Install required Python packages
+      pip:
+        name:
+          - docker
+          - docker-compose
+          - requests
+          - jq
+        state: present
+        
+    - name: Create simple nginx config for backend
+      copy:
+        dest: "/tmp/test-nginx.conf"
+        content: |
+          events { worker_connections 1024; }
+          http {
+            server {
+              listen 80;
+              location / {
+                return 200 '{"status": "ok", "service": "test-backend"}';
+                add_header Content-Type application/json;
+              }
+              location /api/meta {
+                return 200 '{"name": "test-misskey", "version": "test"}';
+                add_header Content-Type application/json;
+              }
+              location /streaming {
+                return 200 'WebSocket endpoint';
+              }
+            }
+          }
+        mode: '0644'
 
-    - name: Create test directories
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-      loop:
-        - /tmp/test
+    - name: Create Docker network for test
+      community.docker.docker_network:
+        name: molecule-test-network
+      failed_when: false
+
+    - name: Ensure test-backend container is running
+      community.docker.docker_container:
+        name: test-backend
+        image: nginx:alpine
+        state: started
+        restart_policy: always
+        networks:
+          - name: molecule-test-network
+        published_ports:
+          - "8888:80"
+        volumes:
+          - /tmp/test-nginx.conf:/etc/nginx/nginx.conf:ro
+      failed_when: false
+      when: docker_version.rc == 0 and docker_socket_stat.stat.exists | default(false)
 
   tasks:
-    - name: Apply modsecurity_nginx role
+    - name: Apply ModSecurity-nginx role
       include_role:
         name: yamisskey.servers.modsecurity_nginx
       vars:
-        ansible_user: "root"
-
+        # Test-specific configuration
+        modsecurity_upstream_backend: "test-backend:80"
+        modsecurity_nginx_name: "modsecurity-nginx-test"
+        modsecurity_nginx_ports:
+          - "8080:80"
+          - "8443:443"
+        
+        # Security settings for testing
+        modsecurity_rule_engine: "DetectionOnly"  # Safe for testing
+        modsecurity_paranoia_level: 1
+        modsecurity_anomaly_inbound: 5
+        modsecurity_anomaly_outbound: 4
+        
+        # Enable key features to test
+        modsecurity_rate_limit_enabled: true
+        modsecurity_rate_limit_requests_per_minute: 60
+        modsecurity_rate_limit_requests_per_second: 5
+        modsecurity_hsts_enabled: true
+        
+        # Application exclusions
+        modsecurity_misskey_exclusions_enabled: true
+        modsecurity_api_exclusions_enabled: true
+        
+        # Test blocked user agents
+        modsecurity_blocked_user_agents:
+          - "sqlmap"
+          - "nikto"
+          - "test-scanner"
+        
+        # Mock domains for testing
+        domain: "test.example.com"
+        synapse_server_name: "matrix.test.example.com"
+        element_server_name: "chat.test.example.com"
+        ctfd_server_name: "ctf.test.example.com"
+        
+    - name: Wait for ModSecurity-nginx container to be ready
+      wait_for:
+        port: 8080
+        host: localhost
+        timeout: 60
+        delay: 5
+      when: ansible_env.MOLECULE_SCENARIO_NAME is undefined
+      failed_when: false
+        
+    - name: Test basic connectivity to ensure setup is working
+      uri:
+        url: "http://localhost:8080/"
+        method: GET
+        return_content: true
+      register: initial_test
+      when: ansible_env.MOLECULE_SCENARIO_NAME is undefined
+      failed_when: false
+      retries: 3
+      delay: 5
+      until: initial_test.status == 200
+      
+    - name: Display initial test result
       debug:
-        msg: "modsecurity_nginx role applied successfully"
-
+        var: initial_test.json
+      when: initial_test.json is defined
+      
   post_tasks:
-    - name: Show test environment status
-      shell: echo "Test environment setup completed"
-      register: test_status
+    - name: Show container logs if verification fails
+      command: docker logs {{ modsecurity_nginx_name }}
+      register: container_logs
+      failed_when: false
       changed_when: false
-
-    - name: Display test status
+      
+    - name: Display container logs for debugging
       debug:
-        var: test_status.stdout
+        var: container_logs.stdout_lines
+      when: container_logs.rc == 0

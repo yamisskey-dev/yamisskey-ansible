@@ -1,21 +1,13 @@
 ---
-- name: Install system packages via packages role
-  include_role:
-    name: yamisskey.servers.packages
-  vars:
-    packages_profile: "server"
+- name: Update and upgrade apt packages
+  apt:
+    update_cache: true
+    upgrade: 'dist'
   tags:
-    - always
+    - update
 
-- name: Display package management strategy
-  debug:
-    msg: |
-      ✅ System Package Management via Ansible
-      📦 All packages managed via ansible.builtin.package
-      
-      📋 Common role packages provided by system packages:
-      - prometheus, rclone, apparmor, auditd, tor, go
-      
-      🚀 Ready for infrastructure automation!
+- name: Install essential packages
+  apt:
+    name: '{{ packages }}'
   tags:
-    - always
+    - packages
