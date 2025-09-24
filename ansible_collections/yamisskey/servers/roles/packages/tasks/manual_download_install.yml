@@ -1,40 +1,8 @@
 ---
-- name: Check if manual download packages are needed
-  ansible.builtin.set_fact:
-    needed_downloads: "{{ packages_install_methods.manual_download | dict2items | list }}"
-  when: packages_install_methods.manual_download is defined
-
-- name: Filter downloads with packages in selection
-  ansible.builtin.set_fact:
-    needed_downloads: "{{ needed_downloads | default([]) | selectattr('key', 'in', packages_selected) | list }}"
-  when: needed_downloads is defined
-
-- name: Check if {{ item.key }} is already installed
-  ansible.builtin.command: "which {{ item.key }}"
-  register: manual_check
-  failed_when: false
-  changed_when: false
-  loop: "{{ needed_downloads }}"
-  when: needed_downloads | length > 0
-
-- name: Download {{ item.key }}
-  ansible.builtin.get_url:
-    url: "{{ item.value.download_url }}"
-    dest: "{{ item.value.install_path }}"
-    mode: "{{ item.value.mode }}"
-    owner: "{{ item.value.owner }}"
-    group: "{{ item.value.group }}"
-  become: true
+- name: Process manual downloads
+  ansible.builtin.include_tasks: manual_download_process.yml
+  loop: "{{ packages_install_methods.manual_download | dict2items | list }}"
   when: 
-    - needed_downloads | length > 0
-    - item.item.manual_check.rc != 0
-  loop: "{{ needed_downloads }}"
-
-- name: Verify {{ item.key }} installation
-  ansible.builtin.command: "{{ item.value.version_check }}"
-  register: manual_verify
-  changed_when: false
-  when: 
-    - needed_downloads | length > 0
-    - item.item.manual_check.rc != 0
-  loop: "{{ needed_downloads }}"
+    - packages_install_methods.manual_download is defined
+    - packages_selected is defined
+    - item.key in packages_selected

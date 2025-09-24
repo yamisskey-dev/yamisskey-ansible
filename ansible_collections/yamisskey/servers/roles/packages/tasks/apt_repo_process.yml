@@ -1,0 +1,20 @@
+---
+- name: Add GPG key for {{ item.key }}
+  ansible.builtin.get_url:
+    url: "{{ item.value.gpg_key_url }}"
+    dest: "{{ item.value.gpg_key_file }}"
+    mode: '0644'
+  become: true
+
+- name: Add APT repository for {{ item.key }}
+  ansible.builtin.apt_repository:
+    repo: "{{ item.value.repo }}"
+    filename: "{{ item.value.filename }}"
+    update_cache: true
+  become: true
+
+- name: Install packages from {{ item.key }} repository
+  ansible.builtin.apt:
+    name: "{{ item.value.packages }}"
+    state: present
+  become: true

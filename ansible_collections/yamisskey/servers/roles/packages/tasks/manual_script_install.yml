@@ -1,48 +1,8 @@
 ---
-- name: Check if manual script packages are needed
-  ansible.builtin.set_fact:
-    needed_scripts: "{{ packages_install_methods.manual_script | dict2items | list }}"
-  when: packages_install_methods.manual_script is defined
-
-- name: Filter scripts with packages in selection
-  ansible.builtin.set_fact:
-    needed_scripts: "{{ needed_scripts | default([]) | selectattr('key', 'in', packages_selected) | list }}"
-  when: needed_scripts is defined
-
-- name: Check if {{ item.key }} is already installed
-  ansible.builtin.stat:
-    path: "{{ item.value.check_path }}"
-  register: script_check
-  loop: "{{ needed_scripts }}"
-  when: needed_scripts | length > 0
-
-- name: Clone repository for {{ item.key }}
-  ansible.builtin.git:
-    repo: "{{ item.value.repo }}"
-    dest: "{{ item.value.dest }}"
-    depth: 1
-    version: master
+- name: Process manual scripts
+  ansible.builtin.include_tasks: manual_script_process.yml
+  loop: "{{ packages_install_methods.manual_script | dict2items | list }}"
   when: 
-    - needed_scripts | length > 0
-    - not item.item.script_check.stat.exists
-  loop: "{{ needed_scripts }}"
-
-- name: Run installation script for {{ item.key }}
-  ansible.builtin.shell: "{{ item.value.script }}"
-  args:
-    chdir: "{{ item.value.dest }}"
-    executable: /bin/bash
-  become: true
-  when: 
-    - needed_scripts | length > 0
-    - not item.item.script_check.stat.exists
-  loop: "{{ needed_scripts }}"
-
-- name: Clean up {{ item.key }} repository
-  ansible.builtin.file:
-    path: "{{ item.value.dest }}"
-    state: absent
-  when: 
-    - needed_scripts | length > 0
-    - not item.item.script_check.stat.exists
-  loop: "{{ needed_scripts }}"
+    - packages_install_methods.manual_script is defined
+    - packages_selected is defined
+    - item.key in packages_selected
