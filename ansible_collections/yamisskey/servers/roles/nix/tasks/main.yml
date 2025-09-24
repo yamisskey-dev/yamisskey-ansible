@@ -1,16 +1,56 @@
 ---
+- name: Define Nix user environment
+  become: false
+  ansible.builtin.set_fact:
+    nix_user_temp_dir: "{{ ansible_user_dir }}/.cache/nix-installer"
+    nix_user_environment:
+      HOME: "{{ ansible_user_dir }}"
+      USER: "{{ ansible_user | default(ansible_env.USER) }}"
+      PATH: "{{ ansible_user_dir }}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:{{ ansible_env.PATH }}"
+      TMPDIR: "{{ ansible_user_dir }}/.cache/nix-installer"
+      TMP: "{{ ansible_user_dir }}/.cache/nix-installer"
+      TEMP: "{{ ansible_user_dir }}/.cache/nix-installer"
+    nix_install_requested_mode: "{{ nix_install_mode | default('auto') }}"
+    nix_install_run_user: "{{ ansible_user | default(ansible_env.USER) }}"
+
+- name: Ensure Nix installer temp directory exists
+  become: false
+  ansible.builtin.file:
+    path: "{{ nix_user_temp_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Determine Nix install mode
+  become: false
+  ansible.builtin.set_fact:
+    nix_install_effective_mode: "{{
+      nix_install_requested_mode
+      if nix_install_requested_mode != 'auto'
+      else ('daemon' if nix_install_run_user == 'root' else 'no-daemon')
+    }}"
+
+- name: Display Nix installer mode
+  ansible.builtin.debug:
+    msg: "Nix installer mode resolved to: {{ nix_install_effective_mode }}"
+
 - name: Check if Nix is already installed
   become: false
-  ansible.builtin.command: nix --version
-  register: nix_version_check
+  ansible.builtin.shell: |-
+    if command -v nix >/dev/null 2>&1; then
+      echo "installed"
+    else
+      echo "not_installed"
+    fi
+  environment: "{{ nix_user_environment }}"
+  register: nix_check
   changed_when: false
-  failed_when: false
 
-- name: Record Nix installation status
-  ansible.builtin.set_fact:
-    nix_already_installed: "{{ nix_version_check.rc == 0 }}"
+- name: Display Nix installation status
+  ansible.builtin.debug:
+    msg: "Nix installation status: {{ nix_check.stdout }}"
 
-- name: Install Nix prerequisites on Debian-based systems
+- name: Install prerequisites on Debian/Ubuntu
+  become: true
   ansible.builtin.apt:
     update_cache: true
     name:
@@ -20,60 +60,81 @@
     state: present
   when:
     - ansible_os_family == 'Debian'
-    - not nix_already_installed
-  become: true
+    - nix_check.stdout == 'not_installed'
 
-- name: Install Nix prerequisites on RedHat-based systems
-  ansible.builtin.yum:
-    name:
-      - curl
-      - ca-certificates
-      - xz
-    state: present
+- name: Install prerequisites on Gentoo
+  become: true
+  ansible.builtin.shell: |-
+    emerge --sync --quiet
+    emerge --ask=n net-misc/curl app-misc/ca-certificates app-arch/xz-utils
   when:
-    - ansible_os_family == 'RedHat'
-    - not nix_already_installed
-  become: true
+    - ansible_pkg_mgr == 'portage'
+    - nix_check.stdout == 'not_installed'
 
-- name: Decide Nix installer mode
-  ansible.builtin.set_fact:
-    nix_install_effective_mode: >-
-      {{
-        (nix_install_mode | default('auto')) != 'auto'
-        | ternary(
-            nix_install_mode,
-            (ansible_user_id == 'root') | ternary('daemon', 'no-daemon')
-          )
-      }}
-
-- name: Install Nix
-  ansible.builtin.shell: |
-    set -eu
+- name: Download and install Nix ({{ nix_install_effective_mode }} mode)
+  become: false
+  ansible.builtin.shell: |-
     curl -L --fail https://nixos.org/nix/install | sh -s -- --{{ nix_install_effective_mode }} --yes
-  args:
-    executable: /bin/sh
-  when: not nix_already_installed
-  register: nix_install_result
+  environment: "{{ nix_user_environment }}"
+  when: nix_check.stdout == 'not_installed'
+  register: nix_install
 
-- name: Ensure Nix profile is sourced for the remote user
+- name: Source Nix profile in bashrc
+  become: false
   ansible.builtin.lineinfile:
     path: "{{ ansible_user_dir }}/.bashrc"
     line: '. {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh'
     state: present
     create: true
+  when: nix_check.stdout == 'not_installed'
 
 - name: Verify Nix installation
-  ansible.builtin.shell: |
-    set -eu
-    if [ -f "{{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh" ]; then
-      . "{{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh"
+  become: false
+  ansible.builtin.shell: |-
+    found_script=0
+    for script in \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix.sh \
+      {{ ansible_user_dir }}/.nix-profile/etc/profile.d/nix-daemon.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix.sh \
+      /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+      /etc/profile.d/nix.sh; do
+      if [ -f "$script" ]; then
+        . "$script"
+        found_script=1
+        break
+      fi
+    done
+    if ! command -v nix >/dev/null 2>&1; then
+      echo "nix command not available after sourcing known profile scripts"
+      exit 1
     fi
     nix --version
-  args:
-    executable: /bin/sh
-  register: nix_verify
+  environment: "{{ nix_user_environment }}"
+  register: nix_version
   changed_when: false
+  failed_when: false
 
 - name: Display Nix version
   ansible.builtin.debug:
-    msg: "Nix version: {{ nix_verify.stdout | default('Unavailable') }}"
+    msg: "Nix version: {{ nix_version.stdout | default('Not installed or not accessible') }}"
+
+- name: Check Nix CLI prerequisites for Home Manager
+  become: false
+  ansible.builtin.shell: |-
+    missing=""
+    for cli in nix-channel nix-env nix-shell; do
+      if ! command -v "$cli" >/dev/null 2>&1; then
+        if [ -z "$missing" ]; then
+          missing="$cli"
+        else
+          missing="$missing $cli"
+        fi
+      fi
+    done
+    if [ -n "$missing" ]; then
+      echo "Missing Nix CLI tools: $missing"
+      exit 1
+    fi
+  environment: "{{ nix_user_environment }}"
+  register: nix_cli_prereq
+  changed_when: false

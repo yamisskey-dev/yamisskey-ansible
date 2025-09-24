@@ -5,9 +5,8 @@ Modern Ansible infrastructure management with SOPS secrets management and Nix-ba
 ## 🚀 Quick Start
 
 ### Prerequisites
-- [Nix](https://nixos.org/download.html) with flakes enabled
+- [Make](https://www.gnu.org/software/make/)
 - [direnv](https://direnv.net/)
-- [envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html)
 
 ### System Requirements
 - Linux distribution providing a writable `systemd` (e.g. Ubuntu 22.04 LTS)

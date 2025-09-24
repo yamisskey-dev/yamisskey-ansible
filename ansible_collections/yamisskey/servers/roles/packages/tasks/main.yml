@@ -1,0 +1,41 @@
+---
+- name: Determine package profile
+  ansible.builtin.set_fact:
+    packages_profile_effective: >-
+      {{
+        packages_profile
+        | default(nix_package_profile, true)
+        | default(nix_home_manager_config, true)
+        | default('server', true)
+      }}
+
+- name: Initialize package selection
+  ansible.builtin.set_fact:
+    packages_selected: "{{ (packages_categories.base[ansible_os_family] | default([])) | list }}"
+
+- name: Merge category packages
+  ansible.builtin.set_fact:
+    packages_selected: "{{ packages_selected | union(packages_categories[item.category][ansible_os_family] | default([])) }}"
+  when: item.include
+  loop:
+    - { category: 'common', include: (('common' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
+    - { category: 'security', include: (('security' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
+    - { category: 'watch', include: (('watch' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
+    - { category: 'ai', include: (('ai' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'ai-server']) }
+    - { category: 'ghq', include: (('ghq' in (ansible_play_role_names | default([]))) or packages_profile_effective == 'development') }
+    - { category: 'development', include: (packages_profile_effective == 'development') }
+    - { category: 'infrastructure', include: (('system_init' in (ansible_play_role_names | default([]))) or packages_profile_effective in ['development', 'server', 'ai-server']) }
+
+- name: Append extra package requests
+  ansible.builtin.set_fact:
+    packages_selected: "{{ packages_selected | union(packages_extra | default([]) | map('string') | list) }}"
+
+- name: Display selected system packages
+  ansible.builtin.debug:
+    msg: "System packages to install: {{ packages_selected }}"
+
+- name: Install system packages
+  ansible.builtin.package:
+    name: "{{ packages_selected }}"
+    state: present
+  when: packages_selected | length > 0

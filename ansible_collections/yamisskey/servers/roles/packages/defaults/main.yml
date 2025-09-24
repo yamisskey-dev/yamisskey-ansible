@@ -1,0 +1,78 @@
+---
+# Preferred package profile for this host. Set to null to rely on role-based
+# detection or legacy variables.
+packages_profile: null
+
+# Additional packages to install explicitly.
+packages_extra: []
+
+# Mapping of package categories to OS-specific package lists.
+packages_categories:
+  base:
+    Debian:
+      - curl
+      - wget
+      - openssh-client
+      - git
+      - net-tools
+      - nmap
+      - dnsutils
+      - htop
+      - btop
+      - sysstat
+      - lynis
+      - jq
+      - yq
+      - unzip
+      - zip
+      - tar
+      - gawk
+      - sed
+      - findutils
+      - coreutils
+      - rsync
+      - lsof
+      - tmux
+  common:
+    Debian:
+      - prometheus
+      - rclone
+      - apparmor
+      - auditd
+      - tor
+      - golang
+  security:
+    Debian:
+      - fail2ban
+      - ufw
+      - dnscrypt-proxy
+      - clamav
+  watch:
+    Debian:
+      - prometheus-node-exporter
+  ai:
+    Debian:
+      - mecab
+      - mecab-ipadic
+      - python3
+      - python3-pip
+  ghq:
+    Debian:
+      - ghq
+  development:
+    Debian:
+      - ansible
+      - ansible-lint
+      - yamllint
+      - sops
+      - age
+      - gnupg
+      - docker.io
+      - docker-compose
+      - python3-passlib
+      - nixpkgs-fmt
+      - statix
+  infrastructure:
+    Debian:
+      - cloudflared
+      - tailscale
