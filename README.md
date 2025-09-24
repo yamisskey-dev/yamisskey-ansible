@@ -6,7 +6,9 @@ Modern Ansible infrastructure management with SOPS secrets management.
 
 ### Prerequisites
 
-- Make
+- make
+- sops
+- age
 
 ### System Requirements
 
@@ -18,8 +20,6 @@ Modern Ansible infrastructure management with SOPS secrets management.
 - **Ansible 2.17+** with complete ecosystem
 - **SOPS + Age** for modern secrets management
 - **Testing tools** (molecule, ansible-lint)
-- **Complete Python environment** for development
-- **Automatic environment loading** via direnv
 
 ## Quick Start
 
