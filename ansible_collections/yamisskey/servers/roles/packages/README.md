@@ -7,10 +7,30 @@ This role provides a flexible and efficient way to manage system packages across
 - **Role-based packages**: Each role can define its required packages
 - **Tag-based packages**: Install packages based on Ansible tags
 - **Profile-based packages**: Predefined package sets for different environments
+- **Multiple installation methods**: Support for various package installation methods
 - **Base packages**: Essential packages always installed
 - **Extra packages**: Additional packages specified at runtime
 - **Automatic deduplication**: No duplicate packages installed
 - **YAML syntax compliant**: Clean, readable configuration
+
+## Installation Methods
+
+The packages role supports multiple installation methods:
+
+### 1. Standard APT Packages
+Standard packages available in the default Debian/Ubuntu repositories.
+
+### 2. APT Repositories
+Packages from external APT repositories with GPG key management.
+
+### 3. Manual Downloads
+Binary downloads from GitHub releases and other sources.
+
+### 4. Python Packages
+Python packages installed via pip.
+
+### 5. Manual Scripts
+Custom installation scripts for complex packages.
 
 ## Usage Examples
 

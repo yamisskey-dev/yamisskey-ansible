@@ -3,6 +3,137 @@
 packages_profile: null  # Override with specific profile: development, server, ai-server, etc.
 packages_extra: []      # Additional packages to install explicitly
 
+# Package installation methods
+packages_install_methods:
+  # Standard APT packages
+  apt:
+    - btop
+    - net-tools
+    - nmap
+    - inetutils-traceroute
+    - rsync
+    - zip
+    - tor
+    - mecab
+    - libmecab-dev
+    - mecab-ipadic-utf8
+    - prometheus
+    - rclone
+    - fail2ban
+    - unattended-upgrades
+    - debsums
+    - apt-show-versions
+    - clamav
+    - clamav-daemon
+    - lynis
+    - apparmor
+    - auditd
+    - sysstat
+    - python3-passlib
+    - rsyslog
+    - logrotate
+    - ufw
+    - curl
+    - dnsutils
+    - tailscale
+    - docker.io
+    - docker-compose
+    - nginx
+    - postgresql-client
+    - redis-tools
+    - htop
+    - btop
+    - jq
+    - yq
+    - vim
+    - nano
+    - tree
+    - git
+    - wget
+    - gnupg
+    - ca-certificates
+    - apt-transport-https
+    - lsb-release
+    - software-properties-common
+    - openssh-client
+    - tmux
+    - lsof
+    - tar
+    - gzip
+    - unzip
+    - gawk
+    - sed
+    - findutils
+    - coreutils
+    - ansible
+    - ansible-lint
+    - yamllint
+    - python3
+    - python3-pip
+    - python3-dev
+    - python3-venv
+    - python3-pytest
+    - python3-tox
+    - docker.io
+    - docker-compose
+    - playit
+    - certbot
+    - python3-certbot-nginx
+    - libapache2-mod-security2
+    - nginx-module-headers-more
+    - postgresql
+    - postgresql-contrib
+    - mysql-server
+    - mysql-client
+    - redis-server
+    - redis-tools
+    - grafana
+    - prometheus-node-exporter
+    - node-exporter
+
+  # APT repositories (with GPG keys)
+  apt_repo:
+    playit:
+      gpg_key_url: "https://playit-cloud.github.io/ppa/key.gpg"
+      gpg_key_file: "/etc/apt/trusted.gpg.d/playit.gpg"
+      repo: "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./"
+      filename: "playit-cloud"
+      packages:
+        - playit
+
+  # Manual downloads (GitHub releases, etc.)
+  manual_download:
+    cloudflared:
+      download_url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+      install_path: "/usr/local/bin/cloudflared"
+      mode: "0755"
+      owner: "root"
+      group: "root"
+      version_check: "cloudflared --version"
+
+  # Python packages via pip
+  pip:
+    - name: requests
+      version: "latest"
+    - name: flask
+      version: "latest"
+    - name: ansible-lint
+      version: "latest"
+    - name: yamllint
+      version: "latest"
+    - name: sops
+      version: "latest"
+    - name: age
+      version: "latest"
+
+  # Manual installation scripts
+  manual_script:
+    mecab-ipadic-neologd:
+      repo: "https://github.com/neologd/mecab-ipadic-neologd.git"
+      dest: "/tmp/mecab-ipadic-neologd"
+      script: "./bin/install-mecab-ipadic-neologd -n -a -y"
+      check_path: "/usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd"
+
 # Role-based package mapping
 # Each role can specify its required packages
 packages_by_role:
