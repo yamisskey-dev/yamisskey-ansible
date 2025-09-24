@@ -11,13 +11,6 @@
       vars:
         packages_profile: development
 
-    - name: Display Nix-based test environment status
-      debug:
-        msg: |
-          ✅ Nix-based Test Environment (common role)
-          📦 All packages provided by Nix Flake
-          🧪 Ready for common role testing!
-
   tasks:
     - name: Apply common role
       include_role:
@@ -31,7 +24,7 @@
         state: directory
         mode: '0755'
       
-    - name: Verify Nix-managed packages are available
+    - name: Verify packages are available
       shell: |
         fi
         which {{ item }}

@@ -11,13 +11,6 @@
       vars:
         packages_profile: development
 
-    - name: Display Nix-based test environment status
-      debug:
-        msg: |
-          ✅ Nix-based Test Environment (security role)
-          📦 All security packages provided by Nix Flake
-          🔒 Ready for security role testing!
-
   tasks:
     - name: Apply security role
       include_role:
@@ -29,7 +22,7 @@
         security_manage_clamav: false
         security_install_crowdsec: false
         
-    - name: Verify Nix-managed security packages are available
+    - name: Verify security packages are available
       shell: |
         fi
         which {{ item }}

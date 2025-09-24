@@ -19,18 +19,13 @@ deploy/**/ansible.cfg.debug
 secrets/
 age-key.txt
 
-# Runtime directories created by Nix scripts
+# Runtime directories
 backups/
 logs/
 dist/
 
 # Build artifacts
 yamisskey-*.tar.gz
-
-# Nix development environment
-result
-result-*
-.direnv/
 
 # OS generated files
 .DS_Store

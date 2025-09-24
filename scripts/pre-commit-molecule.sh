@@ -24,13 +24,6 @@ if [ -z "$CHANGED_ROLES" ]; then
     exit 0
 fi
 
-# Check if necessary tools are available
-if ! command -v molecule >/dev/null 2>&1; then
-    echo -e "${RED}❌ Molecule not found. Please install Molecule first:${NC}"
-    echo "   direnv allow  # Auto-loads Nix environment with Molecule"
-    exit 1
-fi
-
 # Always use the Ubuntu + Ansible image for local Molecule runs (override via MOLECULE_IMAGE if needed)
 export MOLECULE_IMAGE="${MOLECULE_IMAGE:-geerlingguy/docker-ubuntu2204-ansible:latest}"
 
