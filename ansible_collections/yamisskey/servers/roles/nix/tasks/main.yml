@@ -173,7 +173,7 @@
         break
       fi
     done
-    nix-channel --add https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz home-manager
+    nix-channel --add {{ nix_home_manager_channel_url }} home-manager
     nix-channel --update
     nix-env -f '<home-manager>' -iA home-manager
   environment: "{{ nix_user_environment }}"

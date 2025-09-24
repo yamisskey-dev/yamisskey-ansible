@@ -5,6 +5,15 @@ nix_home_manager_config: server
 # Additional packages to inject into the Home Manager profile.
 home_manager_extra_packages: []
 
+# Home Manager channel URL to register when installing.
+nix_home_manager_channel_url: https://github.com/nix-community/home-manager/archive/release-25.05.tar.gz
+
+# Home Manager state version written to generated configuration.
+nix_home_manager_state_version: "25.05"
+
+# Whether Home Manager should enforce nixpkgs release matching.
+nix_home_manager_enable_release_check: false
+
 # How the Nix installer should run.
 #   auto       -> single-user when the remote user is non-root, multi-user when root.
 #   no-daemon  -> force single-user installer.

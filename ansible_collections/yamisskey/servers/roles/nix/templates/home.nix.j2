@@ -4,7 +4,7 @@
   # User information
   home.username = "{{ ansible_user_id }}";
   home.homeDirectory = "{{ ansible_user_dir }}";
-  home.stateVersion = "23.11";
+  home.stateVersion = "{{ nix_home_manager_state_version }}";
 
   # Role-based package configuration
   home.packages = with pkgs; [
@@ -125,4 +125,5 @@
 
   # Let Home Manager install and manage itself
   programs.home-manager.enable = true;
+  home.enableNixpkgsReleaseCheck = {{ 'true' if nix_home_manager_enable_release_check else 'false' }};
 }
