@@ -1,7 +1,13 @@
 ---
 - name: Check if manual download packages are needed
   ansible.builtin.set_fact:
-    needed_downloads: "{{ packages_install_methods.manual_download | dict2items | selectattr('key', 'in', packages_selected) | list }}"
+    needed_downloads: "{{ packages_install_methods.manual_download | dict2items | list }}"
+  when: packages_install_methods.manual_download is defined
+
+- name: Filter downloads with packages in selection
+  ansible.builtin.set_fact:
+    needed_downloads: "{{ needed_downloads | default([]) | selectattr('key', 'in', packages_selected) | list }}"
+  when: needed_downloads is defined
 
 - name: Check if {{ item.key }} is already installed
   ansible.builtin.command: "which {{ item.key }}"

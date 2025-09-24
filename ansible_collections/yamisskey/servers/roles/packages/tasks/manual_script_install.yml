@@ -1,7 +1,13 @@
 ---
 - name: Check if manual script packages are needed
   ansible.builtin.set_fact:
-    needed_scripts: "{{ packages_install_methods.manual_script | dict2items | selectattr('key', 'in', packages_selected) | list }}"
+    needed_scripts: "{{ packages_install_methods.manual_script | dict2items | list }}"
+  when: packages_install_methods.manual_script is defined
+
+- name: Filter scripts with packages in selection
+  ansible.builtin.set_fact:
+    needed_scripts: "{{ needed_scripts | default([]) | selectattr('key', 'in', packages_selected) | list }}"
+  when: needed_scripts is defined
 
 - name: Check if {{ item.key }} is already installed
   ansible.builtin.stat:

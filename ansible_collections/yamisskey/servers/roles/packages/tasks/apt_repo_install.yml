@@ -1,7 +1,13 @@
 ---
 - name: Check if repository packages are needed
   ansible.builtin.set_fact:
-    needed_repos: "{{ packages_install_methods.apt_repo | dict2items | selectattr('value.packages', 'intersect', packages_selected) | list }}"
+    needed_repos: "{{ packages_install_methods.apt_repo | dict2items | selectattr('value.packages', 'defined') | list }}"
+  when: packages_install_methods.apt_repo is defined
+
+- name: Filter repositories with packages in selection
+  ansible.builtin.set_fact:
+    needed_repos: "{{ needed_repos | default([]) | selectattr('value.packages', 'intersect', packages_selected) | list }}"
+  when: needed_repos is defined
 
 - name: Add GPG key for {{ item.key }}
   ansible.builtin.get_url:
