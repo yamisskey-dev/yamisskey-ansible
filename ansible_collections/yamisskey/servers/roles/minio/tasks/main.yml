@@ -43,15 +43,6 @@
     mode: '0644'
     backup: true
 
-- name: Check if running in Molecule test environment
-  ansible.builtin.stat:
-    path: /tmp/.ansible-tmp
-  register: molecule_tmp_check
-
-- name: Set molecule test flag
-  set_fact:
-    is_molecule_test: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined or molecule_tmp_check.stat.exists }}"
-
 - name: Create Docker network if not exists
   community.docker.docker_network:
     name: external_network
@@ -66,26 +57,6 @@
   until: minio_start_result is succeeded
   failed_when: false
 
-- name: Disable MinIO runtime checks by default
-  set_fact:
-    minio_runtime_checks_enabled: false
-
-- name: Enable MinIO runtime checks when running outside Molecule
-  set_fact:
-    minio_runtime_checks_enabled: true
-  when:
-    - not is_molecule_test
-
-- name: Debug MinIO runtime checks setting
-  debug:
-    msg: |
-      minio_runtime_checks_enabled: {{ minio_runtime_checks_enabled }}
-      is_molecule_test: {{ is_molecule_test }}
-      MOLECULE_SCENARIO_NAME: {{ ansible_env.MOLECULE_SCENARIO_NAME | default('undefined') }}
-      molecule_tmp_check.stat.exists: {{ molecule_tmp_check.stat.exists | default('undefined') }}
-      PWD: {{ ansible_env.PWD | default('undefined') }}
-      Will skip MinIO tasks: {{ not is_molecule_test and ansible_env.MOLECULE_SCENARIO_NAME is not defined }}
-
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
   changed_when: false
@@ -94,29 +65,6 @@
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
     - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false  # UFW command may fail if ufw is not installed or configured
-
-- name: Wait for MinIO container to be ready
-  ansible.builtin.wait_for:
-    host: localhost
-    port: "{{ host_services[inventory_hostname].minio_api | default(9000) }}"
-    delay: 5
-    sleep: 3
-    timeout: 60
-  when:
-    - minio_runtime_checks_enabled
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-  failed_when: false
-
-- name: Wait for MinIO container to be ready (Molecule test)
-  ansible.builtin.wait_for:
-    host: localhost
-    port: 9000
-    delay: 10
-    sleep: 5
-    timeout: 120
-  when:
-    - ansible_env.MOLECULE_SCENARIO_NAME is defined
-  failed_when: false
 
 - name: Check if Minio Client exists
   ansible.builtin.stat:
@@ -135,45 +83,13 @@
   register: minio_ip
   changed_when: false
   failed_when: false
-  when:
-    - minio_runtime_checks_enabled
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Set default MinIO IP for test environment
   set_fact:
     minio_ip:
       stdout: "localhost"
-  when:
-    - minio_runtime_checks_enabled
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-    - minio_ip is not defined or minio_ip.stdout == ""
-
-- name: Wait for MinIO service to be fully ready (health check)
-  uri:
-    url: "http://{{ minio_ip.stdout }}:{{ host_services[inventory_hostname].minio_api }}/minio/health/live"
-    method: GET
-    status_code: [200, 403]  # 403 is acceptable as console might be disabled
-  register: health_check
-  until: health_check.status in [200, 403]
-  retries: 10
-  delay: 15
-  failed_when: false
-  when:
-    - minio_runtime_checks_enabled
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
-
-- name: Wait for MinIO to be ready before setting alias
-  ansible.builtin.wait_for:
-    port: "{{ host_services[inventory_hostname].minio_api }}"
-    host: "{{ minio_ip.stdout }}"
-    timeout: 60
-    delay: 5
-  when:
-    - minio_runtime_checks_enabled
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
-  failed_when: false
+  when: minio_ip is not defined or minio_ip.stdout == ""
 
 - name: Set Minio Client alias with retry mechanism
   command: >
@@ -186,10 +102,7 @@
   retries: 15
   delay: 10
   changed_when: mc_alias_result.rc == 0
-  when:
-    - minio_runtime_checks_enabled
-    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-    - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
 
 - name: Create and configure secure buckets
