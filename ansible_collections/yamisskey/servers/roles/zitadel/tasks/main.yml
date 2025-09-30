@@ -70,5 +70,5 @@
     project_src: "{{ zitadel_dir }}"
     pull: "{{ 'never' if is_molecule_test | default(false) else 'always' }}"
     recreate: never
-    reuse_volumes: "{{ is_molecule_test | default(false) }}"
+    remove_volumes: false
     state: present

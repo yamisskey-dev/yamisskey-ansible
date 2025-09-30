@@ -62,7 +62,7 @@
     state: present
     recreate: never
     pull: "{{ 'never' if is_molecule_test | default(false) else 'always' }}"
-    reuse_volumes: "{{ is_molecule_test | default(false) }}"
+    remove_volumes: false
   register: minio_start_result
   retries: 3
   delay: 5
