@@ -50,7 +50,7 @@
     state: directory
     mode: '0755'
     owner: "1000"
-    ansible.builtin.file: "1000"
+    group: "1000"
   loop:
     - "{{ zitadel_dir }}/data"
     - "{{ zitadel_dir }}/config"

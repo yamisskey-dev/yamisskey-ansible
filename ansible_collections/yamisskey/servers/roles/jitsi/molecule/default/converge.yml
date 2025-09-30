@@ -105,14 +105,14 @@
             path: "/home/{{ ansible_user }}/misskey-assets"
             state: directory
             owner: "{{ ansible_user }}"
-            ansible.builtin.file: "{{ ansible_user }}"
+            group: "{{ ansible_user }}"
             mode: '0755'
         - name: Create placeholder wallpaper asset
           ansible.builtin.copy:
             dest: "/home/{{ ansible_user }}/misskey-assets/wallpaper.jpg"
             content: ""  # minimal placeholder file for tests
             owner: "{{ ansible_user }}"
-            ansible.builtin.file: "{{ ansible_user }}"
+            group: "{{ ansible_user }}"
             mode: '0644'
 
   tasks:

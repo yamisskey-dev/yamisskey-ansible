@@ -17,6 +17,14 @@ available_test_categories:
   - security
   - e2e
 
+# Test categories execution control
+integration_test_categories:
+  infrastructure: true
+  application: true
+  service: true
+  performance: true
+  security: true
+
 # Test thresholds
 performance_thresholds:
   response_time_ms: 5000

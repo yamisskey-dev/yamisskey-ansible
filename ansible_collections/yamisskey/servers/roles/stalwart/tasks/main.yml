@@ -21,7 +21,7 @@
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   loop:
     - '{{ stalwart_dir }}'
     - '{{ stalwart_dir }}/data'
@@ -34,7 +34,7 @@
     dest: '{{ stalwart_dir }}/docker-compose.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
 
 - name: Copy Stalwart config
   ansible.builtin.template:
@@ -42,7 +42,7 @@
     dest: '{{ stalwart_dir }}/etc/config.toml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
 
 - name: Start Stalwart container
   community.docker.docker_compose_v2:

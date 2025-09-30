@@ -52,7 +52,7 @@
     project_src: /opt/minio
     state: present
     recreate: never
-    pull: always
+    pull: "{{ 'missing' if is_molecule_test | default(false) else 'always' }}"
   register: minio_start_result
   retries: 3
   delay: 5
