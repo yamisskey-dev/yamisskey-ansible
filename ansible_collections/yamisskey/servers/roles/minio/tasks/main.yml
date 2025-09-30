@@ -136,12 +136,17 @@
       failed_when: false
       no_log: true
 
+    - name: Check if IAM policy template exists
+      stat:
+        path: /tmp/minio_iam_policy.json
+      register: iam_policy_template_check
+
     - name: Deploy IAM policy template
       template:
         src: "{{ role_path | default('../..') }}/templates/minio_iam_policy.json.j2"
         dest: /tmp/minio_iam_policy.json
         mode: '0600'
-        backup: true
+      when: not iam_policy_template_check.stat.exists
 
     - name: Check if IAM policy already exists
       command: /usr/local/bin/mc admin policy info "{{ minio_alias }}" misskey-policy
@@ -155,11 +160,6 @@
       changed_when: policy_create_result.rc == 0
       failed_when: false
       when: iam_policy_check.rc != 0
-
-    - name: Clean up temporary policy file
-      file:
-        path: /tmp/minio_iam_policy.json
-        state: absent
 
     - name: Check if policy is already attached to user
       command: /usr/local/bin/mc admin policy entities "{{ minio_alias }}" misskey-policy
@@ -176,12 +176,17 @@
         - iam_policy_check.rc == 0
         - misskey_s3_access_key not in (policy_attach_check.stdout | default(''))
 
+    - name: Check if bucket policy template exists
+      stat:
+        path: /tmp/minio_bucket_policy.json
+      register: bucket_policy_template_check
+
     - name: Deploy bucket policy template
       template:
         src: "{{ role_path | default('../..') }}/templates/minio_cors_policy.json.j2"
         dest: /tmp/minio_bucket_policy.json
         mode: '0600'
-        backup: true
+      when: not bucket_policy_template_check.stat.exists
 
     - name: Check current bucket anonymous policy
       command: /usr/local/bin/mc anonymous get "{{ minio_alias }}/{{ item }}"
@@ -221,11 +226,6 @@
       failed_when: false
       ignore_errors: true
       when: item not in (advanced_policy_check.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)
-
-    - name: Clean up temporary bucket policy file
-      file:
-        path: /tmp/minio_bucket_policy.json
-        state: absent
 
     - name: Check if encryption is already enabled
       command: /usr/local/bin/mc encrypt info "{{ minio_alias }}/{{ item }}"
