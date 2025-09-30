@@ -25,15 +25,15 @@ jobs:
       - name: Create dummy inventories for testing
         run: |
           mkdir -p ci-test/servers ci-test/appliances
-          
+
           # Create dummy servers inventory
           cat > ci-test/servers/inventory <<'EOF'
           [local]
           localhost ansible_connection=local
-          
+
           [production:children]
           local
-          
+
           [all:vars]
           ansible_python_interpreter=/usr/bin/python3
           ansible_become=false
@@ -43,12 +43,12 @@ jobs:
           cloudflare_zone_id=dummy_zone
           cloudflare_account_id=dummy_account
           EOF
-          
+
           # Create dummy appliances inventory
           cat > ci-test/appliances/inventory <<'EOF'
           [truenas]
           localhost ansible_connection=local
-          
+
           [all:vars]
           ansible_python_interpreter=/usr/bin/python3
           ansible_become=false

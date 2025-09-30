@@ -66,10 +66,8 @@ primary_domain=${DOMAIN}
 misskey_domain=${DOMAIN}
 
 # --- Cloudflare Tunnel Configuration (必須) ---
-# これらの値は group_vars/vault.yml で暗号化してください
-cloudflare_account_id="{{ vault_cloudflare_account_id }}"
-cloudflare_api_token="{{ vault_cloudflare_api_token }}"
-cloudflare_zone_id="{{ vault_cloudflare_zone_id }}"
+# 秘匿情報は group_vars/all/secrets.yml (SOPS) で管理されます
+# cloudflare_account_id, cloudflare_api_token, cloudflare_zone_id は SOPS から参照
 
 # --- WARP/Proxy Configuration (必須) ---
 # egress routing: warp, squid, direct
@@ -94,14 +92,14 @@ squid_proxy_enabled=true
 [social_servers:vars]
 # Network Configuration
 internal_ip=10.0.1.10
-external_ip="{{ vault_balthasar_external_ip }}"
-cloudflare_tunnel_id="{{ vault_balthasar_tunnel_id }}"
-cloudflare_tunnel_token="{{ vault_balthasar_tunnel_token }}"
+external_ip="{{ balthasar_external_ip }}"
+cloudflare_tunnel_id="{{ balthasar_tunnel_id }}"
+cloudflare_tunnel_token="{{ balthasar_tunnel_token }}"
 
 # Egress Configuration
 egress_route=warp
-warp_team_name="{{ vault_warp_team_name }}"
-warp_device_id="{{ vault_balthasar_warp_device_id }}"
+warp_team_name="{{ warp_team_name }}"
+warp_device_id="{{ balthasar_warp_device_id }}"
 
 # Service Roles (converted to string for INI compatibility)
 host_roles=social_frontend,app_hosting,reverse_proxy
@@ -114,16 +112,16 @@ crowdsec_enabled=true
 
 # --- Caspar (Security & Monitoring) ---
 [monitoring_servers:vars]
-# Network Configuration  
+# Network Configuration
 internal_ip=10.0.1.20
-external_ip="{{ vault_caspar_external_ip }}"
-cloudflare_tunnel_id="{{ vault_caspar_tunnel_id }}"
-cloudflare_tunnel_token="{{ vault_caspar_tunnel_token }}"
+external_ip="{{ caspar_external_ip }}"
+cloudflare_tunnel_id="{{ caspar_tunnel_id }}"
+cloudflare_tunnel_token="{{ caspar_tunnel_token }}"
 
 # Egress Configuration
 egress_route=warp
-warp_team_name="{{ vault_warp_team_name }}"
-warp_device_id="{{ vault_caspar_warp_device_id }}"
+warp_team_name="{{ warp_team_name }}"
+warp_device_id="{{ caspar_warp_device_id }}"
 
 # Service Roles (converted to string for INI compatibility)
 host_roles=monitoring_hub,security_center,ctf_environment
@@ -139,12 +137,12 @@ additional_monitoring=true
 [proxy_servers:vars]
 # Network Configuration (External VPS)
 internal_ip=10.8.0.1
-external_ip="{{ vault_linode_proxy_external_ip }}"
+external_ip="{{ linode_proxy_external_ip }}"
 # No Cloudflare tunnel - direct exposure with security
 
 # Egress Configuration
 egress_route=direct
-squid_upstream_proxy="{{ vault_squid_upstream_proxy | default('') }}"
+squid_upstream_proxy="{{ squid_upstream_proxy | default('') }}"
 
 # Service Roles (converted to string for INI compatibility)
 host_roles=external_proxy,media_proxy,summaly_proxy
@@ -164,7 +162,7 @@ internal_ip=10.0.1.60
 # Egress Configuration
 egress_route=playit
 playit_enabled=true
-playit_secret="{{ vault_playit_secret }}"
+playit_secret="{{ playit_secret }}"
 
 # Service Roles (converted to string for INI compatibility)
 host_roles=game_hosting,minecraft_server
@@ -218,33 +216,27 @@ ansible_ssh_port=22
 # ========================================
 # 必須変数チェック用コメント
 # ========================================
-# 以下の Ansible Vault 暗号化変数が group_vars/vault.yml に必須:
+# 以下のシークレットは group_vars/all/secrets.yml (SOPS) で管理します:
 #
 # Network & External:
-# - vault_balthasar_external_ip
-# - vault_caspar_external_ip  
-# - vault_linode_proxy_external_ip
+# - balthasar_external_ip
+# - caspar_external_ip
+# - linode_proxy_external_ip
 #
 # Cloudflare:
-# - vault_cloudflare_account_id
-# - vault_cloudflare_api_token
-# - vault_cloudflare_zone_id
-# - vault_balthasar_tunnel_id
-# - vault_balthasar_tunnel_token
-# - vault_caspar_tunnel_id
-# - vault_caspar_tunnel_token
+# - cloudflare_account_id
+# - cloudflare_api_token
+# - cloudflare_zone_id
+# - balthasar_tunnel_id
+# - balthasar_tunnel_token
+# - caspar_tunnel_id
+# - caspar_tunnel_token
 #
 # WARP/Proxy:
-# - vault_warp_team_name
-# - vault_balthasar_warp_device_id
-# - vault_caspar_warp_device_id
-# - vault_squid_upstream_proxy
+# - warp_team_name
+# - balthasar_warp_device_id
+# - caspar_warp_device_id
+# - squid_upstream_proxy
 #
 # Game Services:
-# - vault_playit_secret
-#
-# Auth/Sudo:
-# - vault_balthasar_sudo_password
-# - vault_caspar_sudo_password
-# - vault_linode_proxy_sudo_password
-# - vault_raspberry_sudo_password
+# - playit_secret

@@ -107,7 +107,7 @@
   register: compose_config
 
 - name: Create .env file for Docker Compose
-  copy:
+  ansible.builtin.copy:
     content: |
       DOMAIN={{ primary_domain }}
       GRAFANA_PASSWORD={{ grafana_admin_password }}

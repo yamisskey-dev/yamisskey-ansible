@@ -34,7 +34,7 @@
     - cloudflared_version != "latest"
 
 - name: Download cloudflared binary
-  get_url:
+  ansible.builtin.get_url:
     url: "{{ cloudflared_download_url }}"
     dest: "{{ cloudflared_install_dir }}/cloudflared"
     mode: '0755'

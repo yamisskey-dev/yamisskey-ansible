@@ -33,7 +33,8 @@ provisioner:
         # Role-specific test configuration will be added here
         ansible_user: "root"
         domain: "example.com"
-        lemmy_secrets_file: "/tmp/lemmy-secrets.yml"
+        lemmy:
+          postgres_password: molecule-test-password
 verifier:
   name: ansible
 scenario:

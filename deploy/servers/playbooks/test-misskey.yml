@@ -3,30 +3,27 @@
   hosts: localhost
   connection: local
   gather_facts: true
-  collections:
-    - yamisskey.servers
-  
   vars:
     # Test variables
-    ansible_check_mode: false
-    
+    test_check_mode: false
+
   tasks:
     - name: Include compat role from collection
-      include_role:
+      ansible.builtin.include_role:
         name: yamisskey.servers.compat
       tags:
         - compat
         - test
-    
-    - name: Include misskey role from collection  
-      include_role:
+
+    - name: Include misskey role from collection
+      ansible.builtin.include_role:
         name: yamisskey.servers.misskey
       tags:
         - misskey
         - test
-    
+
     - name: Display collection info
-      debug:
+      ansible.builtin.debug:
         msg: |
           Successfully loaded roles from yamisskey.servers collection:
           - compat: {{ ansible_role_names | default([]) | select('match', '.*compat.*') | list }}

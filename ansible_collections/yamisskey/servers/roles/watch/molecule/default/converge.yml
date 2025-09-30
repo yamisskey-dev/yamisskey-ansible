@@ -11,26 +11,26 @@
       port: "{{ watch_services.node_exporter }}"
     cadvisor:
       enabled: false
-    
+
     # テスト用のポート設定（デフォルトと異なるポートを使用してコンフリクトを避ける）
     watch_services:
       node_exporter: 9100
       cadvisor: 8085
     watch_node_exporter_port: 9100
     watch_cadvisor_port: 8085
-    
+
     # テスト用のネットワーク設定
     monitor_network:
       name: monitor
       create: true
-    
+
     # テスト環境でもシステムチェックを有効化
     skip_system_checks: false
-    
+
   pre_tasks:
     # 基本的な依存関係とDockerライブラリをインストール
     - name: Install basic dependencies
-      apt:
+      ansible.builtin.apt:
         name:
           - curl
           - wget
@@ -42,14 +42,14 @@
         update_cache: true
 
     - name: Install Docker Python library via pip
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - requests
         state: present
 
     - name: Install Node Exporter package for testing
-      apt:
+      ansible.builtin.apt:
         name: prometheus-node-exporter
         state: present
         update_cache: true

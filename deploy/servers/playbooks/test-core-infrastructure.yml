@@ -3,37 +3,37 @@
   hosts: localhost
   connection: local
   gather_facts: true
-  
+
   tasks:
     - name: Test common role
-      include_role:
+      ansible.builtin.include_role:
         name: yamisskey.servers.common
       tags: common
-      
+
     - name: Test security role
-      include_role:
+      ansible.builtin.include_role:
         name: yamisskey.servers.security
       tags: security
-      
+
     - name: Test minio role
-      include_role:
+      ansible.builtin.include_role:
         name: yamisskey.servers.minio
       tags: minio
-      
+
     - name: Test misskey role
-      include_role:
+      ansible.builtin.include_role:
         name: yamisskey.servers.misskey
       tags: misskey
-      
+
   post_tasks:
     - name: Display test completion
-      debug:
+      ansible.builtin.debug:
         msg: |
           ✅ Core Infrastructure Test Results:
           - Common role: {{ ansible_check_mode | ternary('SYNTAX OK', 'EXECUTED') }}
           - Security role: {{ ansible_check_mode | ternary('SYNTAX OK', 'EXECUTED') }}
           - MinIO role: {{ ansible_check_mode | ternary('SYNTAX OK', 'EXECUTED') }}
           - Misskey role: {{ ansible_check_mode | ternary('SYNTAX OK', 'EXECUTED') }}
-          
-          🎯 yamisskey.servers Collection v1.0.0 
+
+          🎯 yamisskey.servers Collection v1.0.0
           📦 Core Infrastructure: Ready for Production

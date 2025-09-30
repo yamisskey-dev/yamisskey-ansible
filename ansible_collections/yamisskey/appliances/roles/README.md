@@ -102,7 +102,6 @@ make check PLAYBOOK=setup TARGET=appliances
 ```yaml
 # deploy/appliances/group_vars/all.yml
 truenas_base_url: "https://truenas.local"
-api_key: "{{ vault_truenas_api_key }}"
 pool_name: "main-pool"
 
 # サービス設定

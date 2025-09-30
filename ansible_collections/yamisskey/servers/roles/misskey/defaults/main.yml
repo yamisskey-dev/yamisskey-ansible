@@ -24,9 +24,6 @@ misskey_proxy: "http://127.0.0.1:{{ (host_services | default({})).get('linode_pr
 misskey_url: "https://{{ domain }}"
 misskey_host: "{{ domain }}"
 
-# Security settings
-misskey_secrets_file: "{{ misskey_dir }}/secrets.yml"
-
 # Docker configuration
 misskey_image_tag: 'latest'
 misskey_enable_dev_mode: false

@@ -35,7 +35,7 @@
           Phase 1: TrueNAS infrastructure setup
           Phase 2: MinIO deployment
           Phase 3: Data migration ({{ 'enabled' if migration_enabled else 'disabled' }})
-          
+
           Target: {{ truenas_minio_domain }}
           Source: {{ source_minio_host if migration_enabled else 'N/A' }}
           ==============================================
@@ -67,16 +67,16 @@
           Phase 1: ✅ Infrastructure setup
           Phase 2: ✅ MinIO deployment
           Phase 3: {{ '✅ Data migration' if migration_enabled else '⏭️ Migration skipped' }}
-          
+
           Result:
           - MinIO URL: https://{{ truenas_minio_domain }}
           - App Name: {{ truenas_minio_app_name }}
           - Status: Ready for production
-          
+
           Usage Examples:
           # Deploy only (no migration)
           ansible-playbook minio-full.yml -e "enable_migration=false"
-          
+
           # Deploy and migrate from specific source
           ansible-playbook minio-full.yml -e "migration_source=balthasar"
           ==============================================

@@ -3,10 +3,10 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Update apt cache safely
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
       retries: 3
@@ -15,34 +15,34 @@
       failed_when: false
 
     - name: Create keyrings directory for Docker
-      file:
+      ansible.builtin.file:
         path: /etc/apt/keyrings
         state: directory
         mode: '0755'
       when: apt_update_result is not failed
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
       when: apt_update_result is not failed
 
     - name: Set Docker GPG key permissions
-      file:
+      ansible.builtin.file:
         path: /etc/apt/keyrings/docker.asc
         mode: 'a+r'
       when: apt_update_result is not failed
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -52,9 +52,9 @@
         state: present
         update_cache: true
       when: apt_update_result is not failed
-      
+
     - name: Install Docker for testing (fallback - use system packages)
-      apt:
+      ansible.builtin.apt:
         name:
           - docker.io
           - docker-compose-plugin
@@ -62,30 +62,30 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
-      
+
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
@@ -94,23 +94,23 @@
 
   tasks:
     - name: Apply security role
-      include_role:
+      ansible.builtin.include_role:
         name: yamisskey.servers.security
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
         security_manage_fail2ban_service: false
-        
+
     - name: Basic role verification
-      debug:
+      ansible.builtin.debug:
         msg: "security role applied successfully"
 
   post_tasks:
     - name: Show test environment status
-      shell: echo "Test environment setup completed"
+      ansible.builtin.shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
-      debug:
+      ansible.builtin.debug:
         var: test_status.stdout

@@ -40,18 +40,18 @@ log "=== Phase 1: Downloading from source MinIO ==="
 
 for bucket in "$BUCKET1" "$BUCKET2"; do
     log "Processing bucket: $bucket"
-    
+
     if ! /usr/local/bin/mc ls "$SOURCE_ALIAS/$bucket/" > /dev/null 2>&1; then
         log "WARNING: Source bucket $bucket does not exist or is empty, skipping"
         continue
     fi
-    
+
     file_count=$(/usr/local/bin/mc ls --recursive "$SOURCE_ALIAS/$bucket/" 2>/dev/null | wc -l || echo "0")
     log "Found $file_count files in source bucket $bucket"
-    
+
     if [ "$file_count" -gt 0 ]; then
         log "Starting download of $bucket ($file_count files)..."
-        
+
         if /usr/local/bin/mc mirror "$SOURCE_ALIAS/$bucket/" "${TEMP_DIR}/${bucket}/" --overwrite; then
             log "Successfully downloaded files from $bucket"
         else
@@ -67,15 +67,15 @@ log "=== Phase 2: Uploading to target MinIO (with encryption) ==="
 
 for bucket in "$BUCKET1" "$BUCKET2"; do
     log "Uploading bucket: $bucket"
-    
+
     if [ ! -d "${TEMP_DIR}/${bucket}" ] || [ -z "$(ls -A "${TEMP_DIR}/${bucket}" 2>/dev/null)" ]; then
         log "No files to upload for bucket $bucket"
         continue
     fi
-    
+
     file_count=$(find "${TEMP_DIR}/${bucket}/" -type f | wc -l)
     log "Uploading $file_count files to target bucket $bucket with encryption..."
-    
+
     if /usr/local/bin/mc mirror "${TEMP_DIR}/${bucket}/" "$TARGET_ALIAS/$bucket/" --overwrite; then
         log "Successfully uploaded $file_count files to $bucket (encrypted)"
     else
@@ -88,12 +88,12 @@ log "=== Phase 3: Migration Verification ==="
 
 for bucket in "$BUCKET1" "$BUCKET2"; do
     log "Verifying bucket: $bucket"
-    
+
     source_count=$(/usr/local/bin/mc ls --recursive "$SOURCE_ALIAS/$bucket/" 2>/dev/null | wc -l || echo "0")
     target_count=$(/usr/local/bin/mc ls --recursive "$TARGET_ALIAS/$bucket/" 2>/dev/null | wc -l || echo "0")
-    
+
     log "Bucket $bucket - Source: $source_count files, Target: $target_count files"
-    
+
     if [ "$source_count" -eq "$target_count" ]; then
         log "Bucket $bucket migration verified"
     else

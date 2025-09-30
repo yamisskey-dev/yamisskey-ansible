@@ -1,7 +1,6 @@
 ---
 # Matrix/Synapse specific variables
 synapse_server_name: "matrix.{{ domain }}"
-synapse_secrets_file: '/var/www/synapse/secrets.yml'
 element_server_name: "chat.{{ domain }}"
 jitsi_server_name: "call.{{ domain }}"
 matrix_use_ssl: true

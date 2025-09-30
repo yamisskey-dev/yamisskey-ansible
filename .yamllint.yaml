@@ -1,5 +1,8 @@
 extends: default
 
+exclude: |
+  .*secrets\.yml$
+
 rules:
   line-length:
     max: 800

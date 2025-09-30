@@ -12,7 +12,7 @@
     - target_service not in known_services
 
 - name: Find service directories
-  find:
+  ansible.builtin.find:
     paths: /opt
     file_type: directory
     patterns: "{{ known_services }}"
@@ -20,7 +20,7 @@
   when: target_service == 'all'
 
 - name: Check if specific service directory exists
-  stat:
+  ansible.builtin.stat:
     path: "/opt/{{ target_service }}"
   register: service_dir_check
   when: target_service != 'all'
@@ -59,7 +59,7 @@
     - debugging
 
 - name: Display operation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       🎯 Operation '{{ operation }}' completed on {{ target_service }}
       📊 Host: {{ inventory_hostname }}

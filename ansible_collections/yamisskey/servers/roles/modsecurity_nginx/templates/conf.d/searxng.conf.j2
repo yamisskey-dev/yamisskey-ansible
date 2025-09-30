@@ -27,29 +27,29 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "no-referrer" always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'" always;
-    
+
     # Privacy headers
     add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet" always;
-    
+
     # Proxy settings
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto https;
-    
+
     # Rate limiting for search queries (zone defined in 00-shared.conf)
     limit_req zone=searxng_limit burst=20 nodelay;
-    
+
     # Main SearXNG application
     location / {
         proxy_pass http://searxng_backend;
         proxy_http_version 1.1;
-        
+
         # Search timeouts (can be longer for search operations)
         proxy_connect_timeout 30s;
         proxy_send_timeout 120s;
         proxy_read_timeout 120s;
-        
+
         # Buffering
         proxy_buffering on;
         proxy_buffer_size 64k;
@@ -61,7 +61,7 @@ server {
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
-    
+
     # Static assets
     location /static/ {
         proxy_pass http://searxng_backend;

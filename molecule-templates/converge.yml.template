@@ -3,7 +3,7 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   tasks:
     # Simplified test approach: basic functionality test without systemd dependencies
     # This provides a baseline test that can be customized per role as needed
@@ -25,7 +25,7 @@
         state: present
         update_cache: false
       when: apt_update_result is not failed
-      
+
     - name: Install basic test packages (fallback without cache update)
       apt:
         name:
@@ -36,11 +36,11 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
-      
+
     - name: Basic role verification
       debug:
         msg: "${ROLE_NAME} role test environment ready"
-        
+
     - name: Test basic functionality
       debug:
         msg: "Role ${ROLE_NAME} basic tests completed successfully"

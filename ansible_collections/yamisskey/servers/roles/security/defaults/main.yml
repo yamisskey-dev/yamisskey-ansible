@@ -16,17 +16,17 @@ security_packages:
   - dnscrypt-proxy
 
 # UFW firewall configuration
-ufw_enable: true
-ufw_default_incoming: deny
-ufw_default_outgoing: allow
-ufw_logging: "off"
+security_ufw_enable: true
+security_ufw_default_incoming: deny
+security_ufw_default_outgoing: allow
+security_ufw_logging: "off"
 
 # SSH configuration
-ssh_ports:
+security_ssh_ports:
   - 22
   - 2222
 
-ssh_settings:
+security_ssh_settings:
   - 'AuthorizedKeysFile .ssh/authorized_keys'
   - 'RSAAuthentication yes'
   - 'PubkeyAuthentication yes'
@@ -41,29 +41,29 @@ ssh_settings:
   - 'AllowAgentForwarding yes'
 
 # ClamAV configuration
-clamav_scan_schedule:
+security_clamav_scan_schedule:
   minute: '0'
   hour: '19'  # UTC 19:00 = JST 04:00
   job: "/usr/bin/timeout 1h45m /usr/bin/nice -n 19 /usr/bin/clamdscan -m --fdpass --config-file=/etc/clamav/clamd.conf -l /var/log/clamav/clamav-$(date +\\%Y\\%m\\%d).log /"
 
 # DNS over HTTPS configuration
-dnscrypt_proxy_listen_address: "127.0.0.1:53"
-dnscrypt_proxy_servers:
+security_dnscrypt_proxy_listen_address: "127.0.0.1:53"
+security_dnscrypt_proxy_servers:
   - "cloudflare"
   - "cloudflare-ipv6"
   - "quad9-dnscrypt-ip4-nofilter-pri"
 
 # Docker DNS settings
-docker_dns_servers:
+security_docker_dns_servers:
   - "127.0.0.1"
   - "1.1.1.1"
 
 # Service restart settings
-restart_services_on_change: true
+security_restart_services_on_change: true
 
 # CrowdSec configuration
-crowdsec_config_dir: "/etc/crowdsec"
-crowdsec_bouncer_name: "crowdsec-firewall-bouncer"
+security_crowdsec_config_dir: "/etc/crowdsec"
+security_crowdsec_bouncer_name: "crowdsec-firewall-bouncer"
 
 # Service management toggles
 security_manage_fail2ban_service: true
@@ -71,5 +71,5 @@ security_install_crowdsec: true
 security_manage_clamav: true
 
 # systemd-resolved configuration
-systemd_resolved_dns: "127.0.0.1"
-systemd_resolved_fallback_dns: "1.1.1.1"
+security_systemd_resolved_dns: "127.0.0.1"
+security_systemd_resolved_fallback_dns: "1.1.1.1"

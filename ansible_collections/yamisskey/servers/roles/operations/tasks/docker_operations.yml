@@ -17,7 +17,7 @@
   when: operation == 'status' and target_service != 'all'
 
 - name: Display status results
-  debug:
+  ansible.builtin.debug:
     msg: |
       {% if target_service == 'all' %}
       🐳 All Docker Containers:
@@ -29,13 +29,13 @@
 
 # Service Management Operations
 - name: Check if docker-compose.yml exists for specific service
-  stat:
+  ansible.builtin.stat:
     path: "{{ single_service_dir }}/docker-compose.yml"
   register: compose_file_check
   when: operation in ['restart', 'stop', 'start', 'update'] and target_service != 'all'
 
 - name: Warn if docker-compose.yml not found
-  debug:
+  ansible.builtin.debug:
     msg: "⚠️ docker-compose.yml not found in {{ single_service_dir }}. Skipping {{ operation }} for {{ target_service }}."
   when:
     - operation in ['restart', 'stop', 'start', 'update']
@@ -43,7 +43,7 @@
     - not compose_file_check.stat.exists
 
 - name: Check for docker-compose.yml in each service directory
-  stat:
+  ansible.builtin.stat:
     path: "{{ item.path }}/docker-compose.yml"
   register: compose_files_check
   loop: "{{ service_dirs.files }}"
@@ -81,8 +81,8 @@
     echo "{{ operation | title }}ping {{ target_service }}..."
     docker compose {{ operation }}
   register: stop_start_result
-  when: 
-    - operation in ['stop', 'start'] 
+  when:
+    - operation in ['stop', 'start']
     - target_service != 'all'
     - compose_file_check.stat.exists
 
@@ -104,8 +104,8 @@
     docker compose pull
     docker compose up -d
   register: update_result
-  when: 
-    - operation == 'update' 
+  when:
+    - operation == 'update'
     - target_service != 'all'
     - compose_file_check.stat.exists
 
@@ -132,7 +132,7 @@
 
 # Results Display
 - name: Display Docker operation results
-  debug:
+  ansible.builtin.debug:
     msg: |
       {% if operation == 'restart' %}
       🔄 Restart Results:
@@ -175,7 +175,7 @@
   when: operation in ['restart', 'start', 'update']
 
 - name: Display final status
-  debug:
+  ansible.builtin.debug:
     msg: |
       📊 Final Service Status:
       {{ final_status.stdout_lines | join('\n') }}

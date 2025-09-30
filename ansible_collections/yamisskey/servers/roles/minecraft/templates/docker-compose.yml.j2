@@ -8,37 +8,37 @@ services:
 {% else %}
     platform: linux/amd64
 {% endif %}
-    
+
     env_file:
       - .env
-    
+
     environment:
       EULA: "TRUE"
       TYPE: PAPER
       VERSION: "1.21.1"
       MEMORY: "${MEMORY:-4G}"
-      
+
       # クロスプラットフォーム対応の設定
       ONLINE_MODE: "false"
       ENABLE_RCON: "true"
       RCON_PASSWORD: "${RCON_PASSWORD:-minecraft}"
       RCON_PORT: 25575
-      
+
       # PaperMC特有の設定
       USE_AIKAR_FLAGS: "true"
       PAPER_CHANNEL: default
-      
+
       # 自動でGeyser/Floodgate/ViaVersion/GeyserSkinManagerプラグインをダウンロード
       PLUGINS: |
         https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot
         https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot
         https://hangarcdn.papermc.io/plugins/ViaVersion/ViaVersion/versions/5.4.2/PAPER/ViaVersion-5.4.2.jar
         https://github.com/Camotoy/GeyserSkinManager/releases/latest/download/GeyserSkinManager-Spigot.jar
-      
+
       # 古いプラグイン/MODの削除
       REMOVE_OLD_MODS: "true"
       REMOVE_OLD_PLUGINS: "true"
-      
+
       # サーバープロパティの自動設定
       ALLOW_NETHER: "true"
       ANNOUNCE_PLAYER_ACHIEVEMENTS: "true"
@@ -59,15 +59,15 @@ services:
       DIFFICULTY: {{ minecraft_difficulty }}
       LEVEL_TYPE: minecraft:normal
       GENERATOR_SETTINGS: ""
-    
+
     ports:
       - "25565:25565"    # Java Edition
       - "19132:19132/udp" # Bedrock Edition (Geyser)
       - "25575:25575"    # RCON
-    
+
     volumes:
       - minecraft-data:/data
-    
+
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 30s
@@ -82,10 +82,10 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: unless-stopped
-    
+
     ports:
       - "9000:9000"
-    
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer-data:/data

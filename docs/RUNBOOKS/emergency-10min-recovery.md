@@ -153,7 +153,7 @@ docker compose exec web node built/scripts/resume-federation.js --full
 復旧完了後、必ず以下を実行：
 
 1. **障害レポート作成**: [`incident-template.md`](incident-template.md) を使用
-2. **ログ収集**: 
+2. **ログ収集**:
    ```bash
    yamisskey-provision run collect-logs TARGET=all
    ```

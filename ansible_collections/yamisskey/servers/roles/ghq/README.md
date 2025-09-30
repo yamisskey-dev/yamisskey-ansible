@@ -134,7 +134,7 @@ None.
     - role: yamisskey.servers.ghq
       vars:
         ghq_operation: "install"
-        
+
     - role: yamisskey.servers.ghq
       vars:
         ghq_operation: "clone"

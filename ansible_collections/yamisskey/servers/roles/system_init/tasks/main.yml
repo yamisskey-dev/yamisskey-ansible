@@ -32,7 +32,7 @@
 - name: Apply common role for necessary packages
   ansible.builtin.include_role:
     name: yamisskey.servers.common
-  when: 
+  when:
     - not (test_mode | default(false))
     - common_playbook_check.stat.exists
   tags:
@@ -52,9 +52,9 @@
       - ca-certificates
     state: present
     update_cache: true
-  when: 
+  when:
     - not (test_mode | default(false))
-    - not common_playbook_check.stat.exists 
+    - not common_playbook_check.stat.exists
     - ansible_os_family == "Debian"
   tags:
     - packages

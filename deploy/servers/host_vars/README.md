@@ -11,7 +11,7 @@
   - 本番実行: `yamisskey-provision run security`
 
 注意:
-- シークレットは Ansible Vault 等の安全な手段で管理してください。
+- シークレットは SOPS (group_vars/all/secrets.yml や host_vars/<host>/secrets.yml) で管理してください。
 
 参考:
 - ルートの `README.md`

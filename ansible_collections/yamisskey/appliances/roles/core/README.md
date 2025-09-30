@@ -151,7 +151,7 @@ ansible_collections/yamisskey/appliances/roles/core/
 
 ### 1. API認証
 ```yaml
-# 推奨: Ansible Vaultで暗号化
+# 推奨: SOPS で暗号化
 truenas_api_key: !vault |
   $ANSIBLE_VAULT;1.1;AES256
   636361653...

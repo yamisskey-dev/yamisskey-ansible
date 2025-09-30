@@ -4,8 +4,7 @@
   gather_facts: false
   vars:
     minio_container_name: "minio"
-    test_secrets_file: "/tmp/test-secrets.yml"
-  
+
   tasks:
     - name: Check docker CLI (non-fatal)
       command: docker --version
@@ -19,7 +18,7 @@
       changed_when: false
       failed_when: false
       ignore_errors: true
-      
+
     - name: Assert container is running (if container exists)
       assert:
         that:
@@ -97,45 +96,12 @@
         - container_status.rc == 0
         - minio_port_check.stdout is defined
 
-    - name: Check if secrets file was created
-      stat:
-        path: "{{ test_secrets_file }}"
-      register: secrets_file_check
-      
-    - name: Verify secrets file exists
-      assert:
-        that:
-          - secrets_file_check.stat.exists
-        fail_msg: "Secrets file was not created"
-        success_msg: "Secrets file created successfully"
-
-    - name: Load and verify secrets file content
-      slurp:
-        src: "{{ test_secrets_file }}"
-      register: secrets_content
-      
-    - name: Parse secrets YAML
-      set_fact:
-        secrets_data: "{{ secrets_content.content | b64decode | from_yaml }}"
-      
-    - name: Verify secrets file structure
-      assert:
-        that:
-          - secrets_data.minio is defined
-          - secrets_data.minio.root_user is defined
-          - secrets_data.minio.root_password is defined
-          - secrets_data.minio.misskey_s3_access_key is defined
-          - secrets_data.minio.misskey_s3_secret_key is defined
-          - secrets_data.minio.kms_master_key is defined
-        fail_msg: "Secrets file is missing required keys"
-        success_msg: "Secrets file has all required keys"
-
     - name: Check if MinIO client was installed
-      stat:
+      ansible.builtin.stat:
         path: /usr/local/bin/mc
       register: mc_client_check
       become: true
-      
+
     - name: Verify MinIO client installation
       assert:
         that:
@@ -145,11 +111,11 @@
         success_msg: "MinIO client installed successfully"
 
     - name: Check if docker-compose file was created
-      stat:
+      ansible.builtin.stat:
         path: "/opt/minio/docker-compose.yml"
       register: compose_file_check
       become: true
-      
+
     - name: Verify docker-compose file exists
       assert:
         that:
@@ -158,11 +124,11 @@
         success_msg: "Docker-compose file created successfully"
 
     - name: Check if MinIO data directory was created
-      stat:
+      ansible.builtin.stat:
         path: "/opt/minio/minio-data"
       register: data_dir_check
       become: true
-      
+
     - name: Verify MinIO data directory exists
       assert:
         that:
@@ -179,12 +145,12 @@
       changed_when: false
       when: container_status.rc == 0
       ignore_errors: true
-      
+
     - name: Verify external network was created
       shell: docker network ls | grep external_network
       register: network_check
       changed_when: false
-      
+
     - name: Assert external network exists
       assert:
         that:
@@ -200,7 +166,7 @@
       changed_when: false
       when: container_status.rc == 0
       ignore_errors: true
-      
+
     - name: Verify container has IP address
       assert:
         that:
@@ -208,7 +174,7 @@
           - container_ip.stdout != "<no value>"
         fail_msg: "MinIO container has no IP address"
         success_msg: "MinIO container has valid IP address"
-      when: 
+      when:
         - container_status.rc == 0
         - container_ip is defined
 
@@ -219,14 +185,14 @@
           ====================================
           ✅ Container Status: {{ 'Running' if container_status.rc == 0 and container_status.stdout == 'running' else 'Not Available' }}
           ✅ Health Check: {{ 'OK' if (health_test is defined and health_test.status_code is defined and health_test.status_code in [200, 403]) else 'Skipped' }}
-          ✅ Secrets File: {{ 'Created' if secrets_file_check.stat.exists else 'Missing' }}
+          ✅ Secrets Source: SOPS host_vars (local file not required)
           ✅ MinIO Client: {{ 'Installed' if mc_client_check.stat.exists else 'Missing' }}
           ✅ Data Directory: {{ 'Created' if data_dir_check.stat.exists else 'Missing' }}
           ✅ Docker Network: {{ 'Created' if network_check.rc == 0 else 'Missing' }}
           ✅ Container IP: {{ container_ip.stdout if (container_ip is defined and container_ip.stdout is defined) else 'N/A' }}
-          
+
           Configuration Details:
-          - Test Secrets File: {{ test_secrets_file }}
+          - Secrets Path: host_vars → minio.*
           - Test Buckets: test-misskey-files, test-outline-assets
           - MinIO Alias: testminio
           - Health Endpoint: http://localhost:9000/minio/health/live

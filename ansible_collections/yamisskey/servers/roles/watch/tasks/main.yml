@@ -18,15 +18,15 @@
 - name: Node Exporter setup
   block:
     - name: Install Node Exporter (Debian/Ubuntu)
-      apt:
+      ansible.builtin.apt:
         name: "{{ node_exporter.package_name }}"
         state: present
         update_cache: yes
-      when: 
+      when:
         - node_exporter.enabled | default(true)
         - ansible_os_family == "Debian"
         - not (skip_system_checks | default(false) | bool)
-      tags: 
+      tags:
         - node_exporter
 
     - name: Install Node Exporter (Gentoo)
@@ -34,7 +34,7 @@
         package: "{{ node_exporter_gentoo.package_name }}"
         state: present
       when:
-        - node_exporter.enabled | default(true) 
+        - node_exporter.enabled | default(true)
         - ansible_os_family == "Gentoo"
         - not (skip_system_checks | default(false) | bool)
       tags:
@@ -98,7 +98,7 @@
         - cadvisor
 
     - name: Wait for cAdvisor to be ready
-      pause:
+      ansible.builtin.pause:
         seconds: 15
       when:
         - cadvisor.enabled | default(true)

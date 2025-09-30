@@ -3,7 +3,7 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Create keyrings directory for Docker
       file:
@@ -12,7 +12,7 @@
         mode: '0755'
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -23,13 +23,13 @@
         mode: 'a+r'
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
 
     - name: Update apt cache
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
       register: apt_update
@@ -39,7 +39,7 @@
       failed_when: false
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -68,27 +68,27 @@
       failed_when: false
 
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       when: docker_version_check.rc == 0
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -98,45 +98,38 @@
         - /opt/minio
         - /opt/minio/minio-data
         - /tmp/test
-        
-    - name: Create mock secrets file directory
-      file:
-        path: "{{ minio_secrets_file | dirname }}"
-        state: directory
-        mode: '0755'
 
   tasks:
     - name: Import MinIO tasks directly (skip dependencies)
       import_tasks: "../../tasks/main.yml"
       vars:
         # Test-specific configuration
-        minio_secrets_file: "/tmp/test-secrets.yml"
         minio_alias: "testminio"
         minio_bucket_name_for_misskey: "test-misskey-files"
         minio_bucket_name_for_outline: "test-outline-assets"
         minio_api_server_name: "test.example.com"
-        
+
         # Mock host services for testing
         host_services:
           minio-test-instance:
             minio_api: 9000
-        
+
         # Override complex operations for testing
         ansible_hostname: "test-host"
         ansible_date_time:
           epoch: "1234567890"
       tags:
         - molecule-test
-        
+
     - name: Wait for MinIO container to be ready
-      wait_for:
+      ansible.builtin.wait_for:
         port: 9000
         host: localhost
         timeout: 60
         delay: 5
       when: false  # Skip in Molecule test environment - MinIO may not be fully ready
       failed_when: false
-        
+
     - name: Test basic connectivity to ensure setup is working
       uri:
         url: "http://localhost:9000/minio/health/live"
@@ -149,17 +142,17 @@
       when: false  # Skip in Molecule test environment - MinIO may not be fully ready
       ignore_errors: true
       failed_when: false
-      
+
   post_tasks:
     - name: Show container logs if verification fails
       command: docker logs minio
       register: container_logs
       failed_when: false
       changed_when: false
-      
+
     - name: Display container logs for debugging
       debug:
         var: container_logs.stdout_lines
-      when: 
+      when:
         - container_logs.rc == 0
         - container_logs.stdout_lines is defined

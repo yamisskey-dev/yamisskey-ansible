@@ -33,7 +33,7 @@
           ==============================================
           App: {{ truenas_minio_app_name }}
           Domain: https://{{ truenas_minio_domain }}
-          
+
           Next Steps:
           1. Configure mc client: mc alias set truenas https://{{ truenas_minio_domain }} <user> <password>
           2. Create buckets and policies

@@ -36,7 +36,7 @@
 - name: Load legacy secrets when SOPS unavailable
   include_vars:
     file: "{{ role_secrets_file }}"
-  when: 
+  when:
     - not sops_secrets_stat.stat.exists
     - legacy_secrets_stat.stat.exists
 

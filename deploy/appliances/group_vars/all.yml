@@ -48,7 +48,7 @@ truenas_app_deploy_retries: 12
 truenas_app_deploy_delay: 10
 
 # MinIO client (mc) pinned release
-# Define the matching sha256 in vault or host/group vars
+# Define the matching sha256 in SOPS secrets or host/group vars
 mc_release_sha256: "CHANGE_ME_WITH_REAL_SHA256"
 
 # Migration defaults

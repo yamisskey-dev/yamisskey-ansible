@@ -34,34 +34,34 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # Rate limiting
     limit_req zone=misskey_limit burst=100 nodelay;
-    
+
     # Proxy settings
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto https;  # Always HTTPS from Cloudflare
-    
+
     # WebSocket support
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
-    
+
     # Timeouts
     proxy_connect_timeout 30s;
     proxy_send_timeout 60s;
     proxy_read_timeout 60s;
-    
+
     # Main location
     location / {
         # Rate limiting
         limit_req zone=misskey_limit burst=1000 nodelay;
-        
+
         proxy_pass http://misskey_backend;
         proxy_http_version 1.1;
         proxy_redirect off;
-        
+
         # API cache for GET requests
         proxy_cache api_cache;
         proxy_cache_methods GET HEAD;
@@ -75,14 +75,14 @@ server {
         proxy_cache_valid 200 1h;
         proxy_cache_valid 404 5m;
         proxy_cache_key "$scheme$request_method$host$request_uri";
-        
+
         # Reduce buffering for WebSocket
         proxy_buffering off;
-        
+
         # Header to indicate cache status
         add_header X-Cache-Status $upstream_cache_status;
     }
-    
+
     # Static assets from Misskey application (fonts, icons, etc.)
     location ~* ^/(static-assets|vite)/.*\.(css|js|woff|woff2|ttf|eot|svg|ico|png|jpg|gif|map|json)$ {
         proxy_pass http://misskey_backend;
@@ -136,10 +136,10 @@ server {
         add_header Cache-Control "public, max-age=1209600";  # 14日のmax-age
     }
 
-    
+
     # Client body size for uploads
     client_max_body_size 80m;
-    
+
     # Enhanced compression settings
     gzip on;
     gzip_types
@@ -161,40 +161,40 @@ server {
     gzip_buffers 16 8k;
     gzip_comp_level 7;
     gzip_disable "msie6";
-    
+
     # Add Brotli compression if available
     # brotli on;
     # brotli_comp_level 6;
     # brotli_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    
+
     # API endpoints (no caching)
     location ~* ^/api/ {
         proxy_pass http://misskey_backend;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_cache off;
-        
+
         # Larger timeouts for API
         proxy_read_timeout 180s;
         proxy_send_timeout 180s;
     }
-    
+
     # Streaming endpoints
     location ~* ^/streaming {
         proxy_pass http://misskey_backend;
         proxy_http_version 1.1;
         proxy_cache off;
         proxy_buffering off;
-        
+
         # WebSocket specific
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        
+
         # Keep connections alive
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }
-    
+
     # Media uploads
     location ~* ^/api/drive/files/create {
         client_max_body_size 500M;
@@ -202,13 +202,13 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_cache off;
-        
+
         # Longer timeouts for uploads
         proxy_read_timeout 600s;
         proxy_send_timeout 600s;
         client_body_timeout 600s;
     }
-    
+
     # Disable access log to reduce I/O load
     access_log off;
     error_log /dev/null crit;

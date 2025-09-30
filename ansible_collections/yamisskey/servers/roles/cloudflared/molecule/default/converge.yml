@@ -3,31 +3,31 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   tasks:
     - name: Update package cache
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
-        
+
     - name: Install basic test packages
-      apt:
+      ansible.builtin.apt:
         name:
           - curl
           - wget
           - systemd
         state: present
-        
+
     - name: Basic role verification
       debug:
         msg: "cloudflared role test environment ready"
-        
+
     - name: Create test directory for verify step
       file:
         path: /tmp/test
         state: directory
         mode: '0755'
-        
+
     - name: Test basic functionality
       debug:
         msg: "Role cloudflared basic tests completed successfully"

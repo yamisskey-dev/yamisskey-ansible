@@ -27,15 +27,19 @@ COLL_BASE := $(COLLECTIONS_DIR)
 COLLS := servers appliances
 VERSION ?= 1.0.0
 
-# Secret management
+# Repo paths
+REPO_ROOT := $(abspath .)
+SHIM_DIR  := $(REPO_ROOT)/.bin
+
+# Secret management - prefer repo-local shims, fallback to system binary
 SOPS_BIN ?= $(shell [ -x "$(SHIM_DIR)/sops" ] && echo "$(SHIM_DIR)/sops" || command -v sops 2>/dev/null)
 SOPS_BIN := $(if $(SOPS_BIN),$(SOPS_BIN),sops)
 AGE_BIN ?= $(shell command -v age 2>/dev/null)
 AGE_BIN := $(if $(AGE_BIN),$(AGE_BIN),age)
 AGE_KEY_FILE ?= $(REPO_ROOT)/age-key.txt
-SOPS_FILE_servers := $(DEPLOY_DIR_servers)/group_vars/vault.yml
-SOPS_FILE_appliances := $(DEPLOY_DIR_appliances)/group_vars/vault.yml
-SOPS_FILE := $(SOPS_FILE_$(TARGET))
+SOPS_GROUP_FILE_servers := $(DEPLOY_DIR_servers)/group_vars/all/secrets.yml
+SOPS_GROUP_FILE_appliances := $(DEPLOY_DIR_appliances)/group_vars/all/secrets.yml
+SOPS_GROUP_FILE := $(SOPS_GROUP_FILE_$(TARGET))
 
 # ---------------- uv / paths ----------------
 UV_BIN ?= $(HOME)/.local/bin
@@ -52,8 +56,6 @@ ANSIBLE_CORE_SPEC := ansible-core
 endif
 
 # 使い回し
-REPO_ROOT := $(abspath .)
-SHIM_DIR  := $(REPO_ROOT)/.bin
 GALAXY_DIR := $(REPO_ROOT)/.vendor/collections
 ANSIBLE_PATHS := $(GALAXY_DIR):$(REPO_ROOT):$(HOME)/.ansible/collections
 
@@ -113,12 +115,15 @@ deploy:
 install:
 	@echo "📦 Installing Ansible toolchain via uv..."
 	@command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
-	@export PATH="$(UV_BIN):$$PATH"; uv tool install --python $(UV_PY) ansible-lint
+	@export PATH="$(UV_BIN):$$PATH"; \
+		uv tool install --python $(UV_PY) ansible-lint && \
+		uv tool install --python $(UV_PY) pre-commit
 	@echo "🔧 Creating repo-local shims in $(SHIM_DIR) ..."
 	@mkdir -p "$(SHIM_DIR)"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible "$$@"'          > "$(SHIM_DIR)/ansible";           chmod +x "$(SHIM_DIR)/ansible"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-playbook "$$@"' > "$(SHIM_DIR)/ansible-playbook";   chmod +x "$(SHIM_DIR)/ansible-playbook"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-galaxy "$$@"'   > "$(SHIM_DIR)/ansible-galaxy";     chmod +x "$(SHIM_DIR)/ansible-galaxy"
+	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from pre-commit pre-commit "$$@"'                  > "$(SHIM_DIR)/pre-commit";        chmod +x "$(SHIM_DIR)/pre-commit"
 	@echo "🔐 Installing SOPS for secrets management..."
 	@if ! command -v sops >/dev/null 2>&1; then \
 		echo "📥 Downloading SOPS v3.10.2..."; \
@@ -139,6 +144,7 @@ install:
 	@echo "🔍 Verifying installation:"
 	@env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible --version | head -n1 || true
 	@uvx --python $(UV_PY) --from ansible-lint ansible-lint --version || true
+	@uvx --python $(UV_PY) --from pre-commit pre-commit --version || true
 	@ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible-galaxy collection list | grep yamisskey || true
 	@echo "🧪 Molecule runtime (uvx) check:"
 	@$(MOLECULE) --version && echo "✅ Molecule available via uvx" || echo "⚠️ Molecule check failed (ensure Docker is available)"
@@ -167,7 +173,7 @@ inventory:
 		echo "📋 Creating $(TARGET) inventory from template..."; \
 		INV_PATH="$(INV)"; TEMPLATE_PATH="$(DEPLOY_DIR)/inventory.template"; \
 		if [ ! -f "$$TEMPLATE_PATH" ]; then echo "❌ Template not found: $$TEMPLATE_PATH"; exit 1; fi; \
-		if [ -f "$$INV_PATH" ]; then echo "⚠️  Inventory already exists. Creating backup..."; cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; fi; \
+		if [ -f "$$INV_PATH" ]; then echo "⚠️ Inventory already exists. Creating backup..."; cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; fi; \
 		echo "📄 Processing template with Tailscale IPs..."; \
 		cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
 		CURRENT_HOST=$$(hostname); CURRENT_USER=$$(whoami); DOMAIN="yami.ski"; NETWORK="100.64.0.0/10"; \
@@ -178,7 +184,6 @@ inventory:
 		sed -i.bak -e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" -e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" -e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" -e "s|BALTHASAR_IP_PLACEHOLDER|$$BALTHASAR_IP|g" -e "s|CASPAR_IP_PLACEHOLDER|$$CASPAR_IP|g" -e "s|LINODE_IP_PLACEHOLDER|$$LINODE_IP|g" -e "s|JOSEPH_IP_PLACEHOLDER|$$JOSEPH_IP|g" -e "s|RASPBERRY_IP_PLACEHOLDER|$$RASPBERRY_IP|g" -e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" "$$INV_PATH"; \
 		rm "$$INV_PATH.bak" 2>/dev/null || true; \
 		echo "✅ $(TARGET) inventory created from template at $$INV_PATH"; \
-		echo "💡 Next Steps: create & encrypt group_vars/vault.yml"; \
 	fi
 
 list:
@@ -267,8 +272,9 @@ test:
 
 # === Secrets Management (SOPS) ===
 secrets:
-	@test -n "$(OPERATION)" || (echo "❌ Usage: make secrets OPERATION=<install|edit|view|status|updatekeys> [TARGET=servers|appliances] [FILE=path/to/file.yml]" && exit 1)
-	@OPERATION_EFF="$(OPERATION)"; TARGET_EFF="$(TARGET)"; FILE_EFF="$(FILE)"; [ -n "$$TARGET_EFF" ] || TARGET_EFF=servers; \
+	@test -n "$(OPERATION)" || (echo "❌ Usage: make secrets OPERATION=<install|edit|view|status|updatekeys|list> [TARGET=servers|appliances] [HOST=hostname] [FILE=path/to/file.yml]" && exit 1)
+	@OPERATION_EFF="$(OPERATION)"; TARGET_EFF="$(TARGET)"; FILE_EFF="$(FILE)"; HOST_EFF="$(HOST)"; [ -n "$TARGET_EFF" ] || TARGET_EFF=servers; \
+	HOST_PATH="$$HOST_EFF"; if [ -n "$$HOST_PATH" ]; then HOST_PATH=$$(printf '%s' "$$HOST_PATH" | tr '-' '_'); fi; \
 	case "$$OPERATION_EFF" in \
 		install) \
 			echo "🔧 Installing SOPS and Age..."; \
@@ -281,27 +287,50 @@ secrets:
 		edit) \
 			echo "✏️  Editing secrets..."; \
 			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
-			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
-			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
-			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			elif [ -n "$$HOST_EFF" ]; then \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_servers)/host_vars/$$HOST_PATH/secrets.yml"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_appliances)/host_vars/$$HOST_PATH/secrets.yml"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			else \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_servers)"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_appliances)"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			fi; \
+			if [ ! -f "$$SOPS_FILE_PATH" ]; then \
+				echo "ℹ️  Initializing new SOPS file at $$SOPS_FILE_PATH"; \
+				mkdir -p "$$(dirname "$$SOPS_FILE_PATH")"; \
+				touch "$$SOPS_FILE_PATH"; \
+			fi; \
 			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
 			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
 			$(SOPS_BIN) "$$SOPS_FILE_PATH" ;; \
 		view) \
 			echo "👁️  Viewing secrets..."; \
 			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
-			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
-			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
-			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			elif [ -n "$$HOST_EFF" ]; then \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_servers)/host_vars/$$HOST_PATH/secrets.yml"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_appliances)/host_vars/$$HOST_PATH/secrets.yml"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			else \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_servers)"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_appliances)"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			fi; \
 			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
 			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
 			$(SOPS_BIN) -d "$$SOPS_FILE_PATH" ;; \
 		status) \
 			echo "🔍 Validating secrets..."; \
 			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
-			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
-			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
-			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			elif [ -n "$$HOST_EFF" ]; then \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_servers)/host_vars/$$HOST_PATH/secrets.yml"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_appliances)/host_vars/$$HOST_PATH/secrets.yml"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			else \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_servers)"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_appliances)"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			fi; \
 			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
 			echo "📄 File: $$SOPS_FILE_PATH"; \
 			if grep -q "sops:" "$$SOPS_FILE_PATH"; then echo "✅ SOPS metadata found"; \
@@ -312,9 +341,15 @@ secrets:
 		updatekeys) \
 			echo "🔄 Updating encryption keys..."; \
 			if [ -n "$$FILE_EFF" ]; then SOPS_FILE_PATH="$$FILE_EFF"; \
-			elif [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_FILE_servers)"; \
-			elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_FILE_appliances)"; \
-			else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			elif [ -n "$$HOST_EFF" ]; then \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_servers)/host_vars/$$HOST_PATH/secrets.yml"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(DEPLOY_DIR_appliances)/host_vars/$$HOST_PATH/secrets.yml"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			else \
+				if [ "$$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_servers)"; \
+				elif [ "$$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="$(SOPS_GROUP_FILE_appliances)"; \
+				else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi; \
+			fi; \
 			if [ ! -f "$$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $$SOPS_FILE_PATH"; exit 1; fi; \
 			export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
 			$(SOPS_BIN) updatekeys "$$SOPS_FILE_PATH" ;; \

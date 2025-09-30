@@ -3,16 +3,16 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   tasks:
     # Simplified test approach: install packages directly instead of using the role
     # This avoids systemd dependencies while still testing package functionality
     - name: Update package cache
-      apt:
+      ansible.builtin.apt:
         update_cache: true
-      
+
     - name: Install common packages (test subset)
-      apt:
+      ansible.builtin.apt:
         name:
           - net-tools
           - nmap
@@ -29,17 +29,17 @@
           - sysstat
           - python3-passlib
         state: present
-      
+
     - name: Create test directory for verification
       file:
         path: /tmp/test
         state: directory
         mode: '0755'
-      
+
     - name: Verify installed packages
       debug:
         msg: "Successfully installed common packages for testing"
-        
+
     - name: Test package functionality
       debug:
         msg: "Package {{ item }} is available"

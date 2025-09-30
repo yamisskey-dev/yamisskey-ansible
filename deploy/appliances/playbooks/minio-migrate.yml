@@ -58,7 +58,7 @@
           Source: {{ source_minio_host }}
           Target: {{ truenas_minio_domain }}
           Buckets: {{ buckets_to_migrate | join(', ') }}
-          
+
           Next Steps:
           1. Update application configurations (Misskey, Outline)
           2. Test file access via new endpoint

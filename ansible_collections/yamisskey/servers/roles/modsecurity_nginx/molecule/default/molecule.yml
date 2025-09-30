@@ -36,24 +36,24 @@ provisioner:
         modsecurity_anomaly_inbound: 5
         modsecurity_anomaly_outbound: 4
         modsecurity_rule_engine: "DetectionOnly"
-        
+
         # Test-specific exclusions
         modsecurity_misskey_exclusions_enabled: true
         modsecurity_api_exclusions_enabled: true
         modsecurity_rate_limit_enabled: true
         modsecurity_rate_limit_requests_per_minute: 100
         modsecurity_rate_limit_requests_per_second: 10
-        
+
         # Security headers testing
         modsecurity_hsts_enabled: true
         modsecurity_hsts_max_age: 31536000
-        
+
         # Mock service endpoints for testing
         domain: "test.example.com"
         synapse_server_name: "matrix.test.example.com"
         element_server_name: "chat.test.example.com"
         ctfd_server_name: "ctf.test.example.com"
-        
+
         # Docker test configuration
         modsecurity_nginx_name: "modsecurity-nginx-test"
         modsecurity_nginx_ports:

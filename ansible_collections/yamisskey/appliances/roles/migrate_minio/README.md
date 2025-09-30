@@ -36,8 +36,6 @@ source_minio_port: 9000
 
 # 移行先設定
 target_minio_endpoint: "https://drive.example.com"
-truenas_minio_root_user: "{{ vault_minio_root_user }}"
-truenas_minio_root_password: "{{ vault_minio_root_password }}"
 
 # 移行対象
 buckets_to_migrate:

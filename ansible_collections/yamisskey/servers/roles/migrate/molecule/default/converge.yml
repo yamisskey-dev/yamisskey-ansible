@@ -3,31 +3,10 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
-    - name: Ensure MinIO secrets directory exists
-      when: inventory_hostname == (ansible_play_hosts_all | first)
-      file:
-        path: "{{ minio_secrets_file | dirname }}"
-        state: directory
-        mode: '0755'
-
-    - name: Ensure MinIO secrets exist for testing
-      when: inventory_hostname == (ansible_play_hosts_all | first)
-      copy:
-        dest: "{{ minio_secrets_file }}"
-        mode: '0600'
-        content: |
-          minio:
-            root_user: test-root
-            root_password: test-root-password
-            misskey_s3_access_key: test-access
-            misskey_s3_secret_key: test-secret
-            kms_master_key: test-kms
-      changed_when: false
-
     - name: Update apt cache safely
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
       retries: 3
@@ -43,7 +22,7 @@
       when: apt_update_result is not failed
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -56,14 +35,14 @@
       when: apt_update_result is not failed
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -73,9 +52,9 @@
         state: present
         update_cache: true
       when: apt_update_result is not failed
-      
+
     - name: Install Docker for testing (fallback - use system packages)
-      apt:
+      ansible.builtin.apt:
         name:
           - docker.io
           - docker-compose-plugin
@@ -83,28 +62,28 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
-      
+
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -153,17 +132,7 @@
         EOF
         chmod +x /usr/local/bin/mc
       changed_when: false
-      
-    - name: Create mock source secrets on source host
-      copy:
-        content: |
-          minio:
-            root_user: "sourceuser"
-            root_password: "sourcepass"
-        dest: "/opt/minio/secrets.yml"
-        mode: '0600'
-      changed_when: false
-      
+
     - name: Mock HTTP health checks for migrate role
       shell: |
         # Start a simple HTTP server for health checks
@@ -172,7 +141,7 @@
         import socketserver
         import threading
         import time
-        
+
         class HealthHandler(http.server.BaseHTTPRequestHandler):
             def do_GET(self):
                 if '/minio/health/live' in self.path:
@@ -182,18 +151,18 @@
                 else:
                     self.send_response(404)
                     self.end_headers()
-        
+
         def start_server(port):
             with socketserver.TCPServer(('', port), HealthHandler) as httpd:
                 httpd.serve_forever()
-        
+
         # Start health check servers in background
         threading.Thread(target=start_server, args=(9000,), daemon=True).start()
         time.sleep(1)  # Give servers time to start
         " &
         sleep 2
       changed_when: false
-      
+
     - name: Test migrate role with mocked dependencies
       debug:
         msg: "Testing migrate role with mocked MinIO dependencies"
@@ -205,11 +174,10 @@
         migration_temp_dir: "/tmp/test-migration"
         minio_bucket_name_for_misskey: "files"
         minio_bucket_name_for_outline: "assets"
-        minio_secrets_file: "/opt/minio/secrets.yml"
         ansible_user: "root"
         ansible_default_ipv4:
           address: "127.0.0.1"
-        
+
     - name: Basic role verification
       debug:
         msg: "migrate role applied successfully"
@@ -219,7 +187,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

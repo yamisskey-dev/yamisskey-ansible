@@ -2,10 +2,10 @@
 - name: Verify cloudflare-warp deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Check mock warp-cli exists
-      stat:
+      ansible.builtin.stat:
         path: /usr/local/bin/warp-cli
       register: warp_cli_stat
 
@@ -18,7 +18,7 @@
         success_msg: "mock warp-cli present"
 
     - name: Check mock systemd service file exists
-      stat:
+      ansible.builtin.stat:
         path: /etc/systemd/system/warp-svc.service
       register: warp_svc_stat
 
@@ -44,7 +44,7 @@
           ✅ Mock Artifacts: Present
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
-          
+
           Role: cloudflare-warp
           Collection: yamisskey.servers
           Test Instance: cloudflare-warp-test-instance

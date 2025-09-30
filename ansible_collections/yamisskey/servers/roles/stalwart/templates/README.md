@@ -7,8 +7,8 @@
 
 関連変数（抜粋）:
 - `stalwart_dir`: 展開先のベースディレクトリ
-- `stalwart_secrets_file`: 管理者認証情報を保持するローカルファイル（初回自動生成）
 - `stalwart_server_name`: Web UI 接続先ホスト名の表示に利用
+- `stalwart.*`: host_vars `<host>/secrets.yml` で定義する管理者認証情報（SOPS 管理）
 
 実行例:
 - 確認: `make check PLAYBOOK=stalwart`

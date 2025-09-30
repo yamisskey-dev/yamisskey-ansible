@@ -20,4 +20,4 @@ cloudflared_hostname: drive.{{ domain }}
 # cloudflare_account_id: "..."         # VAULT 推奨
 ```
 
-機微情報は必ず Ansible Vault で管理してください。
+機微情報は必ず SOPS (group_vars/all/secrets.yml など) で管理してください。

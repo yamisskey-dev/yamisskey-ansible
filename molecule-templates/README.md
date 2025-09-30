@@ -5,7 +5,7 @@
 ## 📋 含まれるファイル
 
 - `molecule.yml.template` - 標準のMolecule設定テンプレート
-- `converge.yml.template` - テスト実行プレイブックテンプレート  
+- `converge.yml.template` - テスト実行プレイブックテンプレート
 - `verify.yml.template` - 基本検証ルールテンプレート
 - `setup_molecule.sh` - 全ロールへの自動セットアップスクリプト
 
@@ -51,7 +51,6 @@ role_name/
   include_role:
     name: yamisskey.servers.minio
   vars:
-    minio_secrets_file: "/tmp/test-secrets.yml"
     minio_bucket_name_for_misskey: "test-misskey-files"
 ```
 

@@ -22,7 +22,7 @@ roles/
 - **機能**: Docker Compose、Cloudflare Tunnel、Nginx設定
 
 #### **`yamisskey.appliances.migrate_minio`**
-- **責任**: MinIOデータ移行のみ  
+- **責任**: MinIOデータ移行のみ
 - **機能**: データ同期、IAM/CORS移行、移行検証
 
 ### 非推奨ロール
@@ -82,15 +82,12 @@ ansible-playbook -i deploy/appliances/inventory \
 ### TrueNAS基盤
 ```yaml
 truenas_pool_name: "tank"
-truenas_api_key: "{{ vault_truenas_api_key }}"
+truenas_api_key: "{{ truenas_api_key }}"
 ```
 
 ### MinIO設定
 ```yaml
 truenas_minio_domain: "drive.example.com"
-truenas_minio_root_user: "{{ vault_minio_root_user }}"
-truenas_minio_root_password: "{{ vault_minio_root_password }}"
-truenas_tunnel_token: "{{ vault_tunnel_token }}"
 ```
 
 ### 移行設定（移行時のみ）

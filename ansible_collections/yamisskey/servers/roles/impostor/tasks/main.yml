@@ -28,7 +28,7 @@
     group: "{{ ansible_user }}"
 
 - name: Ensure Docker service is running
-  service:
+  ansible.builtin.service:
     name: docker
     state: started
     enabled: true

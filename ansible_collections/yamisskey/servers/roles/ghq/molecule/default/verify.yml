@@ -19,7 +19,7 @@
         success_msg: "ghq is installed successfully"
 
     - name: Verify ghq configuration
-      stat:
+      ansible.builtin.stat:
         path: "{{ ansible_env.HOME }}/.config/ghq/config"
       register: ghq_config
 
@@ -31,7 +31,7 @@
         success_msg: "ghq configuration file exists"
 
     - name: Verify ghq root directory
-      stat:
+      ansible.builtin.stat:
         path: "{{ ghq_root | expanduser }}"
       register: ghq_root_dir
 

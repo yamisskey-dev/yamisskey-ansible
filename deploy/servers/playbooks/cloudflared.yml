@@ -7,10 +7,10 @@
   become: false
   gather_facts: true
   vars:
-    # Cloudflare API credentials from vault
-    cloudflare_api_token: "{{ vault_cloudflare_api_token | default(omit) }}"
-    cloudflare_zone_id: "{{ vault_cloudflare_zone_id | default(omit) }}"
-    cloudflare_account_id: "{{ vault_cloudflare_account_id | default(omit) }}"
+    # Cloudflare API credentials from global secrets
+    cloudflare_api_token: "{{ cloudflare_api_token | default(omit) }}"
+    cloudflare_zone_id: "{{ cloudflare_zone_id | default(omit) }}"
+    cloudflare_account_id: "{{ cloudflare_account_id | default(omit) }}"
 
     # Override default settings if needed
     # cloudflared_skip_install: false  # Set to false to enable automatic installation

@@ -32,14 +32,14 @@ provisioner:
         primary_domain: "test.local"
         monitor_compose_dir: "/opt/monitor"
         grafana_admin_password: "testpassword123"
-        
+
         # Service port configuration for testing
         monitor_services:
           prometheus: 9090
           grafana: 3000
           alertmanager: 9093
           blackbox: 9115
-        
+
         # Test monitoring targets (simplified for testing)
         monitor_targets:
           - name: "localhost"
@@ -47,16 +47,16 @@ provisioner:
             port: 9100
             role: "test-server"
             cadvisor_port: 8085
-        
+
         # External endpoints for testing (simplified)
         monitor_external_endpoints:
           - "http://localhost:3000"
           - "http://localhost:9090"
-        
+
         # Enable health checks
         health_check_timeout: 60
         health_check_retries: 3
-        
+
         # Alertmanager configuration for testing
         alertmanager_group_wait: "10s"
         alertmanager_group_interval: "10s"

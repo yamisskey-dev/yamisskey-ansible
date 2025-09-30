@@ -2,19 +2,19 @@
 - name: Verify migrate-minio deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Verify migration test directories exist
-      stat:
+      ansible.builtin.stat:
         path: "{{ item }}"
       register: migration_dir_checks
       loop:
         - /tmp/test-minio-data
         - /tmp/minio-migration
         - /var/tmp/test
-      
+
     - name: Check for migration role task execution markers
-      stat:
+      ansible.builtin.stat:
         path: "{{ item }}"
       register: migration_markers
       loop:
@@ -42,12 +42,12 @@
           ✅ Migration Directories: {{ migration_dir_checks.results | selectattr('stat.exists') | list | length }}/{{ migration_dir_checks.results | length }} Created
           ✅ Role Focus: Data synchronization only
           ✅ No Bucket/IAM Management: Correctly excluded
-          
+
           Role Responsibility:
           - ✅ Data migration (mc mirror)
           - ✅ File integrity verification
           - ❌ Bucket creation (moved to minio role)
           - ❌ IAM configuration (moved to minio role)
-          
+
           Collection: yamisskey.appliances
           Test Instance: migrate-minio-test-instance

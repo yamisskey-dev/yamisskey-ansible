@@ -2,13 +2,13 @@
 - name: Verify core deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Verify role execution completed without errors
-      stat:
+      ansible.builtin.stat:
         path: /var/tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
       assert:
         that:
@@ -25,7 +25,7 @@
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
-          
+
           Role: core
           Collection: yamisskey.appliances
           Test Instance: core-test-instance

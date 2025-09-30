@@ -2,7 +2,7 @@
 # Cloudflared Connectivity Verification
 
 - name: Wait for tunnel to be ready
-  pause:
+  ansible.builtin.pause:
     seconds: 15
 
 - name: Test tunnel connectivity

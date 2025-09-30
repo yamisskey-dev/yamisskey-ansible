@@ -3,30 +3,30 @@
   hosts: all
   become: false
   gather_facts: true
-  
+
   vars:
     # Test configuration
     test_phase: "{{ test_phase | default('full') }}"
     test_categories: "{{ categories | default('all') }}"
-    
+
   pre_tasks:
     - name: Display integration test execution plan
-      debug:
+      ansible.builtin.debug:
         msg: |
           🧪 Integration Test Execution Plan:
           📦 Test Categories: {{ test_categories }}
           🔍 Test Phase: {{ test_phase }}
           🖥️ Target Hosts: {{ ansible_play_hosts | join(', ') }}
-          
+
           📋 Available Test Categories:
           - infrastructure: Docker, disk, memory, network tests
-          - application: Misskey, MinIO, web interface tests  
+          - application: Misskey, MinIO, web interface tests
           - service: Container status, logs, backup tests
           - performance: Response time, resource usage tests
           - security: SSL, ports, permissions tests
           - e2e: End-to-end workflow tests
           - all: Run all test categories
-          
+
           💡 Usage examples:
           - All tests: ansible-playbook integration-test.yml
           - Specific category: ansible-playbook integration-test.yml -e "categories=infrastructure"
@@ -40,16 +40,16 @@
 
   post_tasks:
     - name: Integration test completion summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           🎉 Integration Test Suite Completed!
-          
+
           📊 Execution Summary:
           📅 Completed at: {{ ansible_date_time.iso8601 }}
           🖥️ Host: {{ inventory_hostname }}
           📦 Categories tested: {{ test_categories }}
           🔍 Phase: {{ test_phase }}
-          
+
           💡 Next steps:
           1. Review test results above
           2. Check generated report in /var/tmp/

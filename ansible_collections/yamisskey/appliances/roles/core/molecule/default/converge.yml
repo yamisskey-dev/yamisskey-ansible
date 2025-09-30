@@ -3,10 +3,10 @@
   hosts: all
   become: true
   gather_facts: false
-  
+
   pre_tasks:
     - name: Wait for instance to become reachable
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
         timeout: 30
 
     - name: Ensure remote Ansible temporary directory exists
@@ -14,10 +14,10 @@
       changed_when: false
 
     - name: Gather facts
-      setup:
+      ansible.builtin.setup:
 
     - name: Update apt cache safely
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
       retries: 3
@@ -33,7 +33,7 @@
       when: apt_update_result is not failed
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -46,14 +46,14 @@
       when: apt_update_result is not failed
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -65,7 +65,7 @@
       when: apt_update_result is not failed
 
     - name: Install Docker for testing (fallback - use system packages)
-      apt:
+      ansible.builtin.apt:
         name:
           - docker.io
           - docker-compose-plugin
@@ -73,7 +73,7 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
-      
+
     - name: Check if Docker daemon is already running
       shell: dockerd --version && pgrep dockerd
       register: docker_daemon_check
@@ -92,7 +92,7 @@
       failed_when: false
 
     - name: Check Docker lock files when daemon is not running
-      stat:
+      ansible.builtin.stat:
         path: "{{ item }}"
       loop:
         - /var/run/docker.pid
@@ -110,7 +110,7 @@
         - item.stat.exists
 
     - name: Check Docker lock files when daemon is running
-      stat:
+      ansible.builtin.stat:
         path: "{{ item }}"
       loop:
         - /var/lib/docker/network/files/local-kv.db.lock
@@ -127,7 +127,7 @@
         - item.stat.exists
 
     - name: Ensure Docker service is stopped before restart
-      service:
+      ansible.builtin.service:
         name: docker
         state: stopped
       failed_when: false
@@ -142,7 +142,7 @@
       changed_when: false
 
     - name: Alternative Docker start using service command
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
@@ -166,7 +166,7 @@
       changed_when: false
 
     - name: Wait for Docker socket to be available
-      wait_for:
+      ansible.builtin.wait_for:
         path: /var/run/docker.sock
         timeout: 30
       register: docker_socket_wait
@@ -198,15 +198,15 @@
           docker version check: {{ docker_verify.rc | default('failed') }}
           service status: {{ docker_status_debug.stdout | default('not available') }}
       when: docker_verify is failed
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
@@ -214,11 +214,11 @@
         state: present
 
     - name: Install midclt Molecule mock
-      copy:
+      ansible.builtin.copy:
         dest: /usr/local/bin/midclt
         mode: '0755'
         content: "{{ lookup('file', playbook_dir ~ '/../../../..' ~ '/files/midclt-mock.py') }}"
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -234,7 +234,7 @@
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
-        
+
     - name: Basic role verification
       debug:
         msg: "core role applied successfully"
@@ -244,7 +244,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

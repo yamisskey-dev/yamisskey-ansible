@@ -29,7 +29,7 @@
 
 # 2) 設定ファイルの配備
 - name: Deploy cloudflared credentials (named tunnel)
-  copy:
+  ansible.builtin.copy:
     content: "{{ truenas_tunnel_credentials | default('') }}"
     dest: "{{ truenas_cloudflared_config_path }}/{{ truenas_tunnel_id | default('tunnel') }}.json"
     mode: '0600'
@@ -64,7 +64,7 @@
 
 # 3) Compose をbase64化（APIに流す用）
 - name: Read compose for encoding
-  slurp:
+  ansible.builtin.slurp:
     src: "{{ truenas_apps_config_path }}/minio/docker-compose.yml"
   register: compose_slurp_result
   when: truenas_manage_custom_compose | default(true)
@@ -249,7 +249,7 @@
 
 # 10) バケット・IAM・CORS設定（MinIO構築の一部）
 - name: Install MinIO client for bucket/IAM operations
-  get_url:
+  ansible.builtin.get_url:
     url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
     dest: /usr/local/bin/mc
     mode: '0755'
@@ -296,7 +296,7 @@
     - not truenas_skip_bucket_iam_setup | default(false)
 
 - name: Create IAM policy template
-  copy:
+  ansible.builtin.copy:
     dest: /tmp/minio_iam_policy.json
     mode: '0600'
     content: |
@@ -397,16 +397,16 @@
       State: {{ app_state.state | default('unknown') }}
       Public: https://{{ truenas_minio_domain }}
       Health: {{ 'OK' if (minio_health is defined and minio_health.status is defined and minio_health.status == 200) else ('SKIPPED' if (inventory_hostname == 'apps-test-instance') else 'FAILED') }}
-      
+
       ✅ Buckets Created:
         - {{ minio_bucket_name_for_misskey | default('files') }}
         - {{ minio_bucket_name_for_outline | default('assets') }}
-      
+
       ✅ IAM Configuration:
         - User: {{ final_s3_access_key | default('Not configured') }}
         - Policy: misskey-policy (applied)
         - Federation access: enabled
-      
+
       Next Steps:
         1. MinIO is ready for production use
         2. Run migration: ansible-playbook migrate-minio.yml

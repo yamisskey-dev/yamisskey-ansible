@@ -3,42 +3,42 @@
   hosts: linode_prox
   become: true
   gather_facts: true
-  
+
   vars:
     ansible_python_interpreter: /usr/bin/python3
     docker_compose_cmd: 'docker compose'
-    
+
   roles:
     - role: yamisskey.servers.common
       tags: [common, base]
-      
+
     - role: yamisskey.servers.security
       tags: [security, hardening]
-      
+
     - role: yamisskey.servers.misskey_proxy
       tags: [proxy, nginx]
-      
+
     - role: yamisskey.servers.monitor
       tags: [monitoring, observability]
       when: "enable_monitoring | default(false) | bool"
-      
+
   post_tasks:
     - name: Display proxy deployment summary
       debug:
         msg: |
           🌐 Misskey Proxy Services Deployment Complete!
-          
+
           📦 Deployed Services:
           - ✅ Base system configuration and security
           - ✅ Squid proxy on port {{ squid_port | default(3128) }}
           - ✅ Media proxy (media-proxy-rs) on port 12766
           - ✅ Nginx reverse proxy on port 80
           - ✅ Summaly service via docker compose
-          
+
           🔧 Service Management:
           - Check status: docker ps
           - Squid status: systemctl status squid
           - Nginx status: systemctl status nginx
           - View logs: docker compose logs -f
-          
+
           🎯 yamisskey.servers Collection - Proxy Ready!

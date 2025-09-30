@@ -2,7 +2,6 @@
 # Neo-Quesdon role default variables
 neo_quesdon_dir: "/var/www/neo-quesdon"
 neo_quesdon_version: "develop"
-neo_quesdon_secrets_file: "/etc/neo-quesdon/secrets.yml"
 
 # Default domain (can be overridden)
 neo_quesdon_domain: "{{ domain | default('localhost') }}"

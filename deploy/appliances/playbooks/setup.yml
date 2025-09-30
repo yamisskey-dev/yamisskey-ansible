@@ -5,7 +5,7 @@
   hosts: truenas
   become: yes
   gather_facts: yes
-  
+
   tasks:
     - name: Display TrueNAS Setup Plan
       debug:
@@ -38,7 +38,7 @@
           ✅ Applications: MinIO + Cloudflared Custom App
           ✅ Cloudflare Tunnel: {{ truenas_minio_domain | default('example.invalid') }}
           ✅ Management UI: {{ truenas_api_url | default('https://truenas.local') }}
-          
+
           🔧 Next Steps:
           1. Configure Cloudflare DNS: {{ truenas_minio_domain | default('example.invalid') }}
           2. Run migration: migrate-minio-truenas.yml

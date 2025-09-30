@@ -22,10 +22,6 @@ TrueNAS Scale上でMinIOを構築するための専用ロール
 ```yaml
 truenas_pool_name: "tank"
 truenas_minio_domain: "drive.example.com"
-truenas_minio_root_user: "{{ vault_minio_root_user }}"
-truenas_minio_root_password: "{{ vault_minio_root_password }}"
-truenas_minio_kms_key: "{{ vault_minio_kms_key }}"
-truenas_tunnel_token: "{{ vault_tunnel_token }}"
 ```
 
 ### オプション変数
@@ -67,7 +63,7 @@ truenas_skip_health_check: false
 1. TrueNAS Scale 25.04以上
 2. `yamisskey.appliances.core` ロールの事前実行
 3. Cloudflare Tunnelの設定済み
-4. 必要な認証情報がAnsible Vaultで管理されていること
+4. 必要な認証情報が SOPS で管理されていること
 
 ## 出力成果物
 

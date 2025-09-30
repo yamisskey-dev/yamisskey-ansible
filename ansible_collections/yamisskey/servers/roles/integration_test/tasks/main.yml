@@ -6,13 +6,13 @@
   debug:
     msg: |-
       🧪 Integration Test Suite Starting:
-      📋 Categories: {{ integration_test_categories.keys() | list | join(', ') }}
+      📋 Categories: {{ (integration_test_categories | default({})).keys() | list | join(', ') }}
       🎯 Target Host: {{ inventory_hostname }}
-      🔧 Infrastructure: {{ 'enabled' if integration_test_categories.infrastructure else 'disabled' }}
-      🚀 Application: {{ 'enabled' if integration_test_categories.application else 'disabled' }}
-      🛠️  Services: {{ 'enabled' if integration_test_categories.service else 'disabled' }}
-      ⚡ Performance: {{ 'enabled' if integration_test_categories.performance else 'disabled' }}
-      🔒 Security: {{ 'enabled' if integration_test_categories.security else 'disabled' }}
+      🔧 Infrastructure: {{ 'enabled' if (integration_test_categories | default({})).infrastructure | default(true) else 'disabled' }}
+      🚀 Application: {{ 'enabled' if (integration_test_categories | default({})).application | default(true) else 'disabled' }}
+      🛠️  Services: {{ 'enabled' if (integration_test_categories | default({})).service | default(true) else 'disabled' }}
+      ⚡ Performance: {{ 'enabled' if (integration_test_categories | default({})).performance | default(true) else 'disabled' }}
+      🔒 Security: {{ 'enabled' if (integration_test_categories | default({})).security | default(true) else 'disabled' }}
   tags: ['info', 'plan']
 
 - name: Include infrastructure tests
@@ -20,7 +20,7 @@
   when: integration_test_categories.infrastructure | default(true)
   tags: ['infrastructure', 'infra']
 
-- name: Include application tests  
+- name: Include application tests
   include_tasks: application_tests.yml
   when: integration_test_categories.application | default(true)
   tags: ['application', 'app']
@@ -45,27 +45,27 @@
     final_test_score: |-
       {% set base_score = 0 %}
       {% set max_score = 100 %}
-      
+
       {# Infrastructure tests (20 points) #}
       {% for test, result in infrastructure_results.items() %}
         {% if result == 'pass' %}{% set base_score = base_score + 3 %}{% endif %}
       {% endfor %}
-      
+
       {# Application tests (25 points) #}
       {% for test, result in application_results.items() %}
         {% if result == 'pass' %}{% set base_score = base_score + 4 %}{% endif %}
       {% endfor %}
-      
+
       {# Service tests (20 points) #}
       {% for test, result in service_results.items() %}
         {% if result == 'pass' %}{% set base_score = base_score + 3 %}{% endif %}
       {% endfor %}
-      
+
       {# Performance tests (15 points) #}
       {% for test, result in performance_results.items() %}
         {% if result == 'pass' %}{% set base_score = base_score + 2 %}{% endif %}
       {% endfor %}
-      
+
       {# Security tests (20 points) #}
       {% for test, result in security_results.items() %}
         {% if result == 'pass' %}
@@ -74,9 +74,9 @@
           {% set base_score = base_score + 1 %}
         {% endif %}
       {% endfor %}
-      
+
       {{ [base_score, max_score] | min }}
-    
+
     test_summary:
       total_tests: |-
         {% set count = 0 %}
@@ -129,7 +129,7 @@
     msg: |-
       🧪 Integration Test Summary:
       📊 Final Score: {{ final_test_score }}/100 ({{ 'PASS' if final_test_score | int >= 80 else 'FAIL' }})
-      
+
       📈 Test Statistics:
       {% set total_tests = test_summary.total_tests | int %}
       {% set passed_tests = test_summary.passed_tests | int %}
@@ -138,13 +138,13 @@
       - Passed: {{ test_summary.passed_tests }} ({% if total_tests > 0 %}{{ ((passed_tests * 100.0) / total_tests) | round(1) }}%{% else %}N/A{% endif %})
       - Warned: {{ test_summary.warned_tests }}
       - Failed: {{ (total_tests - passed_tests - warned_tests) }}
-      
+
       🔧 Infrastructure Tests: {{ infrastructure_results.values() | select('equalto', 'pass') | list | length }}/{{ infrastructure_results | length }} passed
       🚀 Application Tests: {{ application_results.values() | select('equalto', 'pass') | list | length }}/{{ application_results | length }} passed
       🛠️  Service Tests: {{ service_results.values() | select('equalto', 'pass') | list | length }}/{{ service_results | length }} passed
       ⚡ Performance Tests: {{ performance_results.values() | select('equalto', 'pass') | list | length }}/{{ performance_results | length }} passed
       🔒 Security Tests: {{ security_results.values() | select('equalto', 'pass') | list | length }}/{{ security_results | length }} passed
-      
+
       {% if final_test_score | int >= 95 %}
       🌟 Excellent! All systems performing optimally
       {% elif final_test_score | int >= 80 %}
@@ -152,6 +152,6 @@
       {% else %}
       ❌ Critical issues detected - review failed tests
       {% endif %}
-      
+
       🚀 Integration test suite completed with comprehensive validation across all service layers
   tags: ['summary', 'info']

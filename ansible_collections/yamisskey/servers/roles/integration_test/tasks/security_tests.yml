@@ -41,7 +41,7 @@
   tags: ['security', 'containers', 'privileges']
 
 - name: Test file permissions on sensitive files
-  stat:
+  ansible.builtin.stat:
     path: "{{ item }}"
   register: file_permissions_test
   failed_when: false
@@ -183,7 +183,7 @@
       {% for test, result in security_results.items() %}
       - {{ test | replace('_', ' ') | title }}: {{ result | upper }}
       {% endfor %}
-      
+
       🚨 Security Findings:
       {% if security_results.port_security is defined and security_results.port_security == 'fail' %}
       - Unexpected open ports detected: {{ port_scan_test.stdout_lines | select('match', '^unexpected:') | join(', ') }}
@@ -197,7 +197,7 @@
       {% if security_results.security_updates is defined and security_results.security_updates == 'fail' %}
       - Critical security updates needed: {{ security_updates_test.stdout | regex_replace('.*:(\\d+)', '\\1') }}
       {% endif %}
-      
+
       ⚠️  Security Warnings:
       {% if security_results.firewall_status is defined and security_results.firewall_status == 'warn' %}
       - Firewall not active or configured

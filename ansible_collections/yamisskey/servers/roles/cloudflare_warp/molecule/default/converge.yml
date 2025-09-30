@@ -3,12 +3,12 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Wait for container to be ready
-      wait_for:
+      ansible.builtin.wait_for:
         timeout: 30
-        
+
     - name: Ensure Ansible temporary directory exists
       file:
         path: /tmp/.ansible-tmp
@@ -16,12 +16,12 @@
         mode: '1777'
         owner: root
         group: root
-        
+
     - name: Verify Ansible temporary directory permissions
-      stat:
+      ansible.builtin.stat:
         path: /tmp/.ansible-tmp
       register: ansible_tmp_stat
-      
+
     - name: Debug Ansible temporary directory info
       debug:
         msg: "Ansible tmp dir: {{ ansible_tmp_stat.stat.path }} exists: {{ ansible_tmp_stat.stat.exists }} mode: {{ ansible_tmp_stat.stat.mode }}"
@@ -30,19 +30,19 @@
     - name: Mock Cloudflare WARP installation for testing
       block:
         - name: Check if mock warp-cli exists
-          stat:
+          ansible.builtin.stat:
             path: /usr/local/bin/warp-cli
           register: mock_warp_cli_stat
-          
+
         - name: Create mock warp-cli command
           file:
             path: /usr/local/bin/warp-cli
             state: touch
             mode: '0755'
           when: not mock_warp_cli_stat.stat.exists
-            
+
         - name: Add mock warp-cli script content
-          copy:
+          ansible.builtin.copy:
             content: |
               #!/bin/bash
               case "$1" in
@@ -97,50 +97,50 @@
               esac
             dest: /usr/local/bin/warp-cli
             mode: '0755'
-            
+
         - name: Check if mock systemd service file exists
-          stat:
+          ansible.builtin.stat:
             path: /etc/systemd/system/warp-svc.service
           register: mock_systemd_service_stat
-          
+
         - name: Create mock systemd service file
           file:
             path: /etc/systemd/system/warp-svc.service
             state: touch
             mode: '0644'
           when: not mock_systemd_service_stat.stat.exists
-            
+
         - name: Add mock systemd service content
-          copy:
+          ansible.builtin.copy:
             content: |
               [Unit]
               Description=Cloudflare WARP Service
               After=network.target
-              
+
               [Service]
               Type=simple
               ExecStart=/bin/true
               Restart=always
-              
+
               [Install]
               WantedBy=multi-user.target
             dest: /etc/systemd/system/warp-svc.service
             mode: '0644'
-            
+
         - name: Reload systemd daemon
           systemd:
             daemon_reload: true
           failed_when: false
-            
+
         - name: Start mock warp service
           systemd:
             name: warp-svc.service
             state: started
             enabled: true
           failed_when: false
-            
+
       when: ansible_user == "root"
-      
+
     - name: Include cloudflare-warp tasks
       include_tasks: ../../tasks/main.yml
       vars:
@@ -157,7 +157,7 @@
         warp_verify_timeout: 10
         # Test environment flags
         test_mode: true
-        
+
     - name: Basic role verification
       debug:
         msg: "cloudflare-warp role applied successfully"
@@ -167,7 +167,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

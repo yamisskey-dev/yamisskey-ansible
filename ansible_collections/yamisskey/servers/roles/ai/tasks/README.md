@@ -8,4 +8,3 @@
 確認/実行例:
 - `make check PLAYBOOK=ai`
 - `make run PLAYBOOK=ai`
-

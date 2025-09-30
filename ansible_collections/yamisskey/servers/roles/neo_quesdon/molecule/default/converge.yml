@@ -3,10 +3,10 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Update apt cache safely
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
       retries: 3
@@ -22,7 +22,7 @@
       when: apt_update_result is not failed
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -35,14 +35,14 @@
       when: apt_update_result is not failed
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -52,9 +52,9 @@
         state: present
         update_cache: true
       when: apt_update_result is not failed
-      
+
     - name: Install Docker for testing (fallback - use system packages)
-      apt:
+      ansible.builtin.apt:
         name:
           - docker.io
           - docker-compose-plugin
@@ -62,28 +62,28 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
-      
+
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -98,7 +98,7 @@
         name: yamisskey.servers.neo_quesdon
       vars:
         ansible_user: "root"
-        
+
     - name: Basic role verification
       debug:
         msg: "neo-quesdon role applied successfully"
@@ -108,7 +108,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

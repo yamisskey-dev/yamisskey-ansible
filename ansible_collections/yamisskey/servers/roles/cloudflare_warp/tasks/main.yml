@@ -28,7 +28,7 @@
 - name: Register WARP (if not registered)
   become: true
   ansible.builtin.command: warp-cli registration new
-  when: 
+  when:
     - not (test_mode | default(false))
     - warp_registration.rc != 0 or (warp_registration.stdout is defined and 'not registered' in warp_registration.stdout | lower)
   notify: restart warp
@@ -37,7 +37,7 @@
   become: true
   no_log: true
   ansible.builtin.command: warp-cli registration license {{ warp_license_key }}
-  when: 
+  when:
     - not (test_mode | default(false))
     - (warp_license_key | default('')) | length > 0
   register: warp_license_applied
@@ -60,7 +60,7 @@
 - name: Set WARP mode
   become: true
   ansible.builtin.command: warp-cli mode {{ warp_mode }}
-  when: 
+  when:
     - not (test_mode | default(false))
     - warp_settings.stdout is not defined or (warp_mode | lower) not in (warp_settings.stdout | lower)
   notify: restart warp
@@ -93,7 +93,7 @@
   become: true
   ansible.builtin.command: warp-cli tunnel host add {{ item }}
   loop: "{{ warp_excluded_hosts }}"
-  when: 
+  when:
     - not (test_mode | default(false))
     - warp_excluded_current.stdout is not defined or (item not in (warp_excluded_current.stdout | default('')))
   register: warp_exclude_add

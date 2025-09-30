@@ -76,7 +76,7 @@
     LOG_DIR="/tmp/yamisskey-logs"
     mkdir -p $LOG_DIR
     LOG_FILE="$LOG_DIR/{{ target_service }}-{{ ansible_date_time.epoch }}.log"
-    
+
     {% if target_service == 'all' %}
     for container in $(docker ps --format "{{ '{{' }}.Names{{ '}}' }}"); do
       echo "=== Logs for $container ===" >> $LOG_FILE
@@ -88,17 +88,17 @@
     echo "=== Logs for {{ target_service }} ===" >> $LOG_FILE
     docker compose logs --tail={{ log_lines }} --timestamps >> $LOG_FILE
     {% endif %}
-    
+
     echo "Logs exported to: $LOG_FILE"
     ls -lh $LOG_FILE
   register: log_export
   when: export_logs | default(false)
 
 - name: Display logs based on operation type
-  debug:
+  ansible.builtin.debug:
     msg: |
       📄 Log Results for {{ target_service }} ({{ log_lines }} lines):
-      
+
       {% if log_filter is defined %}
       🔍 Filtered logs (filter: {{ log_filter }}):
       {{ filtered_logs.stdout_lines | join('\n') }}
@@ -115,7 +115,7 @@
       📋 Service logs:
       {{ specific_service_logs.stdout_lines | join('\n') }}
       {% endif %}
-      
+
       {% if export_logs %}
       💾 Log export results:
       {{ log_export.stdout_lines | join('\n') }}
@@ -124,7 +124,7 @@
 - name: Generate log analysis summary
   set_fact:
     log_analysis:
-      service: "{{ target_service }}"
+      ansible.builtin.service: "{{ target_service }}"
       lines_requested: "{{ log_lines }}"
       filter_applied: "{{ log_filter | default('none') }}"
       level_filter: "{{ log_level | default('all') }}"
@@ -133,7 +133,7 @@
       analysis_time: "{{ ansible_date_time.iso8601 }}"
 
 - name: Display log management summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       📊 Log Management Summary:
       - Service: {{ log_analysis.service }}
@@ -143,7 +143,7 @@
       - Timestamps: {{ log_analysis.timestamps_enabled }}
       - Export to file: {{ log_analysis.export_enabled }}
       - Analysis completed: {{ log_analysis.analysis_time }}
-      
+
       💡 Tips:
       - Use -e log_filter="keyword" to filter logs
       - Use -e log_level="error" to show only errors

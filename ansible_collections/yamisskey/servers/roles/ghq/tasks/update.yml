@@ -36,6 +36,6 @@
     msg: |
       📁 Updated repositories in {{ ghq_root }}:
       {{ ghq_list_result.stdout_lines | join('\n') }}
-  when: 
+  when:
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
     - ghq_list_result.rc == 0

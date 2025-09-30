@@ -6,7 +6,7 @@
     src: config.yml.j2
     dest: "{{ cloudflared_config_file }}"
     owner: "{{ cloudflared_user }}"
-    group: "{{ cloudflared_group }}"
+    ansible.builtin.file: "{{ cloudflared_group }}"
     mode: '0640'
   register: config_deployed
 
@@ -18,7 +18,7 @@
       Owner: {{ cloudflared_user }}:{{ cloudflared_group }}
 
 - name: Copy configuration to system directory
-  copy:
+  ansible.builtin.copy:
     src: "{{ cloudflared_config_file }}"
     dest: "{{ cloudflared_system_config_dir }}/config.yml"
     owner: root
@@ -29,7 +29,7 @@
   register: system_config_deployed
 
 - name: Copy tunnel credentials to system directory
-  copy:
+  ansible.builtin.copy:
     src: "{{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
     dest: "{{ cloudflared_system_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
     owner: root

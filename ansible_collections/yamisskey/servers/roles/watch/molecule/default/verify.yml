@@ -40,7 +40,7 @@
           - node_exporter_status_check.stdout == "active"
         fail_msg: "Node Exporter service is not running (alternative check)"
         success_msg: "Node Exporter service is running correctly (alternative check)"
-      when: 
+      when:
         - node_exporter_service.status is not defined
         - node_exporter_status_check is defined
 
@@ -48,21 +48,21 @@
       shell: "systemctl list-unit-files | grep prometheus-node-exporter"
       register: node_exporter_exists_check
       failed_when: false
-      when: 
+      when:
         - node_exporter_service.status is not defined
         - node_exporter_status_check is not defined
 
     - name: Debug service existence check
       debug:
         var: node_exporter_exists_check
-      when: 
+      when:
         - node_exporter_service.status is not defined
         - node_exporter_status_check is not defined
 
     - name: Fail if Node Exporter service does not exist
       fail:
         msg: "Node Exporter service (prometheus-node-exporter) does not exist on the system"
-      when: 
+      when:
         - node_exporter_service.status is not defined
         - node_exporter_status_check is not defined
         - node_exporter_exists_check.rc != 0
@@ -105,7 +105,7 @@
     - name: Fail if Node Exporter is not accessible
       fail:
         msg: "Node Exporter is not accessible on port 9100. Service may not be running or listening on the expected port."
-      when: 
+      when:
         - node_exporter_metrics.status is not defined
         - node_exporter_process_check.rc != 0
 
@@ -125,7 +125,7 @@
           - cadvisor_container.container.State.Status == "running"
         fail_msg: "cAdvisor container is not running"
         success_msg: "cAdvisor container is running correctly"
-      when: 
+      when:
         - cadvisor_container.exists
         - cadvisor.enabled | default(true)
 
@@ -152,7 +152,7 @@
           - "'container_' in cadvisor_metrics.content"
         fail_msg: "cAdvisor metrics do not contain expected content or endpoint is not accessible"
         success_msg: "cAdvisor is exposing container metrics correctly"
-      when: 
+      when:
         - cadvisor.enabled | default(true)
         - cadvisor_metrics is defined
         - cadvisor_metrics.status is defined
@@ -166,7 +166,7 @@
     - name: Skip cAdvisor metrics check (not accessible)
       debug:
         msg: "cAdvisor metrics endpoint is not accessible, skipping metrics content verification"
-      when: 
+      when:
         - cadvisor.enabled | default(true)
         - cadvisor_metrics is defined
         - cadvisor_metrics.status is defined
@@ -174,12 +174,12 @@
 
 
     - name: Check Node Exporter configuration file exists (systemd)
-      stat:
+      ansible.builtin.stat:
         path: "/lib/systemd/system/prometheus-node-exporter.service"
       register: node_exporter_config_systemd
 
     - name: Check Node Exporter configuration file exists (custom)
-      stat:
+      ansible.builtin.stat:
         path: "/etc/systemd/system/prometheus-node-exporter.service"
       register: node_exporter_config_custom
 

@@ -147,6 +147,7 @@
       ansible.builtin.command: ufw status verbose
       register: ufw_status
       become: true
+      changed_when: false
 
     - name: Display UFW status
       ansible.builtin.debug:
@@ -191,12 +192,14 @@
     - tailscale_cli_available | default(false)
     - tailscale_needs_start | default(false) | bool
   register: tailscale_start
+  changed_when: false
 
 - name: Retrieve and parse Tailscale IP addresses
   block:
     - name: Retrieve Tailscale status
       ansible.builtin.command: tailscale status --json
       register: tailscale_status
+      changed_when: false
 
     - name: Set Tailscale IPs
       ansible.builtin.set_fact:
@@ -283,6 +286,7 @@
   ansible.builtin.command: fail2ban-client status sshd
   register: result
   failed_when: false
+  changed_when: false
   become: true
   when:
     - security_manage_fail2ban_service | default(true)
@@ -302,6 +306,7 @@
   block:
     - name: Add CrowdSec repository
       ansible.builtin.shell: |
+        set -o pipefail
         curl -s https://install.crowdsec.net | sudo sh
       register: crowdsec_repo_install
       changed_when: true
@@ -406,7 +411,7 @@
         path: /var/log/clamav
         state: directory
         owner: clamav
-        group: adm
+        ansible.builtin.file: adm
         mode: '0755'
       become: true
 
@@ -425,7 +430,7 @@
         path: /var/log/clamav/freshclam.log
         state: touch
         owner: clamav
-        group: adm
+        ansible.builtin.file: adm
         mode: '0644'
       become: true
 

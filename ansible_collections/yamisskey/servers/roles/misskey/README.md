@@ -60,7 +60,7 @@ misskey_proxy: 'http://127.0.0.1:{{ host_services.linode_prox.squid }}'
 ```yaml
 # PostgreSQL設定
 misskey_db_name: 'example_misskey_db'
-misskey_db_user: 'example_misskey_user' 
+misskey_db_user: 'example_misskey_user'
 misskey_db_pass: 'example_misskey_pass'
 ```
 
@@ -144,20 +144,11 @@ make run PLAYBOOK=minio
 
 ### 関連サービス
 - **PostgreSQL**: メインデータベース
-- **Redis**: セッション・キャッシュストレージ  
+- **Redis**: セッション・キャッシュストレージ
 - **Nginx**: リバースプロキシ・SSL終端
 - **MinIO**: メディアファイルストレージ（オプション）
 
 ## 🔒 セキュリティ設定
-
-### 環境変数による秘匿情報管理
-```yaml
-# group_vars/vault.yml (Ansible Vault暗号化推奨)
-vault_misskey_db_pass: "secure_database_password"
-vault_misskey_secret_key: "application_secret_key"
-vault_minio_access_key: "s3_access_key"
-vault_minio_secret_key: "s3_secret_key"
-```
 
 ### 接続セキュリティ
 - プロキシ経由の外部通信

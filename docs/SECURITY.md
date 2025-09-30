@@ -7,7 +7,7 @@
 ## 目次
 
 1. [セキュリティアーキテクチャ概要](#セキュリティアーキテクチャ概要)
-2. [Ansible Vault 管理](#ansible-vault-管理)
+2. [SOPS 秘密情報管理](#sops-秘密情報管理)
 3. [MinIO KMS キー管理](#minio-kms-キー管理)
 4. [Cloudflare セキュリティ](#cloudflare-セキュリティ)
 5. [災害復旧（DR）手順](#災害復旧dr手順)
@@ -25,7 +25,7 @@
 │ Layer 1: Cloudflare (WAF, DDoS Protection, Zero Trust) │
 ├─────────────────────────────────────────────────────────┤
 │ Layer 2: ModSecurity + CrowdSec (Application Firewall) │
-├─────────────────────────────────────────────────────────┤  
+├─────────────────────────────────────────────────────────┤
 │ Layer 3: UFW + fail2ban (Host-based Firewall)          │
 ├─────────────────────────────────────────────────────────┤
 │ Layer 4: Encrypted Storage (MinIO KMS + Age)           │
@@ -38,85 +38,83 @@
 
 | コンポーネント | 暗号化 | アクセス制御 | バックアップ | モニタリング |
 |-------------|-------|-----------|-----------|------------|
-| Ansible Vault | ✅ AES256 | 🔐 Vault Password | ✅ Git + 分離保管 | ✅ Commit hooks |
+| SOPS | ✅ AES256-GCM | 🔐 Age Keys | ✅ Git + 分離保管 | ✅ Commit hooks |
 | MinIO KMS | ✅ AES256-GCM | 🔐 IAM Policy | ✅ Cross-region | ✅ Audit logs |
 | Cloudflare | ✅ TLS 1.3 | 🔐 Zero Trust | ✅ Config backup | ✅ Security events |
 | Database | ✅ At-rest + TLS | 🔐 User roles | ✅ Point-in-time | ✅ Query logs |
 
 ---
 
-## Ansible Vault 管理
+## SOPS 秘密情報管理
 
-### Vault パスワード管理
+### Age キー管理
 
 #### 初期設定
 
 ```bash
-# Vault パスワードファイル作成（ローカル環境のみ）
-echo "your-secure-vault-password" > ~/.ansible-vault-yamisskey
-chmod 600 ~/.ansible-vault-yamisskey
+# 既存の Age 秘密鍵が無い場合は生成
+age-keygen -o age-key.txt
 
-# 環境変数設定（推奨）
-export ANSIBLE_VAULT_PASSWORD_FILE=~/.ansible-vault-yamisskey
+# 権限を制限
+chmod 600 age-key.txt
+
+# SOPS 用に環境変数を設定（推奨）
+export SOPS_AGE_KEY_FILE=$(pwd)/age-key.txt
 ```
 
-#### Vault ファイルの暗号化
+Age 公開鍵は `.sops.yaml` の `keys:` に登録済みです。鍵の追加・入れ替えを行う場合は `.sops.yaml` を更新してコミットしてください。
+
+### シークレット保管場所
+
+- 共通シークレット: `deploy/servers/group_vars/all/secrets.yml`
+- ホスト専用シークレット: `deploy/servers/host_vars/<host>/secrets.yml`
+- アプライアンス系: `deploy/appliances/group_vars/all/secrets.yml`（必要に応じて作成）
+
+いずれも SOPS で暗号化された YAML です。復号済みの内容はコミットしないでください。
+
+### 編集フロー（make secrets 推奨）
 
 ```bash
-# 新規作成時の暗号化
-ansible-vault create deploy/servers/group_vars/vault.yml
+# グローバルシークレットを編集
+make secrets OPERATION=edit TARGET=servers
 
-# 既存ファイルの暗号化
-ansible-vault encrypt deploy/servers/group_vars/vault.yml
+# balthasar 用シークレットを編集
+make secrets OPERATION=edit TARGET=servers HOST=balthasar
 
-# 内容確認（復号して表示）
-ansible-vault view deploy/servers/group_vars/vault.yml
-
-# インプレース編集
-ansible-vault edit deploy/servers/group_vars/vault.yml
+# 暗号化状態を検証
+make secrets OPERATION=status TARGET=servers HOST=balthasar
 ```
 
-#### Vault パスワード回転手順
+`HOST` にハイフンを含む場合は自動でアンダースコアに変換されます（例: `HOST=linode-prox` → `host_vars/linode_prox/`）。 `FILE` を指定すると任意の YAML を直接開くことも可能です。
 
-**実行頻度**: 6ヶ月に1回、またはセキュリティインシデント時
+### SOPS 直接操作
 
-1. **新パスワード準備**
+`make` を使わない場合は以下を利用します。
+
+```bash
+# 復号して閲覧
+SOPS_AGE_KEY_FILE=age-key.txt sops -d deploy/servers/group_vars/all/secrets.yml
+
+# 編集
+SOPS_AGE_KEY_FILE=age-key.txt sops deploy/servers/host_vars/balthasar/secrets.yml
+```
+
+### 鍵ローテーション
+
+**実行頻度**: 6ヶ月に1回、または鍵漏洩時
+
+1. `.sops.yaml` に新しい Age 公開鍵を追加
+2. 既存ファイルの受信者を更新
+
    ```bash
-   # 新しいパスワードファイル作成
-   echo "new-secure-vault-password" > ~/.ansible-vault-yamisskey-new
-   chmod 600 ~/.ansible-vault-yamisskey-new
+   make secrets OPERATION=updatekeys TARGET=servers
+   make secrets OPERATION=updatekeys TARGET=servers HOST=balthasar
+   # 必要に応じて appliances も同様に実施
    ```
 
-2. **段階的移行**
-   ```bash
-   # 現在のパスワードで復号し、新パスワードで再暗号化
-   ansible-vault rekey deploy/servers/group_vars/vault.yml \
-     --vault-password-file ~/.ansible-vault-yamisskey \
-     --new-vault-password-file ~/.ansible-vault-yamisskey-new
-   
-   # appliances も同様に実行
-   ansible-vault rekey deploy/appliances/group_vars/vault.yml \
-     --vault-password-file ~/.ansible-vault-yamisskey \
-     --new-vault-password-file ~/.ansible-vault-yamisskey-new
-   ```
+3. 古い鍵を `.sops.yaml` から削除し、Age 秘密鍵を安全に破棄
 
-3. **環境更新**
-   ```bash
-   # 旧パスワードファイルをバックアップ
-   mv ~/.ansible-vault-yamisskey ~/.ansible-vault-yamisskey.$(date +%Y%m%d)
-   
-   # 新パスワードファイルを有効化
-   mv ~/.ansible-vault-yamisskey-new ~/.ansible-vault-yamisskey
-   ```
-
-4. **検証**
-   ```bash
-   # 復号テスト
-   ansible-vault view deploy/servers/group_vars/vault.yml
-   
-   # プレイブック実行テスト
-   yamisskey-provision check common
-   ```
+4. `make secrets OPERATION=status ...` で復号確認
 
 ---
 
@@ -163,16 +161,16 @@ kubectl get secret minio-kms-config -o yaml > kms-config-backup-$(date +%Y%m%d).
 NEW_KMS_KEY=$(openssl rand -base64 32)
 echo "Generated new KMS key: $NEW_KMS_KEY"
 
-# Ansible Vault に新キー追加
-ansible-vault edit deploy/servers/group_vars/vault.yml
-# vault_minio_kms_secret_key_new: "new-key-here"
+# SOPS に新キーを追加（例）
+make secrets OPERATION=edit TARGET=servers
+# minio_kms_secret_key_new: "new-key-here"
 ```
 
 #### 3. 二重キー許容期間の開始
 
 ```bash
 # MinIO に新キーを追加（既存キーと並行稼働）
-mc admin kms key create minio yamisskey-key-v2 
+mc admin kms key create minio yamisskey-key-v2
 
 # 両キーが利用可能なことを確認
 mc admin kms key list minio
@@ -255,9 +253,9 @@ mc policy set none minio/assets
 # - DNS:Edit, Zone:Read permissions
 # - Specific zones: yami.ski
 
-# 2. Ansible Vault 更新
-ansible-vault edit deploy/servers/group_vars/vault.yml
-# vault_cloudflare_api_token: "new-token-here"
+# 2. SOPS シークレット更新
+make secrets OPERATION=edit TARGET=servers
+# cloudflare_api_token: "new-token-here"
 
 # 3. デプロイテスト
 yamisskey-provision check cloudflared
@@ -276,8 +274,8 @@ cloudflared tunnel create yamisskey-balthasar-v2
 # 2. 設定ファイル更新
 cloudflared tunnel route dns yamisskey-balthasar-v2 yami.ski
 
-# 3. Ansible 変数更新
-ansible-vault edit deploy/servers/group_vars/vault.yml
+# 3. SOPS 変数更新
+make secrets OPERATION=edit TARGET=servers
 
 # 4. 段階的切り替え
 yamisskey-provision run cloudflared LIMIT=balthasar
@@ -311,7 +309,7 @@ cloudflared tunnel delete yamisskey-balthasar-v1
    ```bash
    # インシデントチケット作成
    echo "KMS_KEY_LOSS_$(date +%Y%m%d_%H%M)" > /tmp/incident_id
-   
+
    # 関係者通知（Slack/Teams）
    curl -X POST -H 'Content-type: application/json' \
      --data '{"text":"🚨 KMS Key Loss Incident - DR procedures initiated"}' \
@@ -322,11 +320,11 @@ cloudflared tunnel delete yamisskey-balthasar-v1
    ```bash
    # 最新のAge暗号化バックアップ確認
    mc ls r2-backup/encrypted-backups/ --recursive | tail -5
-   
+
    # Age秘密鍵で復号
    mc cp r2-backup/encrypted-backups/latest-kms.age /tmp/
    age --decrypt -i ~/.age/key.txt /tmp/latest-kms.age > /tmp/kms-recovery.json
-   
+
    # KMS設定復元
    kubectl create secret generic minio-kms-config \
      --from-file=kms.json=/tmp/kms-recovery.json
@@ -336,7 +334,7 @@ cloudflared tunnel delete yamisskey-balthasar-v1
    ```bash
    # MinIO 再起動（KMS設定読み込み）
    yamisskey-provision run minio servers "" restart
-   
+
    # データアクセステスト
    mc ls minio/files | head -5
    ```
@@ -345,7 +343,7 @@ cloudflared tunnel delete yamisskey-balthasar-v1
    ```bash
    # ヘルスチェック実行
    mc admin heal minio --recursive --verbose
-   
+
    # ランダムサンプリング検証
    for i in {1..10}; do
      RANDOM_FILE=$(mc ls minio/files --recursive | shuf -n1 | awk '{print $NF}')
@@ -426,12 +424,12 @@ emergency_contacts:
     phone: "+81-90-XXXX-XXXX"
     email: "admin@yami.ski"
     signal: "@admin_signal"
-  
+
   security_team:
     name: "Security Response Team"
-    phone: "+81-90-YYYY-YYYY" 
+    phone: "+81-90-YYYY-YYYY"
     email: "security@yami.ski"
-    
+
   vendor_support:
     cloudflare: "enterprise-support@cloudflare.com"
     linode: "+1-855-4-LINODE"
@@ -445,7 +443,7 @@ emergency_contacts:
 
 | タスク | 頻度 | 実行時期 | 責任者 |
 |--------|------|----------|--------|
-| Vault パスワード回転 | 6ヶ月 | 6月/12月 | Admin |
+| SOPS 鍵回転 | 6ヶ月 | 6月/12月 | Admin |
 | MinIO KMS キー回転 | 3ヶ月 | 四半期末 | Admin |
 | TLS証明書更新 | 自動 | Let's Encrypt | System |
 | セキュリティパッチ適用 | 週次 | 日曜深夜 | Unattended |
@@ -469,9 +467,9 @@ zcat /var/log/nginx/access.log.*.gz | \
 echo "2. Failed authentication attempts..."
 sudo grep "Failed password" /var/log/auth.log | wc -l
 
-# 3. Vault ファイル整合性チェック
-echo "3. Vault integrity check..."
-ansible-vault view deploy/servers/group_vars/vault.yml > /dev/null && echo "✅ Vault OK"
+# 3. SOPS ファイル整合性チェック
+echo "3. SOPS integrity check..."
+SOPS_AGE_KEY_FILE=age-key.txt sops -d deploy/servers/group_vars/all/secrets.yml >/dev/null && echo "✅ SOPS OK"
 
 # 4. MinIO KMS 健全性
 echo "4. MinIO KMS health..."
@@ -494,8 +492,7 @@ echo "=== Review completed ==="
 emergency-kit/
 ├── credentials/
 │   ├── ssh-keys/              # SSH秘密鍵（パスフレーズ保護）
-│   ├── age-keys/              # Age暗号化鍵
-│   ├── vault-passwords        # Ansible Vault パスワード
+│   ├── age-keys/              # Age暗号化鍵（SOPS用）
 │   └── recovery-tokens        # 各種API トークン
 ├── procedures/
 │   ├── quick-start.md         # 緊急時クイックスタート
@@ -534,9 +531,9 @@ gpg --armor --cipher-algo AES256 --compress-algo 2 \
 
 ```bash
 # よく使用するセキュリティコマンド
-ansible-vault encrypt group_vars/vault.yml
-ansible-vault decrypt group_vars/vault.yml --output=-
-ansible-vault rekey group_vars/vault.yml
+SOPS_AGE_KEY_FILE=age-key.txt sops -d deploy/servers/group_vars/all/secrets.yml
+SOPS_AGE_KEY_FILE=age-key.txt sops deploy/servers/host_vars/balthasar/secrets.yml
+make secrets OPERATION=updatekeys TARGET=servers
 mc admin kms key list minio
 mc admin heal minio --recursive
 age --encrypt -R ~/.age/public-key.txt < secrets.txt > secrets.age
@@ -549,7 +546,7 @@ age --decrypt -i ~/.age/key.txt secrets.age
 {
   "timestamp": "2024-01-15T10:30:00Z",
   "event_type": "kms_key_rotation",
-  "severity": "info", 
+  "severity": "info",
   "actor": "admin@yami.ski",
   "resource": "minio/yamisskey-key-v1",
   "action": "rotate",
@@ -564,7 +561,7 @@ age --decrypt -i ~/.age/key.txt secrets.age
 
 ### C. セキュリティ設定チェックリスト
 
-- [ ] Ansible Vault パスワード強度（20文字以上）
+- [ ] SOPS Age 秘密鍵の保護（オフライン複製 + アクセス制御）
 - [ ] MinIO KMS キー定期回転（3ヶ月以内）
 - [ ] TLS 証明書有効期限（30日以上残存）
 - [ ] バックアップ暗号化検証（週次）
@@ -575,6 +572,6 @@ age --decrypt -i ~/.age/key.txt secrets.age
 
 **文書管理**
 - 作成日: 2024-01-15
-- 最終更新: 2024-01-15  
+- 最終更新: 2024-01-15
 - バージョン: 1.0
 - 次回レビュー: 2024-04-15

@@ -166,7 +166,7 @@
       {% for test, result in performance_results.items() %}
       - {{ test | replace('_', ' ') | title }}: {{ result | upper }}
       {% endfor %}
-      
+
       📊 Performance Metrics:
       - Average response time: {{ performance_metrics.avg_response_time }}ms (threshold: {{ performance_thresholds.response_time_ms | default(5000) }}ms)
       - Max memory usage: {{ performance_metrics.max_memory_usage }}MB (threshold: {{ performance_thresholds.memory_usage_mb | default(2048) }}MB)

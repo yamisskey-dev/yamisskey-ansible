@@ -5,7 +5,6 @@
     # Migration configuration with defaults
     minio_bucket_name_for_misskey: "{{ minio_bucket_name_for_misskey | default('files') }}"
     minio_bucket_name_for_outline: "{{ minio_bucket_name_for_outline | default('assets') }}"
-    minio_secrets_file: "{{ minio_secrets_file | default('/opt/secrets.yml') }}"
     source_minio_port: "{{ source_minio_port | default(9000) }}"
     target_minio_port: "{{ target_minio_port | default(9000) }}"
     migration_temp_dir: "{{ migration_temp_dir | default('/tmp/minio-migration') }}"
@@ -36,15 +35,40 @@
       - Target host: {{ inventory_hostname }}
       - Available hosts in inventory: {{ groups['all'] }}
 
+- name: Gather MinIO credentials from inventory
+  set_fact:
+    source_minio_inventory: "{{ (hostvars[source_minio_host] | default({})).minio | default({}) }}"
+    target_minio_inventory: "{{ (hostvars[inventory_hostname] | default({})).minio | default({}) }}"
+
+- name: Build MinIO credential dictionaries
+  set_fact:
+    source_secrets:
+      minio:
+        root_user: "{{ source_minio_inventory.root_user | default('CHANGE_ME_SOURCE_ROOT_USER') }}"
+        root_password: "{{ source_minio_inventory.root_password | default('CHANGE_ME_SOURCE_ROOT_PASSWORD') }}"
+    target_secrets:
+      minio:
+        root_user: "{{ target_minio_inventory.root_user | default('CHANGE_ME_TARGET_ROOT_USER') }}"
+        root_password: "{{ target_minio_inventory.root_password | default('CHANGE_ME_TARGET_ROOT_PASSWORD') }}"
+
+- name: Warn about placeholder migration credentials
+  debug:
+    msg: >-
+      MinIO {{ item.role }} credentials are placeholders. Update host_vars/{{ item.host }}/secrets.yml → minio.root_user/minio.root_password.
+  loop:
+    - { role: 'source', host: "{{ source_minio_host }}", user: "{{ source_secrets.minio.root_user }}", password: "{{ source_secrets.minio.root_password }}" }
+    - { role: 'target', host: "{{ inventory_hostname }}", user: "{{ target_secrets.minio.root_user }}", password: "{{ target_secrets.minio.root_password }}" }
+  when: item.user is search('^CHANGE_ME_') or item.password is search('^CHANGE_ME_')
+
 - name: Install MinIO CLI if not present
   block:
     - name: Check if MinIO CLI exists
-      stat:
+      ansible.builtin.stat:
         path: /usr/local/bin/mc
       register: mc_exists
 
     - name: Download and install MinIO CLI
-      get_url:
+      ansible.builtin.get_url:
         url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
         dest: /usr/local/bin/mc
         mode: '0755'
@@ -118,83 +142,6 @@
       Status: {{ target_health.status | default('Connection failed') }}
       Please ensure target MinIO is running and accessible.
   when: target_health.status | default(0) != 200
-
-- name: Load source MinIO credentials
-  block:
-    - name: Check source secrets file exists (remote)
-      stat:
-        path: "/opt/minio/secrets.yml"
-      register: source_secrets_stat
-      delegate_to: "{{ source_minio_host }}"
-      when: source_minio_host != inventory_hostname
-
-    - name: Check source secrets file exists (local)
-      stat:
-        path: "/opt/minio/secrets.yml"
-      register: source_secrets_stat_local
-      when: source_minio_host == inventory_hostname
-
-    - name: Fail if source secrets not found
-      fail:
-        msg: "Source MinIO secrets file not found at /opt/minio/secrets.yml on {{ source_minio_host }}"
-      when: >
-        (source_minio_host != inventory_hostname and not source_secrets_stat.stat.exists) or
-        (source_minio_host == inventory_hostname and not source_secrets_stat_local.stat.exists)
-
-    - name: Display found source secrets file
-      debug:
-        msg: "✅ Found source secrets at: /opt/minio/secrets.yml"
-
-    - name: Read source secrets (remote)
-      slurp:
-        src: "/opt/minio/secrets.yml"
-      register: source_secrets_raw
-      delegate_to: "{{ source_minio_host }}"
-      when: source_minio_host != inventory_hostname
-
-    - name: Read source secrets (local)
-      slurp:
-        src: "/opt/minio/secrets.yml"
-      register: source_secrets_raw_local
-      when: source_minio_host == inventory_hostname
-
-    - name: Parse source MinIO credentials
-      set_fact:
-        source_secrets: "{{ (source_secrets_raw.content if source_minio_host != inventory_hostname else source_secrets_raw_local.content) | b64decode | from_yaml }}"
-
-- name: Load target MinIO credentials
-  block:
-    - name: Check target secrets file exists
-      stat:
-        path: "/opt/minio/secrets.yml"
-      register: target_secrets_stat
-
-    - name: Fail if target secrets not found
-      fail:
-        msg: "Target MinIO secrets file not found at /opt/minio/secrets.yml on {{ inventory_hostname }}"
-      when: not target_secrets_stat.stat.exists
-
-    - name: Display found target secrets file
-      debug:
-        msg: "✅ Found target secrets at: /opt/minio/secrets.yml"
-
-    - name: Read target secrets
-      slurp:
-        src: "/opt/minio/secrets.yml"
-      register: target_secrets_raw
-
-    - name: Parse target MinIO credentials
-      set_fact:
-        target_secrets: "{{ target_secrets_raw.content | b64decode | from_yaml }}"
-
-    - name: Display credential loading status
-      debug:
-        msg: |
-          Credential loading completed:
-          ✅ Source: {{ source_minio_host }} (/opt/minio/secrets.yml)
-          ✅ Target: {{ inventory_hostname }} (/opt/minio/secrets.yml)
-          ✅ Source user: {{ source_secrets.minio.root_user | default(source_secrets.minio_root_user) }}
-          ✅ Target user: {{ target_secrets.minio.root_user | default(target_secrets.minio_root_user) }}
 
 - name: Create migration temporary directory
   file:

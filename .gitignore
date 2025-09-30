@@ -16,6 +16,9 @@ deploy/**/ansible.cfg.debug
 *.age
 secrets/
 age-key.txt
+.config/sops/
+*.decrypted
+*.backup
 
 # Runtime directories
 backups/
