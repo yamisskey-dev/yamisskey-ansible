@@ -22,15 +22,6 @@
     - { key: postgresql_password, value: "{{ postgresql_password }}" }
   when: item.value is string and item.value is search('^CHANGE_ME_')
 
-- name: Check if running in Molecule test environment
-  ansible.builtin.stat:
-    path: /tmp/.ansible-tmp
-  register: molecule_tmp_check
-
-- name: Set molecule test flag
-  set_fact:
-    is_molecule_test: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined or molecule_tmp_check.stat.exists }}"
-
 - name: Create Zitadel directory
   file:
     path: "{{ zitadel_dir }}"
