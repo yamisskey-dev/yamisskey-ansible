@@ -68,5 +68,7 @@
 - name: Start Zitadel services with Docker Compose v2
   community.docker.docker_compose_v2:
     project_src: "{{ zitadel_dir }}"
-    pull: "{{ 'missing' if is_molecule_test | default(false) else 'always' }}"
+    pull: "{{ 'never' if is_molecule_test | default(false) else 'always' }}"
+    recreate: never
+    reuse_volumes: "{{ is_molecule_test | default(false) }}"
     state: present
