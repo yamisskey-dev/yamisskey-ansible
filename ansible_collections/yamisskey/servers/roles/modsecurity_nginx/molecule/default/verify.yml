@@ -117,7 +117,7 @@
       register: rate_limit_test
       loop: "{{ range(0, 15) | list }}"  # Send 15 requests quickly
       loop_control:
-        ansible.builtin.pause: 0.1
+        pause: 0.1
       when:
         - ansible_env.MOLECULE_SCENARIO_NAME is not defined
         - docker_daemon_check is defined
