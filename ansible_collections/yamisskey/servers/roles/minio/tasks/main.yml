@@ -43,6 +43,15 @@
     mode: '0644'
     backup: true
 
+- name: Check if running in Molecule test environment
+  ansible.builtin.stat:
+    path: /tmp/.ansible-tmp
+  register: molecule_tmp_check
+
+- name: Set molecule test flag
+  set_fact:
+    is_molecule_test: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined or molecule_tmp_check.stat.exists }}"
+
 - name: Create Docker network if not exists
   community.docker.docker_network:
     name: external_network
@@ -58,15 +67,6 @@
   delay: 5
   until: minio_start_result is succeeded
   failed_when: false
-
-- name: Check if running in Molecule test environment
-  ansible.builtin.stat:
-    path: /tmp/.ansible-tmp
-  register: molecule_tmp_check
-
-- name: Set molecule test flag
-  set_fact:
-    is_molecule_test: "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined or molecule_tmp_check.stat.exists }}"
 
 - name: Disable MinIO runtime checks by default
   set_fact:

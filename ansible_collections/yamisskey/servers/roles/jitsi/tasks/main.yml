@@ -54,7 +54,7 @@
     path: '/home/{{ ansible_user }}/.jitsi-meet-cfg/{{ item }}'
     state: directory
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
     mode: '0755'
   loop:
     - web

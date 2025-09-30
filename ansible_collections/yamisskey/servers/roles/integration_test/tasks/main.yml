@@ -6,13 +6,13 @@
   debug:
     msg: |-
       🧪 Integration Test Suite Starting:
-      📋 Categories: {{ integration_test_categories.keys() | list | join(', ') }}
+      📋 Categories: {{ (integration_test_categories | default({})).keys() | list | join(', ') }}
       🎯 Target Host: {{ inventory_hostname }}
-      🔧 Infrastructure: {{ 'enabled' if integration_test_categories.infrastructure else 'disabled' }}
-      🚀 Application: {{ 'enabled' if integration_test_categories.application else 'disabled' }}
-      🛠️  Services: {{ 'enabled' if integration_test_categories.service else 'disabled' }}
-      ⚡ Performance: {{ 'enabled' if integration_test_categories.performance else 'disabled' }}
-      🔒 Security: {{ 'enabled' if integration_test_categories.security else 'disabled' }}
+      🔧 Infrastructure: {{ 'enabled' if (integration_test_categories | default({})).infrastructure | default(true) else 'disabled' }}
+      🚀 Application: {{ 'enabled' if (integration_test_categories | default({})).application | default(true) else 'disabled' }}
+      🛠️  Services: {{ 'enabled' if (integration_test_categories | default({})).service | default(true) else 'disabled' }}
+      ⚡ Performance: {{ 'enabled' if (integration_test_categories | default({})).performance | default(true) else 'disabled' }}
+      🔒 Security: {{ 'enabled' if (integration_test_categories | default({})).security | default(true) else 'disabled' }}
   tags: ['info', 'plan']
 
 - name: Include infrastructure tests
