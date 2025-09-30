@@ -53,7 +53,7 @@
       Credentials File: {{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json
 
 - name: Verify tunnel credentials file exists
-  stat:
+  ansible.builtin.stat:
     path: "{{ cloudflared_config_dir }}/{{ cloudflared_tunnel_uuid }}.json"
   register: tunnel_credentials_file
 

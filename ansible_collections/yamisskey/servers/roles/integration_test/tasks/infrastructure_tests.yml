@@ -28,7 +28,7 @@
   tags: ['infra', 'memory']
 
 - name: Test network connectivity
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ item }}"
     port: 80
     timeout: 10
@@ -40,7 +40,7 @@
   tags: ['infra', 'network']
 
 - name: Test critical service ports
-  wait_for:
+  ansible.builtin.wait_for:
     port: "{{ item }}"
     timeout: 5
   register: port_test

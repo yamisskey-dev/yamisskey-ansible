@@ -1,4 +1,39 @@
-# 必要なディレクトリを作成
+---
+- name: Load Synapse secrets from inventory
+  set_fact:
+    synapse_inventory_secrets: "{{ hostvars[inventory_hostname].synapse | default({}) }}"
+    synapse_inventory_postgresql: "{{ (hostvars[inventory_hostname].synapse | default({})).postgresql | default({}) }}"
+
+- name: Build Synapse secret values
+  set_fact:
+    synapse: {
+      "registration_shared_secret": "{{ synapse_inventory_secrets.registration_shared_secret | default('CHANGE_ME_REGISTRATION_SECRET') }}",
+      "macaroon_secret_key": "{{ synapse_inventory_secrets.macaroon_secret_key | default('CHANGE_ME_MACAROON_SECRET') }}",
+      "form_secret": "{{ synapse_inventory_secrets.form_secret | default('CHANGE_ME_FORM_SECRET') }}",
+      "postgresql_user": "{{ synapse_inventory_postgresql.user | default('synapse') }}",
+      "postgresql_password": "{{ synapse_inventory_postgresql.password | default('CHANGE_ME_DB_PASSWORD') }}",
+      "postgresql_database": "{{ synapse_inventory_postgresql.database | default('synapse') }}",
+      "postgresql_host": "{{ synapse_inventory_postgresql.host | default('db') }}"
+    }
+
+- name: Surface placeholder Synapse secrets
+  debug:
+    msg: >-
+      Synapse secret '{{ item.key }}' is using a placeholder value. Update
+      deploy/servers/host_vars/{{ inventory_hostname }}/secrets.yml → synapse.{{ item.key }}.
+  loop: "{{ synapse | dict2items }}"
+  when: item.value is string and item.value is search('^CHANGE_ME_')
+
+- name: Expose Synapse secrets as legacy variables
+  set_fact:
+    registration_shared_secret: "{{ synapse.registration_shared_secret }}"
+    macaroon_secret_key: "{{ synapse.macaroon_secret_key }}"
+    form_secret: "{{ synapse.form_secret }}"
+    postgresql_user: "{{ synapse.postgresql_user }}"
+    postgresql_password: "{{ synapse.postgresql_password }}"
+    postgresql_database: "{{ synapse.postgresql_database }}"
+    postgresql_host: "{{ synapse.postgresql_host }}"
+
 - name: Create synapse directory
   file:
     path: /var/www/synapse
@@ -14,82 +49,6 @@
     path: /var/www/element/element-config
     state: directory
 
-# PostgreSQLの秘密情報をsecrets.ymlから読み込む
-- name: Ensure secrets directory exists
-  file:
-    path: "{{ synapse_secrets_file | dirname }}"
-    state: directory
-
-- name: Initialise PostgreSQL credential defaults
-  set_fact:
-    postgresql_user: "{{ postgresql_user | default(matrix_postgresql_user) }}"
-    postgresql_password: "{{ postgresql_password | default(matrix_postgresql_password | default('')) }}"
-    postgresql_database: "{{ postgresql_database | default(matrix_postgresql_database) }}"
-    postgresql_host: "{{ postgresql_host | default(matrix_postgresql_host) }}"
-
-- name: Load PostgreSQL secrets from secrets.yml
-  block:
-    - name: Check if Synapse secrets file exists
-      stat:
-        path: "{{ synapse_secrets_file }}"
-      register: synapse_secrets_file_stat
-
-    - name: Read secrets from managed host when present
-      slurp:
-        src: "{{ synapse_secrets_file }}"
-      register: synapse_existing_secrets_raw
-      when: synapse_secrets_file_stat.stat.exists
-      failed_when: false
-
-    - name: Parse existing secrets
-      set_fact:
-        synapse_existing_secrets: "{{ synapse_existing_secrets_raw.content | b64decode | from_yaml }}"
-      when:
-        - synapse_secrets_file_stat.stat.exists
-        - synapse_existing_secrets_raw is defined
-        - not (synapse_existing_secrets_raw.failed | default(false) | bool)
-        - synapse_existing_secrets_raw.content is defined
-      failed_when: false
-
-    - name: Set PostgreSQL secrets facts
-      set_fact:
-        postgresql_user: "{{ synapse_existing_secrets.postgresql.user }}"
-        postgresql_password: "{{ synapse_existing_secrets.postgresql.password }}"
-        postgresql_database: "{{ synapse_existing_secrets.postgresql.database }}"
-        postgresql_host: "{{ synapse_existing_secrets.postgresql.host }}"
-      when:
-        - synapse_existing_secrets is defined
-        - synapse_existing_secrets.postgresql is defined
-
-- name: Initialize secrets structure when missing
-  set_fact:
-    synapse_existing_secrets: "{{ synapse_existing_secrets | default({}) }}"
-
-- name: Generate PostgreSQL password when missing
-  no_log: true
-  when: postgresql_password is not defined or (postgresql_password | length) == 0
-  block:
-    - name: Generate PostgreSQL password value
-      command: "openssl rand -base64 32"
-      register: synapse_postgresql_password_command
-
-    - name: Cache generated PostgreSQL password
-      set_fact:
-        postgresql_password: "{{ synapse_postgresql_password_command.stdout }}"
-
-- name: Ensure PostgreSQL secrets are available
-  ansible.builtin.assert:
-    that:
-      - postgresql_user is defined
-      - postgresql_password is defined
-      - (postgresql_password | length) > 0
-      - postgresql_database is defined
-      - postgresql_host is defined
-    fail_msg: >-
-      PostgreSQL credentials are not defined. Provide them via
-      'synapse_secrets_file' or explicit variables before invoking the role.
-
-# Docker Composeファイルをテンプレートから生成
 - name: Add required configurations to Docker Compose file
   template:
     src: synapse_docker-compose.yml.j2
@@ -100,7 +59,6 @@
     src: element_docker-compose.yml.j2
     dest: /var/www/element/docker-compose.yml
 
-# Synapseのコンテナが実行されているか確認
 - name: Check if synapse container is running
   shell: docker ps --filter "name=synapse" --format "{{ '{{.Names}}' }}"
   register: synapse_container
@@ -116,7 +74,7 @@
   become: true
 
 - name: Check if homeserver.yaml exists
-  stat:
+  ansible.builtin.stat:
     path: /var/www/synapse/synapse-data/homeserver.yaml
   register: homeserver_config_stat
 
@@ -127,76 +85,6 @@
     chdir: /var/www/synapse
   when: not homeserver_config_stat.stat.exists
 
-- name: Use existing registration_shared_secret when available
-  set_fact:
-    registration_shared_secret: "{{ synapse_existing_secrets.registration_shared_secret }}"
-  when:
-    - synapse_existing_secrets is defined
-    - synapse_existing_secrets.registration_shared_secret is defined
-
-- name: Generate registration_shared_secret when missing
-  when: registration_shared_secret is not defined
-  block:
-    - name: Generate registration_shared_secret value
-      shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
-      register: registration_shared_secret_output
-
-    - name: Cache generated registration_shared_secret
-      set_fact:
-        registration_shared_secret: "{{ registration_shared_secret_output.stdout }}"
-
-- name: Use existing macaroon_secret_key when available
-  set_fact:
-    macaroon_secret_key: "{{ synapse_existing_secrets.macaroon_secret_key }}"
-  when:
-    - synapse_existing_secrets is defined
-    - synapse_existing_secrets.macaroon_secret_key is defined
-
-- name: Generate macaroon_secret_key when missing
-  when: macaroon_secret_key is not defined
-  block:
-    - name: Generate macaroon_secret_key value
-      shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
-      register: macaroon_secret_key_output
-
-    - name: Cache generated macaroon_secret_key
-      set_fact:
-        macaroon_secret_key: "{{ macaroon_secret_key_output.stdout }}"
-
-- name: Use existing form_secret when available
-  set_fact:
-    form_secret: "{{ synapse_existing_secrets.form_secret }}"
-  when:
-    - synapse_existing_secrets is defined
-    - synapse_existing_secrets.form_secret is defined
-
-- name: Generate form_secret when missing
-  when: form_secret is not defined
-  block:
-    - name: Generate form_secret value
-      shell: 'cat /dev/urandom | base64 -w 0 | fold -w 100 | head -n 1'
-      register: form_secret_output
-
-    - name: Cache generated form_secret
-      set_fact:
-        form_secret: "{{ form_secret_output.stdout }}"
-
-# 秘密情報をファイルに保存
-- name: Save secrets to file
-  copy:
-    dest: '{{ synapse_secrets_file }}'
-    content: |
-      registration_shared_secret: "{{ registration_shared_secret }}"
-      macaroon_secret_key: "{{ macaroon_secret_key }}"
-      form_secret: "{{ form_secret }}"
-      postgresql:
-        user: "{{ postgresql_user }}"
-        password: "{{ postgresql_password }}"
-        database: "{{ postgresql_database }}"
-        host: "{{ postgresql_host }}"
-  when: not synapse_secrets_file_stat.stat.exists
-
-# Synapseの設定ファイルを反映
 - name: Add required configurations to Synapse configuration file
   template:
     src: synapse.homeserver.yaml.j2
@@ -206,38 +94,33 @@
     mode: '0644'
   become: true
 
-# Synapse用ディレクトリの作成
 - name: Create well-known directory for Synapse
   file:
     path: /var/www/synapse/.well-known/matrix
     state: directory
     owner: www-data
-    group: www-data
+    ansible.builtin.file: www-data
     mode: '0755'
   become: true
 
-# /.well-known/matrix/client にE2EE設定ファイルをコピー (Synapse側)
 - name: Configure E2EE settings for Synapse
   template:
     src: synapse_well_known_client.json.j2
     dest: /var/www/synapse/.well-known/matrix/client
     owner: www-data
-    group: www-data
+    ansible.builtin.file: www-data
     mode: '0644'
 
-# Synapseコンテナを起動
 - name: Start Synapse container
   community.docker.docker_compose_v2:
     project_src: /var/www/synapse
     recreate: never
 
-# Elementコンテナの起動
 - name: Start element
   community.docker.docker_compose_v2:
     project_src: /var/www/element
     state: restarted
 
-# Element用カスタム設定ファイルのコピー
 - name: Copy element custom configuration file
   template:
     src: "config.{{ element_server_name }}.json.j2"

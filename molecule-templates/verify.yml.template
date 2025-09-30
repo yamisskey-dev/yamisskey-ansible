@@ -2,7 +2,7 @@
 - name: Verify ${ROLE_NAME} deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     # Optional: check host Docker CLI presence (non-fatal)
     - name: Check host Docker CLI (non-fatal)
@@ -20,7 +20,7 @@
       stat:
         path: /var/tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
       assert:
         that:
@@ -37,7 +37,7 @@
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
-          
+
           Role: ${ROLE_NAME}
           Collection: ${COLLECTION_NAME}
           Test Instance: ${ROLE_NAME}-test-instance

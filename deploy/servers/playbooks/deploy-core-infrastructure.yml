@@ -3,31 +3,31 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   vars:
     ansible_python_interpreter: /usr/bin/python3
-    
+
   roles:
     - role: yamisskey.servers.common
       tags: [common, base]
-      
+
     - role: yamisskey.servers.security
       tags: [security, hardening]
-      
+
     - role: yamisskey.servers.minio
       tags: [minio, storage]
       when: "'storage' in group_names or inventory_hostname in groups.get('minio', [])"
-      
+
   post_tasks:
     - name: Display deployment summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           ✅ Core Infrastructure Deployment Complete!
-          
+
           📦 Deployed Components:
           - Common base packages and system setup
           - Security hardening and monitoring
           - MinIO object storage (if applicable)
-          
+
           🔗 Dependencies resolved automatically via Collections
           🎯 yamisskey.servers v1.0.0 - Enterprise Ready

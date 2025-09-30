@@ -3,10 +3,10 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Wait for instance SSH availability
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
         timeout: 30
 
     - name: Create keyrings directory for Docker
@@ -16,7 +16,7 @@
         mode: '0755'
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -27,13 +27,13 @@
         mode: 'a+r'
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -47,28 +47,28 @@
       retries: 3
       delay: 5
       until: mcaptcha_docker_install is succeeded
-      
+
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -84,7 +84,7 @@
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
-        
+
     - name: Basic role verification
       debug:
         msg: "mcaptcha role applied successfully"
@@ -94,7 +94,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

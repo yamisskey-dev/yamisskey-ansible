@@ -33,19 +33,19 @@
       ✅ IAM policies configured
       ✅ CORS policies applied
       ✅ Encryption enabled (KMS)
-      
+
       🔧 Misskey Configuration Update:
       S3_ENDPOINT={{ target_minio_endpoint }}
       S3_ACCESS_KEY={{ misskey_s3_access_key | default('define-in-vault') }}
       S3_SECRET_KEY={{ misskey_s3_secret_key | default('define-in-vault') }}
       S3_REGION={{ truenas_minio_region | default('ap-northeast-3') }}
-      
+
       🌐 TrueNAS Scale Cloudflare Tunnel:
       - MinIO API: {{ target_minio_endpoint }}
       - Security: End-to-End TLS + Tunnel Isolation
       - Management: TrueNAS Scale Custom App UI
       - Data Path: {{ truenas_minio_data_path }}
-      
+
       📝 DNS Configuration:
       {{ truenas_minio_domain }} → Cloudflare Tunnel (Automatic)
       ==============================================

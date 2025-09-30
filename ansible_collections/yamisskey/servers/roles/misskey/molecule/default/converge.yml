@@ -3,7 +3,7 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Create keyrings directory for Docker
       file:
@@ -12,7 +12,7 @@
         mode: '0755'
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -23,13 +23,13 @@
         mode: 'a+r'
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -40,28 +40,28 @@
           - npm
         update_cache: true
         state: present
-      
+
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -77,7 +77,7 @@
         - /tmp/test-backup/misskey
 
     - name: Create mock template files for testing
-      copy:
+      ansible.builtin.copy:
         dest: "{{ item.dest }}"
         content: "{{ item.content }}"
         mode: '0644'
@@ -111,7 +111,7 @@
 
   tasks:
     - name: Pre-create required files to avoid template issues
-      copy:
+      ansible.builtin.copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         mode: '0644'
@@ -127,7 +127,7 @@
           dest: "/opt/test-misskey/.config/postgresql.conf"
 
     - name: Create mock PG_VERSION file to simulate initialized database
-      copy:
+      ansible.builtin.copy:
         content: "13"
         dest: "/opt/test-misskey/db/PG_VERSION"
         mode: '0644'
@@ -140,22 +140,22 @@
         misskey_dir: "/opt/test-misskey"
         backup_dir: "/tmp/test-backup"
         docker_compose_cmd: "echo 'docker compose simulation'"
-        
+
         # Mock git update results for testing
         git_pull_output:
           stdout: "Already up to date."
         git_submodule_update_output:
           stdout: ""
-        
+
         # Override complex operations for testing
         updates_needed: false
         ansible_user: "root"
-        
+
     - name: Simulate basic service check
-      stat:
+      ansible.builtin.stat:
         path: "/opt/test-misskey/docker-compose.yml"
       register: docker_compose_check
-        
+
     - name: Verify basic setup completed
       assert:
         that:
@@ -167,7 +167,7 @@
     - name: Show directory structure for debugging
       shell: ls -la /opt/test-misskey/
       register: directory_contents
-      
+
     - name: Display directory contents
       debug:
         var: directory_contents.stdout_lines

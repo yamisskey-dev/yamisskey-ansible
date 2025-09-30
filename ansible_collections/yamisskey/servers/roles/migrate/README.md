@@ -12,10 +12,6 @@
 - SSH 接続が可能
 - MinIO サービスが両ホストで稼働中
 
-### 2. 必要なファイル
-- `/opt/yamisskey-provision/secrets.yml` が両ホストに存在
-- 有効な MinIO 認証情報が設定済み
-
 ### 3. システム要件
 - Ansible 実行環境
 - 十分なディスク容量（移行データの 2倍以上推奨）
@@ -120,12 +116,6 @@ sudo systemctl status minio
 
 # ポート確認
 sudo netstat -tlnp | grep 9000
-```
-
-### 認証情報エラー
-```bash
-# secrets.yml の確認
-sudo cat /opt/yamisskey-provision/secrets.yml | grep minio
 ```
 
 ### ディスク容量不足

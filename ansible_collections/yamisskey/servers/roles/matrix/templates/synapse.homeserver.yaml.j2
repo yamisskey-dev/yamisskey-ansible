@@ -24,18 +24,18 @@ listeners:
 database:
   name: psycopg2
   args:
-    user: "{{ postgresql_user }}"
-    password: "{{ postgresql_password }}"
-    database: "{{ postgresql_database }}"
-    host: "{{ postgresql_host }}"
+    user: "{{ synapse.postgresql_user }}"
+    password: "{{ synapse.postgresql_password }}"
+    database: "{{ synapse.postgresql_database }}"
+    host: "{{ synapse.postgresql_host }}"
     cp_min: 5
     cp_max: 10
 
 log_config: "/data/{{ synapse_server_name }}.log.config"
 media_store_path: /data/media_store
-registration_shared_secret: "{{ registration_shared_secret }}"
-macaroon_secret_key: "{{ macaroon_secret_key }}"
-form_secret: "{{ form_secret }}"
+registration_shared_secret: "{{ synapse.registration_shared_secret }}"
+macaroon_secret_key: "{{ synapse.macaroon_secret_key }}"
+form_secret: "{{ synapse.form_secret }}"
 signing_key_path: "/data/{{ synapse_server_name }}.signing.key"
 trusted_key_servers:
   - server_name: "matrix.org"

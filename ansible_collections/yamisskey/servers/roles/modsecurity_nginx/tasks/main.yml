@@ -53,7 +53,7 @@
     mode: '0755'
 
 - name: Create blocked IPs list
-  copy:
+  ansible.builtin.copy:
     content: |
       {% for ip in modsecurity_blocked_ips %}
       {{ ip }}
@@ -64,7 +64,7 @@
   notify: restart modsecurity nginx
 
 - name: Create allowed IPs list
-  copy:
+  ansible.builtin.copy:
     content: |
       {% for ip in modsecurity_allowed_ips %}
       {{ ip }}
@@ -75,7 +75,7 @@
   notify: restart modsecurity nginx
 
 - name: Create maintenance IPs list
-  copy:
+  ansible.builtin.copy:
     content: |
       {% for ip in modsecurity_maintenance_allowed_ips %}
       {{ ip }}
@@ -85,7 +85,7 @@
   notify: restart modsecurity nginx
 
 - name: Create blocked user agents list
-  copy:
+  ansible.builtin.copy:
     content: |
       {% for ua in modsecurity_blocked_user_agents %}
       {{ ua }}
@@ -131,7 +131,7 @@
     - monitoring
 
 - name: Setup log rotation for ModSecurity
-  copy:
+  ansible.builtin.copy:
     content: |
       /var/log/nginx/*.log {
         daily

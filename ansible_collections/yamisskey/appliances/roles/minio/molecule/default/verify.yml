@@ -34,7 +34,7 @@
       register: export_check
 
     - name: Check for bucket creation verification files
-      stat:
+      ansible.builtin.stat:
         path: "{{ item }}"
       loop:
         - /tmp/minio_buckets_created.txt

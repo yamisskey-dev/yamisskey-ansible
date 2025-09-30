@@ -2,23 +2,23 @@
 - name: Verify mcaptcha deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Check if Docker is installed and running
       command: docker --version
       register: docker_version_check
       changed_when: false
-      
+
     - name: Verify Docker is working
       command: docker ps
       register: docker_ps_check
       changed_when: false
-      
+
     - name: Verify role execution completed without errors
-      stat:
+      ansible.builtin.stat:
         path: /tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
       assert:
         that:
@@ -35,7 +35,7 @@
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
-          
+
           Role: mcaptcha
           Collection: yamisskey.servers
           Test Instance: mcaptcha-test-instance

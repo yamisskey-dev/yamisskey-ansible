@@ -2,25 +2,25 @@
 - name: Verify security deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Check if Docker is installed and running
-      command: docker --version
+      ansible.builtin.command: docker --version
       register: docker_version_check
       changed_when: false
-      
+
     - name: Verify Docker is working
-      command: docker ps
+      ansible.builtin.command: docker ps
       register: docker_ps_check
       changed_when: false
-      
+
     - name: Verify role execution completed without errors
-      stat:
+      ansible.builtin.stat:
         path: /tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
-      assert:
+      ansible.builtin.assert:
         that:
           - test_dir_check.stat.exists
           - test_dir_check.stat.isdir
@@ -28,14 +28,14 @@
         success_msg: "Test directory created successfully"
 
     - name: Display test summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           security Role Verification Summary:
           ====================================
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
-          
+
           Role: security
           Collection: yamisskey.servers
           Test Instance: security-test-instance

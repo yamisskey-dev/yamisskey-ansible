@@ -106,11 +106,9 @@ enable_backup: true
 
 # MinIO configuration
 minio_root_user: "admin"
-minio_root_password: "{{ vault_minio_password }}"
 
 # Misskey configuration
 misskey_domain: "example.social"
-misskey_db_password: "{{ vault_misskey_db_password }}"
 ```
 
 ### Inventory Groups

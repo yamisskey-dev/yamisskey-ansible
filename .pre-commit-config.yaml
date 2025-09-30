@@ -5,12 +5,15 @@ repos:
     rev: v6.22.1
     hooks:
       - id: ansible-lint
+        additional_dependencies:
+          - ansible-core==2.15.9
         files: \.(yml|yaml)$
         exclude: |
           (?x)^(
             molecule/.*/.*\.yml|
             \.github/.*|
-            requirements\.yml
+            requirements\.yml|
+            .*secrets\.yml$
           )$
 
   # YAML Lint
@@ -29,6 +32,18 @@ repos:
         language: script
         files: ^ansible_collections/.*/roles/.*/.*$
         require_serial: true
+
+  # SOPS encryption hooks
+  - repo: local
+    hooks:
+      - id: sops-encrypt
+        name: SOPS Encrypt for Commit
+        entry: scripts/pre-commit-sops-encrypt.sh
+        language: script
+        files: \.yml$
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
 
   # General code quality
   - repo: https://github.com/pre-commit/pre-commit-hooks

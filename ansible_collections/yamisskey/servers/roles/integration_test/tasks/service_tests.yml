@@ -61,8 +61,8 @@
   tags: ['service', 'logs']
 
 - name: Test backup integrity
-  find:
-    paths: 
+  ansible.builtin.find:
+    paths:
       - "/opt/backups"
       - "/tmp"
     patterns:
@@ -79,7 +79,7 @@
     if docker ps --filter "name=nginx" --format "{{ '{{.Names}}' }}" | grep -q nginx; then
       docker exec $(docker ps --filter "name=nginx" --format "{{ '{{.Names}}' }}" | head -1) nginx -t 2>/dev/null && echo "nginx_ok"
     fi
-    
+
     # Test docker-compose files
     find /opt -name "docker-compose.yml" -exec docker-compose -f {} config --quiet \; 2>/dev/null && echo "compose_ok" || true
   register: config_validity_test
@@ -159,7 +159,7 @@
       {% for test, result in service_results.items() %}
       - {{ test | replace('_', ' ') | title }}: {{ result | upper }}
       {% endfor %}
-      
+
       📊 Service Health Summary:
       - Active containers: {{ container_status_test.stdout | default('0') }}
       - Healthy containers: {{ container_health_test.stdout | default('0') }}

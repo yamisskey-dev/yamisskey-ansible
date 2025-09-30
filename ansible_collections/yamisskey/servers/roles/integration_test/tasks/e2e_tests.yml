@@ -1,5 +1,5 @@
 ---
-# Integration Test - End-to-End Tests  
+# Integration Test - End-to-End Tests
 # Tests complete user workflows
 
 - name: E2E Test - Full deployment workflow
@@ -19,10 +19,10 @@
         name: yamisskey.servers.operations
       vars:
         op: status
-        service: all
+        service_name: all
       register: ops_test
       failed_when: false
-      
+
   rescue:
     - name: E2E workflow failed
       debug:

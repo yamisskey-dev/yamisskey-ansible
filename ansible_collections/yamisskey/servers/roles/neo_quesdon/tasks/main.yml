@@ -7,51 +7,6 @@
     dest: "{{ neo_quesdon_dir }}"
     version: "{{ neo_quesdon_version | default('develop') }}"
 
-# secrets.ymlの存在確認
-- name: Check if secrets file exists
-  stat:
-    path: "{{ neo_quesdon_secrets_file }}"
-  register: secrets_file_stat
-
-# 秘密情報の保存（生成された場合）
-- name: Save secrets to file
-  when: 
-    - not secrets_file_stat.stat.exists
-    - jwt_secret is defined
-  copy:
-    dest: "{{ neo_quesdon_secrets_file }}"
-    mode: '0600'
-    content: |
-      jwt_secret: "{{ jwt_secret }}"
-      noti_token: "{{ noti_token }}"
-      postgres_password: "{{ postgres_password }}"
-
-- name: Load secrets
-  when: 
-    - secrets_file_stat.stat.exists
-    - neo_quesdon_secrets_file is defined
-  set_fact:
-    secrets: "{{ lookup('file', neo_quesdon_secrets_file) | from_yaml }}"
-  failed_when: false
-
-- name: Set secrets as variables
-  when: 
-    - secrets_file_stat.stat.exists
-    - secrets is defined
-  set_fact:
-    jwt_secret: "{{ secrets.jwt_secret | default('') }}"
-    noti_token: "{{ secrets.noti_token | default('') }}"
-    postgres_password: "{{ secrets.postgres_password | default('') }}"
-
-- name: Set default secrets if file doesn't exist
-  when: 
-    - not secrets_file_stat.stat.exists
-    - jwt_secret is not defined
-  set_fact:
-    jwt_secret: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
-    noti_token: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
-    postgres_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
-
 # 設定ファイルの生成
 - name: Generate docker.env from template
   template:
@@ -74,26 +29,26 @@
     path: "{{ item.path }}"
     state: directory
     owner: "{{ item.owner | default('root') }}"
-    group: "{{ item.group | default('root') }}"
+    ansible.builtin.file: "{{ item.group | default('root') }}"
     mode: "{{ item.mode | default('0755') }}"
   loop:
     - path: "{{ neo_quesdon_dir }}/data/postgres"
       owner: "70"
-      group: "70"
+      ansible.builtin.file: "70"
       mode: '0700'
     - path: "{{ neo_quesdon_dir }}/data/redis"
       owner: "999"
-      group: "999"
+      ansible.builtin.file: "999"
       mode: '0755'
 
 # 設定ファイルの存在確認
 - name: Verify docker-compose.yml exists
-  stat:
+  ansible.builtin.stat:
     path: "{{ neo_quesdon_dir }}/docker-compose.yml"
   register: compose_file
 
 - name: Verify docker.env exists
-  stat:
+  ansible.builtin.stat:
     path: "{{ neo_quesdon_dir }}/config/docker.env"
   register: env_file
 

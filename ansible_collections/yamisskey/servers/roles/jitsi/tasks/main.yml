@@ -5,7 +5,7 @@
     mode: '0755'
 
 - name: Check if Jitsi Meet is already unzipped
-  stat:
+  ansible.builtin.stat:
     path: /var/www/jitsi/docker-compose.yml
   register: jitsi_unzipped
 
@@ -16,7 +16,7 @@
   when: not jitsi_unzipped.stat.exists
 
 - name: Unzip the Jitsi Meet package
-  unarchive:
+  ansible.builtin.unarchive:
     src: /var/www/jitsi/jitsi-docker.zip
     dest: /var/www/jitsi/
     remote_src: true
@@ -33,7 +33,7 @@
   when: not jitsi_unzipped.stat.exists
 
 - name: Check if Jitsi environment file exists
-  stat:
+  ansible.builtin.stat:
     path: /var/www/jitsi/.env
   register: jitsi_env
 
@@ -54,7 +54,7 @@
     path: '/home/{{ ansible_user }}/.jitsi-meet-cfg/{{ item }}'
     state: directory
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
     mode: '0755'
   loop:
     - web
@@ -67,20 +67,20 @@
     - jibri
 
 - name: Update .env file with PUBLIC_URL and other settings
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: '/var/www/jitsi/.env'
     regexp: '^#?PUBLIC_URL=.*$'
     line: 'PUBLIC_URL=https://{{ jitsi_server_name }}'
   when: jitsi_server_name is defined
 
 - name: Update .env file with HTTP_PORT
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: '/var/www/jitsi/.env'
     regexp: '^#?HTTP_PORT=.*$'
     line: 'HTTP_PORT=8002'
 
 - name: Update .env file with CONFIG directory
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: '/var/www/jitsi/.env'
     regexp: '^#?CONFIG=.*$'
     line: 'CONFIG=/home/{{ ansible_user }}/.jitsi-meet-cfg'
@@ -110,7 +110,7 @@
     mode: '0755'
 
 - name: Copy custom background image
-  copy:
+  ansible.builtin.copy:
     src: /home/{{ ansible_user }}/misskey-assets/wallpaper.jpg
     dest: /usr/share/jitsi-meet/images/custom-background.jpg
     owner: root
@@ -119,7 +119,7 @@
     remote_src: true
 
 - name: Add custom CSS to plugin.head.html
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /usr/share/jitsi-meet/plugin.head.html
     line: '<link rel="stylesheet" href="css/custom.css?v=1">'
     create: true

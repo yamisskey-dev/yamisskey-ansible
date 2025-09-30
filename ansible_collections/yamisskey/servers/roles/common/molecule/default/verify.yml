@@ -2,7 +2,7 @@
 - name: Verify common deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     # Optional: check host Docker CLI presence (non-fatal)
     - name: Check host Docker CLI (non-fatal)
@@ -16,10 +16,10 @@
         fi
       tags: [docker]
     - name: Verify role execution completed without errors
-      stat:
+      ansible.builtin.stat:
         path: /tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
       assert:
         that:
@@ -36,7 +36,7 @@
           ✅ Test Environment: Ready
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
-          
+
           Role: common
           Collection: yamisskey.servers
           Test Instance: common-test-instance

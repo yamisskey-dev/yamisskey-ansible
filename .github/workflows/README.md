@@ -9,7 +9,7 @@
 #### 🔍 **Code Quality (Lint)** (`lint.yml`)
 - **トリガー**: Pull Request、mainブランチへのpush
 - **目的**: コード品質とスタイルの統一
-- **実行内容**: 
+- **実行内容**:
   - YAML Lint (yamllint)
   - Ansible Lint (ansible-lint) - 並列実行
   - Ansible Sanity Tests (ansible-test sanity)
@@ -158,7 +158,7 @@ yamllint .
 ansible-lint ansible_collections/yamisskey/servers
 ansible-lint ansible_collections/yamisskey/appliances
 
-# Syntax  
+# Syntax
 ansible-playbook --syntax-check deploy/servers/playbooks/*.yml
 ansible-playbook --syntax-check deploy/appliances/playbooks/*.yml
 
@@ -179,7 +179,7 @@ ansible-playbook -i inventory playbooks/common.yml --check --diff
 
 ### パフォーマンス目標
 - **Lint**: 3分以内
-- **Syntax**: 2分以内  
+- **Syntax**: 2分以内
 - **Security**: 5分以内
 - **Idempotency**: 8分以内
 
@@ -217,7 +217,7 @@ ansible-playbook -i localhost, -c local deploy/servers/playbooks/common.yml --sy
 grep -rEi "password\s*=\s*['\"][^'\"]{8,}['\"]" . --exclude-dir=.git
 ```
 
-#### Idempotency 失敗  
+#### Idempotency 失敗
 ```bash
 # ローカル --check
 ansible-playbook -i inventory playbook.yml --check --diff -e ansible_become=false

@@ -26,7 +26,7 @@
     state: directory
     mode: '0755'
     owner: '65534'
-    group: '65534'
+    ansible.builtin.file: '65534'
   loop: "{{ config_directories }}"
 
 - name: Create Docker network for monitoring
@@ -39,7 +39,7 @@
     dest: '{{ monitor_compose_dir }}/config/prometheus/prometheus.yml'
     mode: '0644'
     owner: '65534'
-    group: '65534'
+    ansible.builtin.file: '65534'
   register: prometheus_config
   notify: Restart monitoring stack
 
@@ -49,7 +49,7 @@
     dest: '{{ monitor_compose_dir }}/config/alertmanager/alertmanager.yml'
     mode: '0644'
     owner: '65534'
-    group: '65534'
+    ansible.builtin.file: '65534'
   register: alertmanager_config
 
 - name: Deploy Blackbox Exporter configuration
@@ -107,7 +107,7 @@
   register: compose_config
 
 - name: Create .env file for Docker Compose
-  copy:
+  ansible.builtin.copy:
     content: |
       DOMAIN={{ primary_domain }}
       GRAFANA_PASSWORD={{ grafana_admin_password }}

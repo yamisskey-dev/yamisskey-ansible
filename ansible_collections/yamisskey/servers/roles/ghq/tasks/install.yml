@@ -1,6 +1,6 @@
 ---
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
   when: ansible_os_family == "Debian"
@@ -19,25 +19,25 @@
   changed_when: false
 
 - name: Set up Go environment for system
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/environment
     line: "GOPATH={{ ansible_env.HOME }}/go"
     state: present
-  when: 
+  when:
     - ghq_version_check.rc != 0
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Set up Go PATH for system
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/environment
     line: "PATH={{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
     state: present
-  when: 
+  when:
     - ghq_version_check.rc != 0
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Set up Go environment for user
-  blockinfile:
+  ansible.builtin.blockinfile:
     path: "{{ ansible_env.HOME }}/.bashrc"
     marker: "# {mark} ANSIBLE MANAGED BLOCK - Go environment"
     block: |
@@ -52,7 +52,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user | default('root') }}"
-    group: "{{ ansible_user | default('root') }}"
+    ansible.builtin.file: "{{ ansible_user | default('root') }}"
   when: ghq_version_check.rc != 0
 
 - name: Verify Go installation
@@ -73,7 +73,7 @@
   environment:
     GOPATH: "{{ ansible_env.HOME }}/go"
     PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
-  when: 
+  when:
     - ghq_version_check.rc != 0
     - go_version_check.rc == 0
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
@@ -88,7 +88,7 @@
   environment:
     GOPATH: "/root/go"
     PATH: "/root/go/bin:{{ ansible_env.PATH }}"
-  when: 
+  when:
     - ghq_version_check.rc != 0
     - go_version_check.rc == 0
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
@@ -99,7 +99,7 @@
     dest: "/usr/local/bin/ghq"
     state: link
     force: true
-  when: 
+  when:
     - ghq_version_check.rc != 0
     - go_version_check.rc == 0
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
@@ -110,7 +110,7 @@
     dest: "/usr/local/bin/ghq"
     state: link
     force: true
-  when: 
+  when:
     - ghq_version_check.rc != 0
     - go_version_check.rc == 0
     - ansible_env.MOLECULE_SCENARIO_NAME is defined
@@ -122,7 +122,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user | default('root') }}"
-    group: "{{ ansible_user | default('root') }}"
+    ansible.builtin.file: "{{ ansible_user | default('root') }}"
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create ghq configuration directory (test environment)
@@ -133,7 +133,7 @@
   when: ansible_env.MOLECULE_SCENARIO_NAME is defined
 
 - name: Configure ghq
-  copy:
+  ansible.builtin.copy:
     content: |
       [ghq]
       root = "{{ ghq_root }}"
@@ -142,12 +142,12 @@
     dest: "{{ ansible_env.HOME }}/.config/ghq/config"
     mode: '0644'
     owner: "{{ ansible_user | default('root') }}"
-    group: "{{ ansible_user | default('root') }}"
+    ansible.builtin.file: "{{ ansible_user | default('root') }}"
   register: ghq_config_result
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Configure ghq (test environment)
-  copy:
+  ansible.builtin.copy:
     content: |
       [ghq]
       root = "{{ ghq_root }}"
@@ -164,7 +164,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user | default('root') }}"
-    group: "{{ ansible_user | default('root') }}"
+    ansible.builtin.file: "{{ ansible_user | default('root') }}"
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create ghq root directory (test environment)

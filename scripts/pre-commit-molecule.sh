@@ -39,15 +39,15 @@ OVERALL_SUCCESS=true
 # Process each changed role
 for role_path in $CHANGED_ROLES; do
     role_name=$(basename "$role_path")
-    
+
     # Check if the role has a Molecule configuration
     if [ ! -f "$role_path/molecule/default/molecule.yml" ]; then
         echo -e "${YELLOW}⚠️  Skipping $role_name (no Molecule configuration)${NC}"
         continue
     fi
-    
+
     echo -e "${YELLOW}📋 Checking $role_name...${NC}"
-    
+
     # Run Molecule syntax check
     if (cd "$role_path" && molecule syntax); then
         echo -e "${GREEN}✅ $role_name syntax check passed${NC}"

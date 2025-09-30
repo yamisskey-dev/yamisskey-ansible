@@ -1,11 +1,31 @@
-# tasks/main.yml
+---
+- name: Load Minecraft secrets from inventory
+  set_fact:
+    minecraft_secrets: "{{ hostvars[inventory_hostname].minecraft | default({}) }}"
+
+- name: Prepare Minecraft secrets
+  set_fact:
+    admin_uuid: "{{ minecraft_secrets.admin_uuid | default('00000000-0000-0000-0000-000000000000') }}"
+    rcon_password: "{{ minecraft_secrets.rcon_password | default('CHANGE_ME_MINECRAFT_RCON') }}"
+
+- name: Warn about placeholder Minecraft secrets
+  debug:
+    msg: >-
+      Minecraft secret '{{ item.key }}' is using a placeholder value. Update
+      deploy/servers/host_vars/{{ inventory_hostname }}/secrets.yml → minecraft.{{ item.key }}.
+  loop:
+    - { key: admin_uuid, value: "{{ admin_uuid }}" }
+    - { key: rcon_password, value: "{{ rcon_password }}" }
+  when: (item.key == 'rcon_password' and item.value == 'CHANGE_ME_MINECRAFT_RCON')
+        or (item.key == 'admin_uuid' and item.value == '00000000-0000-0000-0000-000000000000')
+
 - name: Create Minecraft directory
   file:
     path: '{{ minecraft_dir }}'
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
 
 - name: Create Minecraft data directory
   file:
@@ -13,116 +33,10 @@
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
 
-# secrets.ymlの存在確認
-- name: Ensure secrets directory exists
-  file:
-    path: "{{ minecraft_secrets_file | dirname }}"
-    state: directory
-    mode: '0755'
-    owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-
-- name: Check if secrets file exists
-  stat:
-    path: '{{ minecraft_secrets_file }}'
-  register: minecraft_secrets_file_stat
-
-# 管理者UUIDの生成
-- name: Generate admin UUID if not exists
-  shell: 'python3 -c "import uuid; print(uuid.uuid4())"'
-  register: admin_uuid_output
-  when: not minecraft_secrets_file_stat.stat.exists
-
-# RCONパスワードの生成
-- name: Generate RCON password if not exists
-  shell: 'cat /dev/urandom | tr -dc "a-zA-Z0-9" | fold -w 32 | head -n 1'
-  register: rcon_password_output
-  when: not minecraft_secrets_file_stat.stat.exists
-
-- name: Cache generated secrets for current run
-  set_fact:
-    minecraft_generated_secrets:
-      admin_uuid: '{{ admin_uuid_output.stdout }}'
-      rcon_password: '{{ rcon_password_output.stdout }}'
-  when:
-    - not minecraft_secrets_file_stat.stat.exists
-    - admin_uuid_output is defined
-    - rcon_password_output is defined
-
-- name: Load existing secrets from managed host
-  when: minecraft_secrets_file_stat.stat.exists
-  block:
-    - name: Read secrets file
-      slurp:
-        src: '{{ minecraft_secrets_file }}'
-      register: minecraft_secrets_raw
-      failed_when: false
-
-    - name: Parse existing secrets
-      set_fact:
-        minecraft_existing_secrets: '{{ minecraft_secrets_raw.content | b64decode | from_yaml }}'
-      when:
-        - minecraft_secrets_raw is defined
-        - not (minecraft_secrets_raw.failed | default(false) | bool)
-        - minecraft_secrets_raw.content is defined
-      failed_when: false
-
-- name: Use existing admin UUID when available
-  set_fact:
-    admin_uuid: '{{ minecraft_existing_secrets.admin_uuid }}'
-  when:
-    - minecraft_existing_secrets is defined
-    - minecraft_existing_secrets.admin_uuid is defined
-
-- name: Use generated admin UUID when secrets were created
-  set_fact:
-    admin_uuid: '{{ minecraft_generated_secrets.admin_uuid }}'
-  when:
-    - admin_uuid is not defined
-    - minecraft_generated_secrets is defined
-    - minecraft_generated_secrets.admin_uuid is defined
-
-- name: Use existing RCON password when available
-  set_fact:
-    rcon_password: '{{ minecraft_existing_secrets.rcon_password }}'
-  when:
-    - minecraft_existing_secrets is defined
-    - minecraft_existing_secrets.rcon_password is defined
-
-- name: Use generated RCON password when secrets were created
-  set_fact:
-    rcon_password: '{{ minecraft_generated_secrets.rcon_password }}'
-  when:
-    - rcon_password is not defined
-    - minecraft_generated_secrets is defined
-    - minecraft_generated_secrets.rcon_password is defined
-
-- name: Ensure secrets facts are defined
-  assert:
-    that:
-      - admin_uuid is defined
-      - rcon_password is defined
-    fail_msg: >-
-      Minecraft secrets could not be determined. Ensure '{{ minecraft_secrets_file }}'
-      exists or allow the role to generate new secrets.
-
-# 秘密情報の保存（初回のみ）
-- name: Save secrets to file
-  copy:
-    dest: '{{ minecraft_secrets_file }}'
-    content: |
-      admin_uuid: "{{ admin_uuid }}"
-      rcon_password: "{{ rcon_password }}"
-    mode: '0600'
-    owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-  when: not minecraft_secrets_file_stat.stat.exists
-
-# ops.jsonの作成
 - name: Create ops.json
-  copy:
+  ansible.builtin.copy:
     dest: '{{ minecraft_dir }}/data/ops.json'
     content: |
       [
@@ -135,73 +49,65 @@
       ]
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-  when: not minecraft_secrets_file_stat.stat.exists
+    ansible.builtin.file: '{{ ansible_user }}'
 
-# 環境変数ファイルの配置
 - name: Copy .env file
   template:
     src: minecraft.env.j2
     dest: '{{ minecraft_dir }}/.env'
     mode: '0600'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   notify: restart minecraft
 
-# Docker Compose設定の展開
 - name: Copy docker-compose.yml
   template:
     src: docker-compose.yml.j2
     dest: '{{ minecraft_dir }}/docker-compose.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   notify: restart minecraft
 
-# プラグイン設定ディレクトリの作成
 - name: Create Minecraft plugins config directories
   file:
     path: '{{ item }}'
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   loop:
     - '{{ minecraft_dir }}/data/plugins'
     - '{{ minecraft_dir }}/data/plugins/Geyser-Spigot'
     - '{{ minecraft_dir }}/data/plugins/floodgate'
 
-# Geyser設定ファイルの配置
 - name: Copy Geyser config
   template:
     src: geyser-config.yml.j2
     dest: '{{ minecraft_dir }}/data/plugins/Geyser-Spigot/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   notify: restart minecraft
 
-# Floodgate設定ファイルの配置
 - name: Copy Floodgate config
   template:
     src: floodgate-config.yml.j2
     dest: '{{ minecraft_dir }}/data/plugins/floodgate/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   notify: restart minecraft
 
-# server.propertiesの配置
 - name: Copy server.properties
   template:
     src: server.properties.j2
     dest: '{{ minecraft_dir }}/data/server.properties'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   notify: restart minecraft
 
-# サーバーの起動
 - name: Start Minecraft server
   community.docker.docker_compose_v2:
     project_src: '{{ minecraft_dir }}'
@@ -214,9 +120,8 @@
     enabled: true
   when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
-# プラグイン設定の強制上書き（プラグイン初期化後）
 - name: Wait for plugins to initialize
-  wait_for:
+  ansible.builtin.wait_for:
     timeout: 60
   when: not ansible_check_mode
 
@@ -226,7 +131,7 @@
     dest: '{{ minecraft_dir }}/data/plugins/Geyser-Spigot/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
     force: true
   notify: restart minecraft
 
@@ -236,15 +141,14 @@
     dest: '{{ minecraft_dir }}/data/plugins/floodgate/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
     force: true
   notify: restart minecraft
 
-# PlayIt.gg APTパッケージのインストールと設定（ARM64対応）
 - name: PlayIt.gg setup helper
   block:
     - name: Install required packages for PlayIt.gg
-      apt:
+      ansible.builtin.apt:
         name:
           - curl
           - gnupg
@@ -259,14 +163,14 @@
       become: true
 
     - name: Add PlayIt.gg APT repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [signed-by=/etc/apt/trusted.gpg.d/playit.gpg] https://playit-cloud.github.io/ppa/data ./"
         filename: playit-cloud
         update_cache: true
       become: true
 
     - name: Install PlayIt.gg package
-      apt:
+      ansible.builtin.apt:
         name: playit
       become: true
 

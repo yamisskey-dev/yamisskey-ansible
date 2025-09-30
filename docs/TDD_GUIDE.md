@@ -98,40 +98,40 @@ yamisskey-provision test minio cleanup
 - name: Verify role deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Check if service is running
       service:
         name: myservice
         state: started
       register: service_status
-      
+
     - name: Verify service status
       assert:
         that:
           - service_status.status.ActiveState == "active"
         fail_msg: "Service is not running"
         success_msg: "Service is running correctly"
-    
+
     - name: Check configuration file
       stat:
         path: /etc/myservice/config.yml
       register: config_file
-      
+
     - name: Verify configuration exists
       assert:
         that:
           - config_file.stat.exists
         fail_msg: "Configuration file not found"
         success_msg: "Configuration file exists"
-    
+
     - name: Test API endpoint
       uri:
         url: "http://localhost:8080/health"
         method: GET
         status_code: 200
       register: health_check
-      
+
     - name: Verify API response
       assert:
         that:
@@ -148,13 +148,13 @@ yamisskey-provision test minio cleanup
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Update apt cache
       apt:
         update_cache: true
       when: ansible_os_family == "Debian"
-        
+
     # テスト用のモックデータを準備
     - name: Create test directories
       file:
@@ -165,7 +165,7 @@ yamisskey-provision test minio cleanup
         - /opt/test-app
         - /var/log/test-app
         - /etc/test-app
-        
+
     # テスト用の設定ファイルを作成
     - name: Create mock configuration
       copy:
@@ -296,7 +296,7 @@ cd ansible_collections/yamisskey/servers/roles/webapp
   uri:
     url: "http://localhost:3000/health"
     status_code: 200
-    
+
 - name: Check webapp service
   service:
     name: webapp
@@ -311,7 +311,7 @@ cd ansible_collections/yamisskey/servers/roles/webapp
   package:
     name: webapp
     state: present
-    
+
 - name: Start webapp service
   service:
     name: webapp

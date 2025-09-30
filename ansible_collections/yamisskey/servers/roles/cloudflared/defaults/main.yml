@@ -11,11 +11,6 @@ cloudflared_user: "taka"
 cloudflared_group: "taka"
 cloudflared_config_file: "{{ cloudflared_config_dir }}/config.yml"
 
-# Cloudflare API configuration (from vault)
-# cloudflare_api_token: "{{ vault_cloudflare_api_token }}"
-# cloudflare_zone_id: "{{ vault_cloudflare_zone_id }}"
-# cloudflare_account_id: "{{ vault_cloudflare_account_id }}"
-
 # Tunnel configuration
 cloudflared_protocol: "http2"
 cloudflared_retries: 5

@@ -29,7 +29,7 @@
   tags: ['connectivity', 'ssh']
 
 - name: Test network connectivity to MinIO ports
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ item.host }}"
     port: "{{ item.port }}"
     timeout: "{{ connectivity_timeout_seconds }}"
@@ -70,20 +70,20 @@
   debug:
     msg: |
       🔗 Connectivity Validation Results:
-      
+
       📡 SSH Connectivity:
       {% if source_minio_host == inventory_hostname %}
       ✅ Source is local host (no SSH needed)
       {% elif ssh_test_source is defined %}
       {{ '✅ SSH to source host successful' if ssh_test_source.rc == 0 else '❌ SSH to source host failed: ' + (ssh_test_source.stderr | default('Unknown error')) }}
       {% endif %}
-      
+
       {% if target_minio_host == inventory_hostname %}
       ✅ Target is local host (no SSH needed)
       {% elif ssh_test_target is defined %}
       {{ '✅ SSH to target host successful' if ssh_test_target.rc == 0 else '❌ SSH to target host failed: ' + (ssh_test_target.stderr | default('Unknown error')) }}
       {% endif %}
-      
+
       🔌 Port Connectivity:
       {% if port_connectivity is defined %}
       {% for result in port_connectivity.results %}
@@ -94,7 +94,7 @@
       {% else %}
       ℹ️ Port connectivity tests skipped (localhost targets)
       {% endif %}
-      
+
       🌐 DNS Resolution:
       {% if dns_resolution is defined %}
       {% for result in dns_resolution.results %}
@@ -105,7 +105,7 @@
       {% else %}
       ℹ️ DNS resolution tests skipped (localhost targets)
       {% endif %}
-      
+
       📶 Network Ping:
       {% if ping_test is defined %}
       {% for result in ping_test.results %}
@@ -123,7 +123,7 @@
     connectivity_score: |
       {%- set score = 0 -%}
       {%- set max_score = 0 -%}
-      
+
       {# SSH connectivity scoring #}
       {%- if source_minio_host == inventory_hostname -%}
         {%- set score = score + 25 -%}
@@ -131,14 +131,14 @@
         {%- set score = score + (25 if ssh_test_source.rc == 0 else 0) -%}
       {%- endif -%}
       {%- set max_score = max_score + 25 -%}
-      
+
       {%- if target_minio_host == inventory_hostname -%}
         {%- set score = score + 25 -%}
       {%- elif ssh_test_target is defined -%}
         {%- set score = score + (25 if ssh_test_target.rc == 0 else 0) -%}
       {%- endif -%}
       {%- set max_score = max_score + 25 -%}
-      
+
       {# Port connectivity scoring #}
       {%- if port_connectivity is defined -%}
         {%- for result in port_connectivity.results -%}
@@ -151,7 +151,7 @@
         {%- set score = score + 50 -%}
         {%- set max_score = max_score + 50 -%}
       {%- endif -%}
-      
+
       {# Network reachability scoring #}
       {%- if ping_test is defined -%}
         {%- for result in ping_test.results -%}
@@ -164,7 +164,7 @@
         {%- set score = score + 50 -%}
         {%- set max_score = max_score + 50 -%}
       {%- endif -%}
-      
+
       {{ (score * 100 / max_score) | int }}
   tags: ['connectivity', 'scoring']
 
@@ -178,9 +178,9 @@
     msg: |
       ❌ Critical connectivity issues detected:
       Connectivity score: {{ connectivity_score }}% (minimum required: 80%)
-      
+
       Please resolve connectivity issues before proceeding with migration.
-  when: 
+  when:
     - fail_on_validation_error | bool
     - connectivity_score | int < 80
   tags: ['connectivity', 'critical']

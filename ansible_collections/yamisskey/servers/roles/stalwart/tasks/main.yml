@@ -1,74 +1,48 @@
+---
+- name: Load Stalwart secrets from inventory
+  ansible.builtin.set_fact:
+    stalwart_secrets: "{{ hostvars[inventory_hostname].stalwart | default({}) }}"
+
+- name: Prepare Stalwart admin credentials
+  ansible.builtin.set_fact:
+    admin_user: "{{ stalwart_secrets.admin_user | default('admin') }}"
+    admin_password: "{{ stalwart_secrets.admin_password | default('CHANGE_ME_STALWART_PASSWORD') }}"
+
+- name: Warn about placeholder Stalwart password
+  ansible.builtin.debug:
+    msg: >-
+      Stalwart admin_password is using a placeholder value. Update
+      deploy/servers/host_vars/{{ inventory_hostname }}/secrets.yml → stalwart.admin_password.
+  when: admin_password == 'CHANGE_ME_STALWART_PASSWORD'
+
 - name: Create Stalwart directory structure
-  file:
+  ansible.builtin.file:
     path: '{{ item }}'
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
   loop:
     - '{{ stalwart_dir }}'
     - '{{ stalwart_dir }}/data'
     - '{{ stalwart_dir }}/etc'
     - '{{ stalwart_dir }}/blobs'
 
-- name: Check if secrets file exists
-  stat:
-    path: '{{ stalwart_secrets_file }}'
-  register: secrets_stat
-
-- name: Generate admin credentials
-  when: not secrets_stat.stat.exists
-  block:
-    - name: Generate admin password
-      command: openssl rand -base64 12
-      register: admin_password_output
-
-    - name: Create secrets file
-      copy:
-        dest: '{{ stalwart_secrets_file }}'
-        content: |
-          admin_user: "admin"
-          admin_password: "{{ admin_password_output.stdout }}"
-        mode: '0600'
-        owner: '{{ ansible_user }}'
-        group: '{{ ansible_user }}'
-
-- name: Set proper permissions on secrets file
-  file:
-    path: '{{ stalwart_secrets_file }}'
-    mode: '0600'
-    owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-
-- name: Load secrets from remote file
-  slurp:
-    src: '{{ stalwart_secrets_file }}'
-  register: stalwart_secrets_raw
-
-- name: Parse secrets data
-  set_fact:
-    stalwart_secrets: "{{ stalwart_secrets_raw.content | b64decode | from_yaml }}"
-
-- name: Set admin credentials from secrets
-  set_fact:
-    admin_user: "{{ stalwart_secrets.admin_user | default('admin') }}"
-    admin_password: "{{ stalwart_secrets.admin_password }}"
-
 - name: Copy docker-compose.yml
-  template:
+  ansible.builtin.template:
     src: stalwart_docker-compose.yml.j2
     dest: '{{ stalwart_dir }}/docker-compose.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
 
 - name: Copy Stalwart config
-  template:
+  ansible.builtin.template:
     src: stalwart_config.toml.j2
     dest: '{{ stalwart_dir }}/etc/config.toml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
 
 - name: Start Stalwart container
   community.docker.docker_compose_v2:
@@ -76,7 +50,7 @@
     state: restarted
 
 - name: Show admin credentials and next steps
-  debug:
+  ansible.builtin.debug:
     msg:
       - 'Admin credentials:'
       - '  User: {{ admin_user }}'

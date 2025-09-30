@@ -3,7 +3,7 @@
     path: "{{ item }}"
     state: directory
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
     mode: '0755'
   loop:
     - "{{ backup_dir }}/misskey"
@@ -33,7 +33,7 @@
   failed_when: false
 
 - name: Check if Docker Compose file exists
-  stat:
+  ansible.builtin.stat:
     path: "{{ item }}"
   register: compose_file_check
   loop:
@@ -43,7 +43,7 @@
     - "/opt/misskey-backup/compose.yaml"
 
 - name: Create basic Docker Compose file if not found
-  copy:
+  ansible.builtin.copy:
     content: |
       services:
         misskey-backup:
@@ -59,7 +59,7 @@
   when: not compose_file_check.results | selectattr('stat.exists') | list
 
 - name: Re-check Docker Compose file after creation
-  stat:
+  ansible.builtin.stat:
     path: "/opt/misskey-backup/docker-compose.yml"
   register: final_compose_check
   when: not compose_file_check.results | selectattr('stat.exists') | list
@@ -83,7 +83,7 @@
     project_src: /opt/misskey-backup
     pull: always
     build: always
-  when: 
+  when:
     - not backup_container_running | bool
     - compose_file_path is defined
   register: compose_pull_build
@@ -91,7 +91,7 @@
 - name: Start Docker Compose services
   community.docker.docker_compose_v2:
     project_src: /opt/misskey-backup
-  when: 
+  when:
     - not backup_container_running | bool
     - compose_file_path is defined
   register: compose_start
@@ -112,7 +112,7 @@
 - name: Display container files
   debug:
     msg: "Container files: {{ container_files.stdout_lines | default([]) }}"
-  when: 
+  when:
     - backup_container_check.stdout == 'misskey-backup'
     - container_files is defined
 
@@ -126,13 +126,13 @@
 - name: Display found scripts
   debug:
     msg: "Found scripts: {{ backup_scripts.stdout_lines | default([]) }}"
-  when: 
+  when:
     - backup_container_check.stdout == 'misskey-backup'
     - backup_scripts is defined
 
 - name: Run manual backup script
   command: docker exec misskey-backup /backup.sh
-  when: 
+  when:
     - backup_container_check.stdout == 'misskey-backup'
     - backup_scripts is defined
     - "'/backup.sh' in (backup_scripts.stdout_lines | default([]))"
@@ -140,7 +140,7 @@
 
 - name: Run alternative backup script
   command: docker exec misskey-backup /usr/local/bin/backup.sh
-  when: 
+  when:
     - backup_container_check.stdout == 'misskey-backup'
     - backup_scripts is defined
     - "'/usr/local/bin/backup.sh' in (backup_scripts.stdout_lines | default([]))"
@@ -149,7 +149,7 @@
 - name: Skip backup if no script found
   debug:
     msg: "No backup script found in container, skipping manual backup"
-  when: 
+  when:
     - backup_container_check.stdout == 'misskey-backup'
     - backup_scripts is defined
     - "'/backup.sh' not in (backup_scripts.stdout_lines | default([]))"
@@ -159,19 +159,3 @@
   debug:
     msg: "Backup container is not running, skipping manual backup"
   when: backup_container_check.stdout != 'misskey-backup'
-
-- name: Check if secrets file exists
-  stat:
-    path: "{{ misskey_backup_secrets_file }}"
-  register: secrets_file_check
-
-- name: Load secrets from secrets.yml
-  include_vars:
-    file: '{{ misskey_backup_secrets_file }}'
-  when: secrets_file_check.stat.exists
-  failed_when: false
-
-- name: Skip secrets loading if file doesn't exist
-  debug:
-    msg: "Secrets file {{ misskey_backup_secrets_file }} not found, skipping secrets loading"
-  when: not secrets_file_check.stat.exists

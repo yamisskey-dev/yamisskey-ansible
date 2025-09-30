@@ -34,16 +34,16 @@ provisioner:
         misskey_dir: "/opt/test-misskey"
         backup_dir: "/tmp/test-backup"
         docker_compose_cmd: "docker compose"
-        
+
         # Mock git update results for testing
         git_pull_output:
           stdout: "Already up to date."
         git_submodule_update_output:
           stdout: ""
-        
+
         # Disable complex initialization for testing
         updates_needed: false
-        
+
         # Test user configuration
         ansible_user: "root"
 verifier:

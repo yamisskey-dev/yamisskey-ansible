@@ -34,7 +34,9 @@ provisioner:
         ansible_user: "root"
         domain: "example.com"
         stalwart_dir: "/opt/test-stalwart"
-        stalwart_secrets_file: "/opt/test-stalwart/secrets.yml"
+        stalwart:
+          admin_user: admin
+          admin_password: molecule-stalwart-password
 verifier:
   name: ansible
 scenario:

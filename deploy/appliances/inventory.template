@@ -34,7 +34,7 @@ ansible_become_user=root
 
 # --- TrueNAS API Configuration (必須) ---
 truenas_api_url="https://IP_JOSEPH"
-truenas_api_key="{{ vault_truenas_api_key }}"
+truenas_api_key="{{ truenas_api_key }}"
 truenas_api_timeout=10
 truenas_health_check_timeout=30
 truenas_health_check_retries=10
@@ -54,18 +54,16 @@ internal_network=NETWORK
 truenas_internal_ip=IP_JOSEPH
 
 # --- Cloudflare Tunnel Configuration (必須) ---
-# これらの値は group_vars/vault.yml で暗号化してください
-cloudflare_account_id="{{ vault_cloudflare_account_id }}"
-cloudflare_api_token="{{ vault_cloudflare_api_token }}"
-cloudflare_zone_id="{{ vault_cloudflare_zone_id }}"
-truenas_tunnel_id="{{ vault_truenas_tunnel_id }}"
-truenas_tunnel_token="{{ vault_truenas_tunnel_token }}"
-truenas_tunnel_credentials="{{ vault_truenas_tunnel_credentials }}"
+# 秘匿情報は group_vars/all/secrets.yml (SOPS) で管理されます
+# cloudflare_account_id, cloudflare_api_token, cloudflare_zone_id などは SOPS から参照
+truenas_tunnel_id="{{ truenas_tunnel_id }}"
+truenas_tunnel_token="{{ truenas_tunnel_token }}"
+truenas_tunnel_credentials="{{ truenas_tunnel_credentials }}"
 
 # --- MinIO Configuration (必須) ---
-truenas_minio_root_user="{{ vault_minio_root_user }}"
-truenas_minio_root_password="{{ vault_minio_root_password }}"
-truenas_minio_kms_key="{{ vault_minio_kms_secret_key }}"
+truenas_minio_root_user="{{ minio_root_user }}"
+truenas_minio_root_password="{{ minio_root_password }}"
+truenas_minio_kms_key="{{ minio_kms_secret_key }}"
 minio_region="ap-northeast-3"
 minio_api_port=9000
 minio_console_port=9001
@@ -133,7 +131,7 @@ minio_bucket_name_for_outline="assets"
 truenas_datasets:
   - name: "minio"
     owner: "root"
-    group: "root" 
+    group: "root"
     mode: "0755"
   - name: "cloudflared"
     owner: "root"
@@ -160,23 +158,23 @@ truenas_cloudflared_keep_alive_timeout="15s"
 # ========================================
 # 必須変数チェック用コメント
 # ========================================
-# 以下の Ansible Vault 暗号化変数が group_vars/vault.yml に必須:
+# 以下のシークレットは group_vars/all/secrets.yml (SOPS) で管理します:
 #
 # TrueNAS API:
-# - vault_truenas_api_key
+# - truenas_api_key
 #
 # Cloudflare:
-# - vault_cloudflare_account_id
-# - vault_cloudflare_api_token
-# - vault_cloudflare_zone_id
-# - vault_truenas_tunnel_id
-# - vault_truenas_tunnel_token
-# - vault_truenas_tunnel_credentials
+# - cloudflare_account_id
+# - cloudflare_api_token
+# - cloudflare_zone_id
+# - truenas_tunnel_id
+# - truenas_tunnel_token
+# - truenas_tunnel_credentials
 #
 # MinIO:
-# - vault_minio_root_user
-# - vault_minio_root_password
-# - vault_minio_kms_secret_key
+# - minio_root_user
+# - minio_root_password
+# - minio_kms_secret_key
 #
 # MinIO Client (mc):
 # - mc_release_sha256 (セキュリティ検証用)

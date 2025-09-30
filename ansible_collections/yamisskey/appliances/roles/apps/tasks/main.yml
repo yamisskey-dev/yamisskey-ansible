@@ -22,9 +22,9 @@
       MinIO-specific functionality has been moved to:
       - yamisskey.appliances.minio (MinIO deployment)
       - yamisskey.appliances.migrate_minio (MinIO migration)
-      
+
       This role (apps) is now reserved for generic app management.
-      
+
       For MinIO deployment, use:
       roles:
         - yamisskey.appliances.core

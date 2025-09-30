@@ -5,7 +5,7 @@
 # System-level monitoring components and exporters
 
 # ==================================================
-# Service Ports Configuration  
+# Service Ports Configuration
 # ==================================================
 watch_services:
   node_exporter: 9100
@@ -19,7 +19,7 @@ node_exporter:
   package_name: prometheus-node-exporter  # Ubuntu/Debian
   service_name: prometheus-node-exporter
   port: "{{ watch_services.node_exporter }}"
-  
+
 # Gentoo-specific package names
 node_exporter_gentoo:
   package_name: prometheus-node_exporter
@@ -34,7 +34,7 @@ cadvisor:
   port: "{{ watch_services.cadvisor }}"
   container_name: cadvisor
   restart_policy: always
-  
+
 
 # ==================================================
 # Monitor Network Configuration

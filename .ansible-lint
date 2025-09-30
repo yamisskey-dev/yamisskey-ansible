@@ -1,3 +1,4 @@
+---
 skip_list:
   # Keep some rules relaxed for now, tighten incrementally
   - yaml[line-length]
@@ -19,6 +20,10 @@ skip_list:
 offline: false
 exclude_paths:
   - .github/
+  - molecule/
+  - .vendor/
+  - "**/secrets.yml"
+  - "**/*secrets.yml"
   - backups/
   - .ansible/
 

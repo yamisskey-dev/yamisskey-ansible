@@ -2,6 +2,5 @@
 # mCaptcha specific variables
 mcaptcha_server_name: "captcha.{{ domain }}"
 mcaptcha_dir: '/var/www/mcaptcha'
-mcaptcha_secrets_file: '{{ mcaptcha_dir }}/.config/secrets.yml'
 mcaptcha_postgres_user: mcaptcha
 mcaptcha_postgres_db: mcaptcha

@@ -34,7 +34,13 @@ provisioner:
         ansible_user: "root"
         domain: "example.com"
         zitadel_dir: "/opt/test-zitadel"
-        zitadel_secrets_file: "/opt/test-zitadel/secrets.yml"
+        zitadel:
+          masterkey: test-master-key
+          postgresql:
+            ansible.builtin.user: zitadel
+            password: test-db-password
+            database: zitadel
+            host: db
 verifier:
   name: ansible
 scenario:

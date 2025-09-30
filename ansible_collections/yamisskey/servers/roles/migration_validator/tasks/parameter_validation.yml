@@ -71,11 +71,11 @@
 - name: Extract host information
   set_fact:
     source_host_info:
-      hostname: "{{ source_minio_host }}"
+      ansible.builtin.hostname: "{{ source_minio_host }}"
       ansible_host: "{{ hostvars[source_minio_host]['ansible_host'] | default(source_minio_host) }}"
       ansible_user: "{{ hostvars[source_minio_host]['ansible_user'] | default(ansible_user) }}"
     target_host_info:
-      hostname: "{{ target_minio_host }}"
+      ansible.builtin.hostname: "{{ target_minio_host }}"
       ansible_host: "{{ hostvars[target_minio_host]['ansible_host'] | default('localhost') }}"
       ansible_user: "{{ hostvars[target_minio_host]['ansible_user'] | default(ansible_user) }}"
   tags: ['validation', 'facts']
@@ -89,16 +89,16 @@
         - Hostname: {{ source_host_info.hostname }}
         - IP/FQDN: {{ source_host_info.ansible_host }}
         - User: {{ source_host_info.ansible_user }}
-      
+
       📍 Target Host Details:
         - Hostname: {{ target_host_info.hostname }}
         - IP/FQDN: {{ target_host_info.ansible_host }}
         - User: {{ target_host_info.ansible_user }}
-      
+
       📦 Migration Buckets:
         - Misskey: {{ minio_bucket_name_for_misskey }}
         - Outline: {{ minio_bucket_name_for_outline }}
-      
+
       🔧 Operation Mode: {{ migration_operation }}
       🔍 Validation Phase: {{ validation_phase }}
       ==========================================

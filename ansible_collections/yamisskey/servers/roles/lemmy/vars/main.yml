@@ -2,7 +2,6 @@
 # Lemmy specific variables
 lemmy_server_name: "lemmy.{{ domain }}"
 lemmy_dir: '/var/www/lemmy'
-lemmy_secrets_file: '{{ lemmy_dir }}/secrets.yml'
 
 postgres_password: "{{ lookup('password', 'inventory/host_vars/{{ lemmy_server_name }}/passwords/postgres.psk chars=ascii_letters,digits') }}" # noqa yaml[line-length]
 

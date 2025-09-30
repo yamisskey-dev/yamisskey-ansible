@@ -8,13 +8,11 @@ minio_api_server_name: "drive.{{ domain }}"
 minio_web_server_name: "minio.{{ domain }}"
 minio_bucket_name_for_misskey: "files"
 minio_bucket_name_for_outline: "assets"
-minio_secrets_file: '/opt/minio/secrets.yml'
 ```
 
-上書き例（`group_vars/all.yml` など）:
+上書き例（`group_vars/all/main.yml` など）:
 ```yaml
 minio_alias: default
-minio_secrets_file: '/srv/minio/secrets.yml'
 ```
 
-機微情報は Ansible Vault で管理してください。
+機微情報は SOPS (group_vars/all/ or host_vars/<host>/secrets.yml) で管理してください。

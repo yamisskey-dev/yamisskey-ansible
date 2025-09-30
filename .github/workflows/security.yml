@@ -61,7 +61,7 @@ jobs:
             --exclude="*.md"
             --exclude="*.example"
             --exclude="*.j2"
-            --exclude="vault.yml.example"
+            --exclude="*secrets.yml"
             --exclude="security.yml"
             --exclude=".gitleaks.toml"
             --exclude=".pre-commit-config.yaml"
@@ -78,24 +78,22 @@ jobs:
           FOUND=false
           for pattern in "${PATTERNS[@]}"; do
             if grep -rEin ${GREP_EXCLUDES[@]} -- "$pattern" . \
-              | grep -v "{{ vault_" \
               | grep -v "{{ .*_password" \
               | grep -v "{{ .*_key" \
               | grep -v "{{ .*_token" \
               | grep -v "vars/main.yml:" \
               | grep -v "templates/" \
-              | grep -v "# Vault:" \
+              | grep -v "# SOPS:" \
               | grep -q "."; then
               echo "🚨 Potential secret found: $pattern"
               # Print up to 5 matching lines with file and line number
               grep -rEin ${GREP_EXCLUDES[@]} -- "$pattern" . \
-                | grep -v "{{ vault_" \
                 | grep -v "{{ .*_password" \
                 | grep -v "{{ .*_key" \
                 | grep -v "{{ .*_token" \
                 | grep -v "vars/main.yml:" \
                 | grep -v "templates/" \
-                | grep -v "# Vault:" \
+                | grep -v "# SOPS:" \
                 | head -5 || true
               FOUND=true
             fi
@@ -104,12 +102,10 @@ jobs:
           # Check for hardcoded passwords (excluding Ansible variables and examples)
           echo "🔍 Checking for hardcoded passwords..."
           if grep -rEin ${GREP_EXCLUDES[@]} -- 'password\s*=\s*['\''"][^'\''"]{8,}['\''"]' . \
-            | grep -v "{{ vault_" \
             | grep -v "{{ .*_password" \
             | grep -q "."; then
             echo "🚨 Potential hardcoded password found"
             grep -rEin ${GREP_EXCLUDES[@]} -- 'password\s*=\s*['\''"][^'\''"]{8,}['\''"]' . \
-              | grep -v "{{ vault_" \
               | grep -v "{{ .*_password" \
               | head -5 || true
             FOUND=true
@@ -118,7 +114,6 @@ jobs:
           # Check for hardcoded API keys (excluding Ansible variables and examples)
           echo "🔍 Checking for hardcoded API keys..."
           if grep -rEin ${GREP_EXCLUDES[@]} -- 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{16,}['\''"]' . \
-            | grep -v "{{ vault_" \
             | grep -v "{{ .*_key" \
             | grep -v "{{ .*_api_key" \
             | grep -v "{{ .*_token" \
@@ -129,7 +124,6 @@ jobs:
             | grep -q "."; then
             echo "🚨 Potential hardcoded API key found"
             grep -rEin ${GREP_EXCLUDES[@]} -- 'api[_-]?key\s*[=:]\s*['\''"][^'\''"]{16,}['\''"]' . \
-              | grep -v "{{ vault_" \
               | grep -v "{{ .*_key" \
               | grep -v "{{ .*_api_key" \
               | grep -v "{{ .*_token" \

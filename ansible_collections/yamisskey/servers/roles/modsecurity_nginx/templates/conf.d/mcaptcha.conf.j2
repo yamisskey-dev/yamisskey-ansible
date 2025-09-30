@@ -12,7 +12,7 @@ server {
     listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ mcaptcha_server_name }};
-    
+
     # Error page handling - redirect to maintenance page when backend is down
     error_page 502 503 504 @maintenance_redirect;
 
@@ -26,42 +26,42 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # CORS headers for CAPTCHA API
     add_header 'Access-Control-Allow-Origin' '*' always;
     add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
     add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization' always;
     add_header 'Access-Control-Allow-Credentials' 'false' always;
-    
+
     # Rate limiting for CAPTCHA requests (zone defined in 00-shared.conf)
     limit_req zone=mcaptcha_limit burst=50 nodelay;
-    
+
     # Proxy settings
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto https;
-    
+
     # API endpoints
     location /api/ {
         proxy_pass http://mcaptcha_backend;
         proxy_http_version 1.1;
-        
+
         # CAPTCHA API timeouts
         proxy_connect_timeout 10s;
         proxy_send_timeout 30s;
         proxy_read_timeout 30s;
-        
+
         # No caching for CAPTCHA
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         expires 0;
     }
-    
+
     # Widget endpoints
     location /widget/ {
         proxy_pass http://mcaptcha_backend;
         proxy_http_version 1.1;
-        
+
         # Fast response for widgets
         proxy_connect_timeout 5s;
         proxy_send_timeout 15s;
@@ -77,17 +77,17 @@ server {
 
         add_header X-Cache-Status $upstream_cache_status;
     }
-    
+
     # Main mCaptcha application
     location / {
         proxy_pass http://mcaptcha_backend;
         proxy_http_version 1.1;
-        
+
         # Standard timeouts
         proxy_connect_timeout 30s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-        
+
         # Buffering
         proxy_buffering on;
         proxy_buffer_size 64k;

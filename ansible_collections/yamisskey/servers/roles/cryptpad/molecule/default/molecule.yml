@@ -32,6 +32,8 @@ provisioner:
       cryptpad-test-instance:
         # Role-specific test configuration will be added here
         ansible_user: "root"
+        cryptpad:
+          secret_key: test-cryptpad-secret
 verifier:
   name: ansible
 scenario:

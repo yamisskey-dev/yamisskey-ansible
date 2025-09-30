@@ -16,7 +16,7 @@
           direct: ["warp=off"]
         timeout: 10
       - url: "https://ipinfo.io/json"
-        description: "IP Information Service"  
+        description: "IP Information Service"
         timeout: 10
       - url: "https://api.github.com"
         description: "GitHub API (SSL/TLS test)"
@@ -31,13 +31,13 @@
     # Egress route configuration per host
     expected_routes:
       balthasar: "warp"
-      caspar: "warp"  
+      caspar: "warp"
       linode_prox: "direct"
       raspberrypi: "playit"
 
   pre_tasks:
     - name: Install required packages for connectivity testing
-      package:
+      ansible.builtin.package:
         name:
           - curl
           - dig
@@ -47,12 +47,12 @@
       tags: [setup]
 
     - name: Check current host egress configuration
-      set_fact:
+      ansible.builtin.set_fact:
         expected_egress: "{{ expected_routes[inventory_hostname] | default('unknown') }}"
         actual_egress: "{{ egress_route | default('unknown') }}"
 
     - name: Display egress configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           🌐 Egress Route Verification for {{ inventory_hostname }}
           Expected: {{ expected_egress }}
@@ -63,7 +63,7 @@
     - name: Test direct connectivity (baseline)
       block:
         - name: Basic connectivity test
-          uri:
+          ansible.builtin.uri:
             url: "{{ item.url }}"
             method: GET
             timeout: "{{ item.timeout }}"
@@ -76,7 +76,7 @@
           tags: [connectivity, baseline]
 
         - name: Analyze baseline connectivity results
-          set_fact:
+          ansible.builtin.set_fact:
             baseline_results: >-
               {{
                 baseline_results | default([]) + [{
@@ -94,7 +94,7 @@
     - name: WARP route verification
       block:
         - name: Test Cloudflare WARP connectivity
-          uri:
+          ansible.builtin.uri:
             url: "https://www.cloudflare.com/cdn-cgi/trace"
             method: GET
             timeout: 10
@@ -104,7 +104,7 @@
           changed_when: false
 
         - name: Verify WARP status
-          set_fact:
+          ansible.builtin.set_fact:
             warp_status: >-
               {{
                 'on' if (warp_trace.content | default('') | regex_search('warp=(on|plus)'))
@@ -112,13 +112,13 @@
               }}
             warp_team: >-
               {{
-                warp_trace.content | default('') | 
-                regex_search('warp-team=([^\n]+)') | 
+                warp_trace.content | default('') |
+                regex_search('warp-team=([^\n]+)') |
                 default('none')
               }}
 
         - name: Validate WARP route expectation
-          assert:
+          ansible.builtin.assert:
             that:
               - warp_status == "on"
             fail_msg: |
@@ -130,32 +130,32 @@
           when: expected_egress == "warp"
 
         - name: Report WARP status for non-WARP hosts
-          debug:
+          ansible.builtin.debug:
             msg: |
               ℹ️ WARP status for {{ inventory_hostname }}: {{ warp_status }}
               (Expected egress: {{ expected_egress }})
           when: expected_egress != "warp"
 
       tags: [warp, egress]
-      when: 
+      when:
         - baseline_results is defined
         - (baseline_results | selectattr('endpoint', 'equalto', 'https://www.cloudflare.com/cdn-cgi/trace') | selectattr('accessible') | list | length > 0)
 
     - name: DNS resolution verification
       block:
         - name: Test DNS resolution through different servers
-          shell: |
+          ansible.builtin.shell: |
             set -euo pipefail
-            
+
             # Test primary DNS (systemd-resolved)
             DIG_SYSTEM=$(dig +short +time=5 @1.1.1.1 cloudflare.com A 2>/dev/null | head -1 || echo "failed")
-            
+
             # Test Cloudflare DNS
             DIG_CF=$(dig +short +time=5 @1.1.1.1 cloudflare.com A 2>/dev/null | head -1 || echo "failed")
-            
-            # Test Google DNS  
+
+            # Test Google DNS
             DIG_GOOGLE=$(dig +short +time=5 @8.8.8.8 cloudflare.com A 2>/dev/null | head -1 || echo "failed")
-            
+
             echo "SYSTEM_DNS=$DIG_SYSTEM"
             echo "CLOUDFLARE_DNS=$DIG_CF"
             echo "GOOGLE_DNS=$DIG_GOOGLE"
@@ -164,7 +164,7 @@
           failed_when: false
 
         - name: Analyze DNS resolution results
-          set_fact:
+          ansible.builtin.set_fact:
             dns_results: >-
               {{
                 {
@@ -175,7 +175,7 @@
               }}
 
         - name: Verify DNS functionality
-          assert:
+          ansible.builtin.assert:
             that:
               - dns_results.cloudflare != "failed"
               - dns_results.google != "failed"
@@ -191,7 +191,7 @@
     - name: Port connectivity verification
       block:
         - name: Test critical external ports
-          wait_for:
+          ansible.builtin.wait_for:
             host: "{{ item.host }}"
             port: "{{ item.port }}"
             timeout: 10
@@ -206,7 +206,7 @@
           changed_when: false
 
         - name: Summarize port connectivity
-          set_fact:
+          ansible.builtin.set_fact:
             port_results: >-
               {{
                 port_results | default([]) + [{
@@ -223,14 +223,14 @@
     - name: Performance and latency tests
       block:
         - name: Measure response times to key endpoints
-          shell: |
+          ansible.builtin.shell: |
             set -euo pipefail
-            
+
             # Test latency to various endpoints
             CF_TIME=$(curl -o /dev/null -s -w '%{time_total}' -m 10 https://www.cloudflare.com/cdn-cgi/trace || echo "timeout")
             GITHUB_TIME=$(curl -o /dev/null -s -w '%{time_total}' -m 10 https://api.github.com || echo "timeout")
             GOOGLE_TIME=$(curl -o /dev/null -s -w '%{time_total}' -m 10 https://www.google.com || echo "timeout")
-            
+
             echo "CLOUDFLARE_TIME=$CF_TIME"
             echo "GITHUB_TIME=$GITHUB_TIME"
             echo "GOOGLE_TIME=$GOOGLE_TIME"
@@ -239,7 +239,7 @@
           failed_when: false
 
         - name: Analyze performance results
-          set_fact:
+          ansible.builtin.set_fact:
             performance_results: >-
               {{
                 {
@@ -253,45 +253,45 @@
 
   post_tasks:
     - name: Generate egress verification report
-      debug:
+      ansible.builtin.debug:
         msg: |
           🌐 Egress Route Verification Report - {{ inventory_hostname }}
           ================================================================
-          
+
           📋 Configuration:
           • Expected Route: {{ expected_egress }}
           • Configured Route: {{ actual_egress }}
-          
+
           🔗 Connectivity Summary:
           {% for result in baseline_results | default([]) %}
           • {{ result.description }}: {{ '✅' if result.accessible else '❌' }} ({{ result.response_time }}s)
           {% endfor %}
-          
+
           🛡️ WARP Status: {{ warp_status | default('unknown') }}
           {% if warp_team | default('none') != 'none' %}• Team: {{ warp_team }}{% endif %}
-          
+
           🔍 DNS Resolution:
           {% for server, result in dns_results.items() %}
           • {{ server | title }}: {{ '✅' if result != 'failed' else '❌' }} {{ result }}
           {% endfor %}
-          
+
           🚪 Port Connectivity:
           {% for result in port_results | default([]) %}
           • {{ result.description }}: {{ '✅' if result.accessible else '❌' }}
           {% endfor %}
-          
+
           ⚡ Performance:
           {% for service, time in performance_results.items() %}
           • {{ service | title }}: {{ time }}s {{ '⚠️' if (time | float > 3) else '✅' }}
           {% endfor %}
-          
+
           {{ '🎉 All egress routes verified successfully!' if all_tests_passed | default(true) else '⚠️ Some issues detected - see details above' }}
 
     - name: Fail on critical egress issues
-      fail:
+      ansible.builtin.fail:
         msg: |
           🚨 Critical egress connectivity issues detected!
-          
+
           Issues found:
           {% if expected_egress == "warp" and warp_status != "on" %}
           • WARP expected but not active: {{ warp_status }}
@@ -302,7 +302,7 @@
           {% if baseline_results | selectattr('accessible') | list | length == 0 %}
           • No external connectivity available
           {% endif %}
-          
+
           Please investigate network configuration and routing.
       when:
         - (expected_egress == "warp" and warp_status | default("off") != "on") or

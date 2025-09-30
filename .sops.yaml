@@ -1,43 +1,16 @@
-# SOPS Configuration for yamisskey-provision
-# Replaces Ansible Vault with modern secrets management
-
-# Creation rules for different file types and paths
+# SOPS configuration for yamisskey-provision
 creation_rules:
-  # Legacy vault files (group_vars)
-  - path_regex: deploy/.*/group_vars/vault\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+  # Rule for secrets files
+  - path_regex: .*secrets\.yml$
+    age: age1rxp34jln2puhpu4r6tu8f7f5tg3mxc60eeve0cflnhtgygsl9f2s9thq0q
+    unencrypted_suffix: _unencrypted
 
-  # Host-specific secrets
-  - path_regex: deploy/.*/host_vars/.*\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
+  # Rule for other sensitive files
+  - path_regex: .*\.(key|pem|crt|p12|pfx)$
+    age: age1rxp34jln2puhpu4r6tu8f7f5tg3mxc60eeve0cflnhtgygsl9f2s9thq0q
+    unencrypted_suffix: _unencrypted
 
-  # Role-specific secrets files (vars and defaults)
-  - path_regex: ansible_collections/.*/roles/.*/vars/secrets\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-  
-  - path_regex: ansible_collections/.*/roles/.*/defaults/secrets\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-
-  # Service-specific secrets files
-  - path_regex: .*/secrets\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-
-  # Any file with sensitive suffix
-  - path_regex: .*\.secret\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-  
-  - path_regex: .*\.encrypted\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-
-  # Development and testing secrets
-  - path_regex: secrets.*\.yml$
-    age: age1j3d572hhlycq54vll6xk5cfdeezw09vr6px3rk6k725zayugwf7s04dvf3
-
-# Destination rules (where to apply encryption)
-destination_rules: []
-
-# MAC only encrypted values (not keys)
-mac_only_encrypted: true
-
-# Shamir secret sharing disabled for simplicity
-shamir_threshold: 0
+  # Rule for environment files
+  - path_regex: .*\.env\.(secure|prod|staging)$
+    age: age1rxp34jln2puhpu4r6tu8f7f5tg3mxc60eeve0cflnhtgygsl9f2s9thq0q
+    unencrypted_suffix: _unencrypted

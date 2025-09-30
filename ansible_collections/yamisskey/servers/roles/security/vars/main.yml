@@ -1,18 +1,18 @@
-ufw_ports:
+security_ufw_ports:
   - 2222
   - 80
   - 443
   - 9000
 
-tailscale_ports:
+security_tailscale_ports:
   - 41641
 
 # Ports required for Cloudflare Tunnel (QUIC and optional HTTPS)
-cloudflared_quic_port: 7844
-cloudflared_https_port: 443
+security_cloudflared_quic_port: 7844
+security_cloudflared_https_port: 443
 
 # IPv4 and IPv6 addresses for region1 and region2 of Cloudflare's network
-cloudflare_region1_ips_v4:
+security_cloudflare_region1_ips_v4:
   - 198.41.192.167
   - 198.41.192.67
   - 198.41.192.57
@@ -23,7 +23,7 @@ cloudflare_region1_ips_v4:
   - 198.41.192.47
   - 198.41.192.37
   - 198.41.192.77
-cloudflare_region1_ips_v6:
+security_cloudflare_region1_ips_v6:
   - 2606:4700:a0::1
   - 2606:4700:a0::2
   - 2606:4700:a0::3
@@ -34,7 +34,7 @@ cloudflare_region1_ips_v6:
   - 2606:4700:a0::8
   - 2606:4700:a0::9
   - 2606:4700:a0::10
-cloudflare_region2_ips_v4:
+security_cloudflare_region2_ips_v4:
   - 198.41.200.13
   - 198.41.200.193
   - 198.41.200.33
@@ -45,7 +45,7 @@ cloudflare_region2_ips_v4:
   - 198.41.200.73
   - 198.41.200.43
   - 198.41.200.23
-cloudflare_region2_ips_v6:
+security_cloudflare_region2_ips_v6:
   - 2606:4700:a8::1
   - 2606:4700:a8::2
   - 2606:4700:a8::3
@@ -57,14 +57,14 @@ cloudflare_region2_ips_v6:
   - 2606:4700:a8::9
   - 2606:4700:a8::10
 
-warp_wireguard_ports:
+security_warp_wireguard_ports:
   - 2408
   - 500
   - 1701
   - 4500
   - 51820
 
-cloudflare_warp_ips:
+security_cloudflare_warp_ips:
   - '162.159.137.105'
   - '162.159.138.105'
   - '2606:4700:7::a29f:8969'
@@ -76,7 +76,7 @@ cloudflare_warp_ips:
   - '162.159.193.0/24'
   - '2606:4700:100::/48'
 
-sysctl_settings:
+security_sysctl_settings:
   # ファイルシステム保護
   - { name: 'dev.tty.ldisc_autoload', value: '0' }
   - { name: 'fs.file-max', value: '1048576' }

@@ -30,7 +30,7 @@ services:
       - HSTS=on
     networks:
       - egress
-      
+
   letsencrypt:
     image: nginxproxy/acme-companion:latest
     container_name: nginx-letsencrypt

@@ -6,7 +6,9 @@
   changed_when: false
 
 - name: Download and install Tailscale (cross-distro script)
-  ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://tailscale.com/install.sh | sh
   when: install_tailscale | default(true) and tailscale_check.rc != 0
   register: tailscale_install
   changed_when: false

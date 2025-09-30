@@ -3,17 +3,16 @@
   hosts: all
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Update apt cache safely
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
       retries: 3
       delay: 10
       register: apt_update_result
       failed_when: false
-
 
     - name: Create keyrings directory for Docker
       file:
@@ -23,7 +22,7 @@
       when: apt_update_result is not failed
 
     - name: Add Docker GPG key
-      get_url:
+      ansible.builtin.get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
         dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
@@ -36,14 +35,14 @@
       when: apt_update_result is not failed
 
     - name: Add Docker repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu jammy stable"
         filename: docker
         state: present
       when: apt_update_result is not failed
 
     - name: Install Docker for testing
-      apt:
+      ansible.builtin.apt:
         name:
           - docker-ce
           - docker-ce-cli
@@ -53,10 +52,9 @@
         state: present
         update_cache: true
       when: apt_update_result is not failed
-      
 
     - name: Install Docker for testing (fallback - use system packages)
-      apt:
+      ansible.builtin.apt:
         name:
           - docker.io
           - docker-compose-plugin
@@ -64,28 +62,28 @@
         update_cache: false
         allow_unauthenticated: true
       when: apt_update_result is failed
-      
+
     - name: Start Docker service
-      service:
+      ansible.builtin.service:
         name: docker
         state: started
         enabled: true
       failed_when: false
-        
+
     - name: Add test user to docker group
-      user:
+      ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-        
+
     - name: Install required Python packages
-      pip:
+      ansible.builtin.pip:
         name:
           - docker
           - docker-compose
           - requests
         state: present
-        
+
     - name: Create test directories
       file:
         path: "{{ item }}"
@@ -93,26 +91,6 @@
         mode: '0755'
       loop:
         - /tmp/test
-
-    - name: Ensure test secrets exist on control host
-      when: inventory_hostname == (ansible_play_hosts_all | first)
-      block:
-        - name: Create parent directory for secrets
-          file:
-            path: "{{ zitadel_secrets_file | dirname }}"
-            state: directory
-            mode: '0755'
-        - name: Write deterministic test secrets
-          copy:
-            dest: "{{ zitadel_secrets_file }}"
-            mode: '0600'
-            content: |
-              masterkey: "test-masterkey-1234567890abcdef"
-              postgresql:
-                user: "zitadel"
-                password: "test-postgres-password"
-                database: "zitadel"
-                host: "db"
 
   tasks:
     - name: Apply zitadel role
@@ -122,7 +100,7 @@
         # Test-specific configuration will be added here
         ansible_user: "root"
         domain: "test.local"
-        
+
     - name: Basic role verification
       debug:
         msg: "zitadel role applied successfully"
@@ -132,7 +110,7 @@
       shell: echo "Test environment setup completed"
       register: test_status
       changed_when: false
-      
+
     - name: Display test status
       debug:
         var: test_status.stdout

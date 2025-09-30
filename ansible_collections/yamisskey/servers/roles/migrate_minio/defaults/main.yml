@@ -13,7 +13,6 @@ target_minio_alias: "target"
 
 # Migration configuration
 migration_temp_dir: "/tmp/minio-migration"
-minio_secrets_file: "/opt/minio/secrets.yml"
 
 # Bucket configuration
 buckets_to_migrate:

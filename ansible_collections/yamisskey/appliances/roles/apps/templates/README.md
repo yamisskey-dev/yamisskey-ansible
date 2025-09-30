@@ -8,4 +8,3 @@
 使い方:
 - テンプレート修正後は対象プレイブックで確認してください。
   - 例: `make check PLAYBOOK=migrate-minio-truenas TARGET=appliances`
-

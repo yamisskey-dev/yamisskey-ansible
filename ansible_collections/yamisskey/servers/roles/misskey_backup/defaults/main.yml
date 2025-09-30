@@ -1,7 +1,6 @@
 ---
 # Backup configuration
 backup_dir: "/opt/backups"
-misskey_backup_secrets_file: "/opt/minio/secrets.yml"
 
 # Repository configuration
 misskey_backup_repo: "https://github.com/yamisskey-dev/yamisskey-backup.git"

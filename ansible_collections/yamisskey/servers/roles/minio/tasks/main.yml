@@ -1,4 +1,28 @@
----
+- name: Load MinIO secrets from inventory
+  set_fact:
+    minio_inventory_secrets: "{{ hostvars[inventory_hostname].minio | default({}) }}"
+
+- name: Prepare MinIO secret values
+  set_fact:
+    minio_root_user: "{{ minio_inventory_secrets.root_user | default('CHANGE_ME_MINIO_ROOT_USER') }}"
+    minio_root_password: "{{ minio_inventory_secrets.root_password | default('CHANGE_ME_MINIO_ROOT_PASSWORD') }}"
+    misskey_s3_access_key: "{{ minio_inventory_secrets.misskey_s3_access_key | default('CHANGE_ME_MISSKEY_ACCESS_KEY') }}"
+    misskey_s3_secret_key: "{{ minio_inventory_secrets.misskey_s3_secret_key | default('CHANGE_ME_MISSKEY_SECRET_KEY') }}"
+    minio_kms_master_key: "{{ minio_inventory_secrets.kms_master_key | default('CHANGE_ME_MINIO_KMS_KEY') }}"
+
+- name: Warn about placeholder MinIO secrets
+  debug:
+    msg: >-
+      MinIO secret '{{ item.key }}' is using a placeholder value. Update
+      deploy/servers/host_vars/{{ inventory_hostname }}/secrets.yml → minio.{{ item.key }}.
+  loop:
+    - { key: root_user, value: "{{ minio_root_user }}" }
+    - { key: root_password, value: "{{ minio_root_password }}" }
+    - { key: misskey_s3_access_key, value: "{{ misskey_s3_access_key }}" }
+    - { key: misskey_s3_secret_key, value: "{{ misskey_s3_secret_key }}" }
+    - { key: kms_master_key, value: "{{ minio_kms_master_key }}" }
+  when: item.value is string and item.value is search('^CHANGE_ME_')
+
 - name: Create required directories
   file:
     path: "{{ item }}"
@@ -9,94 +33,6 @@
   loop:
     - /opt/minio
     - /opt/minio/minio-data
-
-- name: Check if secrets.yml exists
-  stat:
-    path: "{{ minio_secrets_file }}"
-  register: secrets_file_stat
-
-- name: Load existing secrets from secrets.yml
-  slurp:
-    src: "{{ minio_secrets_file }}"
-  register: secrets_file_content
-  when: 
-    - secrets_file_stat.stat.exists
-    - minio_secrets_file is defined
-  failed_when: false
-  no_log: true
-
-- name: Parse existing secrets content
-  set_fact:
-    existing_secrets: "{{ secrets_file_content.content | b64decode | from_yaml }}"
-  when: 
-    - secrets_file_content is defined
-    - secrets_file_content.content is defined
-  no_log: true
-
-- name: Initialize empty secrets structure if file doesn't exist
-  set_fact:
-    existing_secrets:
-      minio: {}
-  when: not secrets_file_stat.stat.exists or existing_secrets is not defined
-
-- name: Determine if we need to generate new credentials
-  set_fact:
-    need_new_credentials: "{{ not secrets_file_stat.stat.exists or existing_secrets.minio | length == 0 }}"
-
-- name: Load existing credentials from secrets file
-  set_fact:
-    minio_root_user: "{{ existing_secrets.minio.root_user }}"
-    minio_root_password: "{{ existing_secrets.minio.root_password }}"
-    misskey_s3_access_key: "{{ existing_secrets.minio.misskey_s3_access_key }}"
-    misskey_s3_secret_key: "{{ existing_secrets.minio.misskey_s3_secret_key }}"
-    minio_kms_master_key: "{{ existing_secrets.minio.kms_master_key }}"
-  when: 
-    - secrets_file_stat.stat.exists
-    - existing_secrets.minio | length > 0
-
-- name: Generate new credentials when secrets file doesn't exist
-  set_fact:
-    minio_root_user: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
-    minio_root_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=64') }}"
-    misskey_s3_access_key: "{{ ansible_hostname + '-' + ansible_date_time.epoch }}"
-    misskey_s3_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
-    minio_kms_master_key: "{{ 'minio-master-key:' + (lookup('password', '/dev/null chars=ascii_letters,digits length=32') | b64encode) }}"
-  when: need_new_credentials
-
-- name: Generate secrets content
-  set_fact:
-    secrets_content: |
-      minio:
-        root_user: "{{ minio_root_user }}"
-        root_password: "{{ minio_root_password }}"
-        misskey_s3_access_key: "{{ misskey_s3_access_key }}"
-        misskey_s3_secret_key: "{{ misskey_s3_secret_key }}"
-        kms_master_key: "{{ minio_kms_master_key }}"
-
-- name: Check if secrets file content has changed
-  stat:
-    path: "{{ minio_secrets_file }}"
-  register: secrets_file_check
-  when: not need_new_credentials
-
-- name: Compare secrets content with existing file
-  command: echo "{{ secrets_content }}" | diff - "{{ minio_secrets_file }}"
-  register: secrets_diff
-  changed_when: false
-  failed_when: false
-  when: 
-    - not need_new_credentials
-    - secrets_file_check.stat.exists
-
-- name: Create/update secrets.yml with all credentials
-  copy:
-    content: "{{ secrets_content }}"
-    dest: "{{ minio_secrets_file }}"
-    backup: true
-    mode: '0600'
-  when: 
-    - need_new_credentials or (secrets_diff is defined and secrets_diff.rc != 0)
-  no_log: true
 
 - name: Deploy Docker Compose file for Minio
   template:
@@ -124,7 +60,7 @@
   failed_when: false
 
 - name: Check if running in Molecule test environment
-  stat:
+  ansible.builtin.stat:
     path: /tmp/.ansible-tmp
   register: molecule_tmp_check
 
@@ -162,7 +98,7 @@
   failed_when: false  # UFW command may fail if ufw is not installed or configured
 
 - name: Wait for MinIO container to be ready
-  wait_for:
+  ansible.builtin.wait_for:
     host: localhost
     port: "{{ host_services[inventory_hostname].minio_api | default(9000) }}"
     delay: 5
@@ -174,7 +110,7 @@
   failed_when: false
 
 - name: Wait for MinIO container to be ready (Molecule test)
-  wait_for:
+  ansible.builtin.wait_for:
     host: localhost
     port: 9000
     delay: 10
@@ -185,12 +121,12 @@
   failed_when: false
 
 - name: Check if Minio Client exists
-  stat:
+  ansible.builtin.stat:
     path: /usr/local/bin/mc
   register: mc_check
 
 - name: Download Minio Client (architecture-aware)
-  get_url:
+  ansible.builtin.get_url:
     url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
     dest: /usr/local/bin/mc
     mode: '0755'
@@ -230,12 +166,12 @@
     - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
 
 - name: Wait for MinIO to be ready before setting alias
-  wait_for:
+  ansible.builtin.wait_for:
     port: "{{ host_services[inventory_hostname].minio_api }}"
     host: "{{ minio_ip.stdout }}"
     timeout: 60
     delay: 5
-  when: 
+  when:
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
     - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
@@ -252,7 +188,7 @@
   retries: 15
   delay: 10
   changed_when: mc_alias_result.rc == 0
-  when: 
+  when:
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
     - minio_ip is defined and minio_ip.stdout is defined and minio_ip.stdout != ""
@@ -325,7 +261,7 @@
       register: policy_attach_result
       changed_when: policy_attach_result.rc == 0
       failed_when: false
-      when: 
+      when:
         - iam_policy_check.rc == 0
         - misskey_s3_access_key not in (policy_attach_check.stdout | default(''))
 
@@ -428,10 +364,6 @@
           AWS_S3_UPLOAD_BUCKET_NAME={{ minio_bucket_name_for_outline }}
           AWS_S3_UPLOAD_BUCKET_URL=https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_outline }}
 
-          🔐 Save to secrets.yml for persistence:
-            minio:
-              kms_master_key: "{{ minio_kms_master_key }}"
-
           Testing Steps:
           1. ✅ Tailscale connectivity: balthasar → raspberrypi
           2. ✅ Misskey file upload functionality
@@ -439,6 +371,6 @@
           4. ✅ URL preservation: https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}/
           ==============================================
       when: minio_runtime_checks_enabled
-  when: 
+  when:
     - minio_runtime_checks_enabled
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined

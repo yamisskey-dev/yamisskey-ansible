@@ -12,7 +12,7 @@ server {
     listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ jitsi_server_name }};
-    
+
     # Error page handling - redirect to maintenance page when backend is down
     error_page 502 503 504 @maintenance_redirect;
 
@@ -25,13 +25,13 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     # Proxy settings
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto https;
-    
+
     # WebSocket endpoints for Jitsi
     location ~ ^/colibri-ws/ {
         proxy_pass http://jitsi_backend;
@@ -39,12 +39,12 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         tcp_nodelay on;
-        
+
         # WebSocket timeouts
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }
-    
+
     # XMPP WebSocket
     location ~ ^/xmpp-websocket {
         proxy_pass http://jitsi_backend;
@@ -52,11 +52,11 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         tcp_nodelay on;
-        
+
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
     }
-    
+
     # BOSH endpoint for mobile clients
     location /http-bind {
         proxy_pass http://jitsi_backend/http-bind;
@@ -65,17 +65,17 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
     }
-    
+
     # Main Jitsi Meet web interface
     location / {
         proxy_pass http://jitsi_backend;
         proxy_http_version 1.1;
-        
+
         # Buffering for better performance
         proxy_buffer_size 128k;
         proxy_buffers 4 256k;
         proxy_busy_buffers_size 256k;
-        
+
         # Timeouts
         proxy_connect_timeout 30s;
         proxy_send_timeout 60s;

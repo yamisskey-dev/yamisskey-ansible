@@ -3,7 +3,7 @@
   hosts: "{{ migrate_target | default('destination') }}"
   become: true
   gather_facts: true
-  
+
   pre_tasks:
     - name: Pre-migration validation
       include_role:

@@ -33,7 +33,15 @@ provisioner:
         # Role-specific test configuration will be added here
         ansible_user: "root"
         domain: "example.com"
-        synapse_secrets_file: "/tmp/matrix-secrets.yml"
+        synapse:
+          registration_shared_secret: reg-secret
+          macaroon_secret_key: macaroon-secret
+          form_secret: form-secret
+          postgresql:
+            ansible.builtin.user: synapse
+            password: synapse-pass
+            database: synapse
+            host: localhost
 verifier:
   name: ansible
 scenario:

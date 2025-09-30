@@ -7,13 +7,13 @@
   tasks:
     # Directory and File Structure Tests
     - name: Verify monitor directory exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ monitor_compose_dir }}"
       register: monitor_dir
       failed_when: not monitor_dir.stat.exists
 
     - name: Verify docker-compose.yml exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ monitor_compose_dir }}/docker-compose.yml"
       register: compose_file
       failed_when: not compose_file.stat.exists
@@ -27,14 +27,14 @@
           - alertmanager/alertmanager.yml
 
     - name: Verify configuration files exist
-      stat:
+      ansible.builtin.stat:
         path: "{{ monitor_compose_dir }}/config/{{ item }}"
       register: config_files
       failed_when: not config_files.stat.exists
       loop: "{{ config_files_to_verify }}"
 
     - name: Verify .env file exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ monitor_compose_dir }}/.env"
       register: env_file
       failed_when: not env_file.stat.exists
@@ -73,7 +73,7 @@
 
     # Service Health Tests
     - name: Wait for services to be fully ready
-      pause:
+      ansible.builtin.pause:
         seconds: 45
 
     - name: Test service health endpoints (optional)
@@ -107,13 +107,13 @@
         msg: |
           🎉 Monitor Role Verification Summary:
           ====================================
-          
+
           ✅ Directory Structure: PASSED
           ✅ Configuration Files: PASSED
           ✅ Docker Containers: CHECKED
           ✅ Service Health: TESTED (optional)
           ✅ Docker Compose: CHECKED
-          
+
           Role: monitor
           Collection: yamisskey.servers
           Test Instance: monitor-test-instance

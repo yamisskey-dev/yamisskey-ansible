@@ -40,7 +40,7 @@
         name: cloudflare-warp
         state: present
 
-  when: 
+  when:
     - ansible_os_family == "Debian"
     - install_warp | default(true)
     - not ansible_check_mode
@@ -65,7 +65,7 @@
         state: absent
       changed_when: false
 
-  when: 
+  when:
     - ansible_os_family == "Debian"
     - install_cloudflared | default(true)
     - not ansible_check_mode

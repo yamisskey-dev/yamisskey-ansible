@@ -23,13 +23,13 @@
       📅 Generated: {{ ansible_date_time.iso8601 }}
       🖥️ Host: {{ inventory_hostname }}
       📊 Overall Score: {{ overall_score }}%
-      
+
       📈 Validation Results:
       {% for category, result in validation_results.items() %}
       - {{ category | title }}: {{ result.status | upper }} ({{ result.score }}%)
         Details: {{ result.details }}
       {% endfor %}
-      
+
       {% if overall_score | int >= 80 %}
       ✅ Migration validation PASSED - Ready to proceed
       {% elif overall_score | int >= 60 %}
@@ -40,12 +40,12 @@
   tags: ['report', 'summary']
 
 - name: Generate validation report file
-  copy:
+  ansible.builtin.copy:
     content: |
       # Migration Validation Report
       Generated: {{ ansible_date_time.iso8601 }}
       Overall Score: {{ overall_score }}%
-      
+
       ## Validation Results
       {% for category, result in validation_results.items() %}
       ### {{ category | title }}
@@ -53,7 +53,7 @@
       - Score: {{ result.score }}%
       - Details: {{ result.details }}
       - Timestamp: {{ result.timestamp }}
-      
+
       {% endfor %}
     dest: "/tmp/migration_validation_{{ ansible_date_time.epoch }}.md"
     mode: '0644'

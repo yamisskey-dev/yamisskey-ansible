@@ -17,7 +17,7 @@ log_message() {
 send_alert() {
     local message="$1"
     log_message "ALERT: $message"
-    
+
     # Add integration with your alerting system here
     # Examples:
     # curl -X POST "https://hooks.slack.com/..." -d "{\"text\":\"$message\"}"
@@ -46,11 +46,11 @@ while true; do
         sleep $CHECK_INTERVAL
         continue
     fi
-    
+
     # Count ModSecurity denials in the last minute
     CURRENT_TIME=$(date +%s)
     START_TIME=$((CURRENT_TIME - 60))
-    
+
     # Parse nginx log for ModSecurity denials
     DENIAL_COUNT=$(tail -n 1000 "$LOGFILE" | awk -v start="$START_TIME" '
         BEGIN { count = 0 }
@@ -61,51 +61,51 @@ while true; do
             cmd = "date -d \"" timestamp "\" +%s"
             cmd | getline epoch
             close(cmd)
-            
+
             if (epoch >= start) {
                 count++
             }
         }
         END { print count }
     ')
-    
+
     # Check if threshold exceeded
     if [ "$DENIAL_COUNT" -gt "$ALERT_THRESHOLD" ]; then
         send_alert "High number of ModSecurity denials: $DENIAL_COUNT in the last minute (threshold: $ALERT_THRESHOLD)"
     fi
-    
+
     # Check for specific attack patterns
     RECENT_ATTACKS=$(tail -n 100 "$LOGFILE" | grep -c -E "(SQL injection|XSS|Directory traversal|Command injection)")
     if [ "$RECENT_ATTACKS" -gt 5 ]; then
         send_alert "Multiple attack patterns detected: $RECENT_ATTACKS incidents in recent logs"
     fi
-    
+
     # Check for repeated offenders
-    REPEAT_OFFENDERS=$(tail -n 500 "$LOGFILE" | grep "ModSecurity.*deny" | 
-                      grep -oE "client: [0-9.]+" | 
-                      sort | uniq -c | 
-                      awk '$1 > 10 {print $2, $1}' | 
+    REPEAT_OFFENDERS=$(tail -n 500 "$LOGFILE" | grep "ModSecurity.*deny" |
+                      grep -oE "client: [0-9.]+" |
+                      sort | uniq -c |
+                      awk '$1 > 10 {print $2, $1}' |
                       wc -l)
-    
+
     if [ "$REPEAT_OFFENDERS" -gt 0 ]; then
-        OFFENDER_IPS=$(tail -n 500 "$LOGFILE" | grep "ModSecurity.*deny" | 
-                      grep -oE "client: [0-9.]+" | 
-                      sort | uniq -c | 
-                      awk '$1 > 10 {print $2 " (" $1 " attempts)"}' | 
+        OFFENDER_IPS=$(tail -n 500 "$LOGFILE" | grep "ModSecurity.*deny" |
+                      grep -oE "client: [0-9.]+" |
+                      sort | uniq -c |
+                      awk '$1 > 10 {print $2 " (" $1 " attempts)"}' |
                       head -5)
         send_alert "Repeated attack attempts detected from: $OFFENDER_IPS"
     fi
-    
+
     # Container health check
     if ! docker ps | grep -q "{{ modsecurity_nginx_name }}"; then
         send_alert "ModSecurity container {{ modsecurity_nginx_name }} is not running"
     fi
-    
+
     # Log rotation check
     LOGSIZE=$(stat -c%s "$LOGFILE" 2>/dev/null || echo 0)
     if [ "$LOGSIZE" -gt $((100 * 1024 * 1024)) ]; then  # 100MB
         log_message "Warning: Log file size is ${LOGSIZE} bytes, consider log rotation"
     fi
-    
+
     sleep $CHECK_INTERVAL
 done

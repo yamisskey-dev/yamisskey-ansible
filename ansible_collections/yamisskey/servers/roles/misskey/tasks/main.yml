@@ -1,6 +1,6 @@
 ---
 - name: Check if directory exists
-  stat:
+  ansible.builtin.stat:
     path: '{{ misskey_dir }}'
   register: dir_check
 
@@ -9,7 +9,7 @@
     path: '{{ misskey_dir }}'
     state: directory
     owner: "{{ ansible_user | default('root') }}"
-    group: "{{ ansible_user | default('root') }}"
+    ansible.builtin.file: "{{ ansible_user | default('root') }}"
     mode: '0755'
 
 - name: Create required directories
@@ -24,7 +24,7 @@
     - '{{ misskey_dir }}/db'
 
 - name: Check if required files exist
-  stat:
+  ansible.builtin.stat:
     path: '{{ item }}'
   loop:
     - '{{ misskey_dir }}/docker-compose.yml'
@@ -54,7 +54,7 @@
   when: not required_files.results[2].stat.exists
 
 - name: Recheck if required files exist
-  stat:
+  ansible.builtin.stat:
     path: '{{ item }}'
   loop:
     - '{{ misskey_dir }}/docker-compose.yml'
@@ -87,7 +87,7 @@
   failed_when: false
 
 - name: Check if database is initialized
-  stat:
+  ansible.builtin.stat:
     path: '{{ misskey_dir }}/db/PG_VERSION'
   register: db_initialized
 
@@ -139,11 +139,11 @@
     path: '{{ backup_dir }}/misskey'
     state: directory
     owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
+    ansible.builtin.file: '{{ ansible_user }}'
     mode: '0755'
 
 - name: Check if VAPID keys file exists
-  stat:
+  ansible.builtin.stat:
     path: '{{ backup_dir }}/misskey/vapid_keys.yml'
   register: vapid_keys_file
 
@@ -154,12 +154,12 @@
 
 - name: Save VAPID keys to a file
   when: not vapid_keys_file.stat.exists
-  copy:
+  ansible.builtin.copy:
     content: '{{ vapid_keys.stdout }}'
     dest: '{{ backup_dir }}/misskey/vapid_keys.yml'
 
 - name: Load VAPID keys from file
-  slurp:
+  ansible.builtin.slurp:
     src: '{{ backup_dir }}/misskey/vapid_keys.yml'
   register: vapid_keys_content
 

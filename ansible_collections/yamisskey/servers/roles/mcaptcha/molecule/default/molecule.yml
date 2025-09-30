@@ -33,6 +33,13 @@ provisioner:
         # Role-specific test configuration will be added here
         ansible_user: "root"
         domain: "example.com"
+        mcaptcha:
+          postgresql:
+            ansible.builtin.user: mcaptcha
+            password: test-password
+            database: mcaptcha
+          cookie_secret: test-cookie-secret
+          captcha_salt: test-captcha-salt
 verifier:
   name: ansible
 scenario:

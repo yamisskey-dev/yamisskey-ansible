@@ -2,12 +2,12 @@
 - name: Test 5 - Check migrate role structure
   block:
     - name: Check migrate role directory
-      stat:
+      ansible.builtin.stat:
         path: "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate"
       register: migrate_role_check
 
     - name: Check migrate tasks file
-      stat:
+      ansible.builtin.stat:
         path: "{{ ansible_env.PWD }}/ansible_collections/yamisskey/servers/roles/migrate/tasks/main.yml"
       register: migrate_tasks_check
 

@@ -1,13 +1,13 @@
 ---
 - name: Update and upgrade apt packages
-  apt:
+  ansible.builtin.apt:
     update_cache: true
     upgrade: 'dist'
   tags:
     - update
 
 - name: Install essential packages
-  apt:
+  ansible.builtin.apt:
     name: '{{ packages }}'
   tags:
     - packages

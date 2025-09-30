@@ -2,19 +2,19 @@
 - name: Verify cloudflared deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Check if docker CLI is present (optional)
       command: docker --version
       register: docker_cli
       changed_when: false
       failed_when: false
-      
+
     - name: Verify role execution completed without errors
-      stat:
+      ansible.builtin.stat:
         path: /tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
       assert:
         that:

@@ -4,4 +4,3 @@ All notable changes to the `yamisskey.appliances` collection will be documented 
 
 ## Unreleased
 - Initial scaffolding of roles and Molecule scenarios.
-

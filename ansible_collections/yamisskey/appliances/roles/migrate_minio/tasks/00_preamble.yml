@@ -72,12 +72,12 @@
   changed_when: workspace_result.changed and not (migration_dry_run | default(false))
 
 - name: Check if Minio Client exists
-  stat:
+  ansible.builtin.stat:
     path: /usr/local/bin/mc
   register: mc_check
 
 - name: Download Minio Client (architecture-aware)
-  get_url:
+  ansible.builtin.get_url:
     url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
     dest: /usr/local/bin/mc
     mode: '0755'

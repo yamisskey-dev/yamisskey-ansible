@@ -12,6 +12,6 @@
 
 # Wait for services handler
 - name: Wait for monitoring services
-  pause:
+  ansible.builtin.pause:
     seconds: 30
   listen: "Wait for monitoring services"

@@ -2,7 +2,7 @@
 - name: Verify apps deployment
   hosts: all
   gather_facts: false
-  
+
   tasks:
     - name: Gather service facts
       service_facts:
@@ -27,10 +27,10 @@
       when: apps_docker_service_state != 'absent'
 
     - name: Verify role execution completed without errors
-      stat:
+      ansible.builtin.stat:
         path: /var/tmp/test
       register: test_dir_check
-      
+
     - name: Assert test directory exists
       assert:
         that:
@@ -40,7 +40,7 @@
         success_msg: "Test directory created successfully"
 
     - name: Check for deprecation notice display
-      stat:
+      ansible.builtin.stat:
         path: /tmp/apps_deprecation_notice_displayed
       register: deprecation_notice_check
       failed_when: false
@@ -54,12 +54,12 @@
           ✅ Role Execution: Completed
           ✅ Basic Checks: Passed
           ✅ MinIO Separation: Complete
-          
+
           Role Responsibility Changes:
           - ❌ MinIO-specific features: Moved to yamisskey.appliances.minio
           - ✅ Generic app management: Retained
           - ✅ Deprecation notices: {{ 'Displayed' if deprecation_notice_check.stat.exists else 'Ready for display' }}
-          
+
           Role: apps (post-MinIO separation)
           Collection: yamisskey.appliances
           Test Instance: apps-test-instance
