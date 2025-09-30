@@ -20,7 +20,7 @@
     state: directory
     mode: '0755'
     owner: "4001"
-    ansible.builtin.file: "4001"
+    group: "4001"
   loop:
     - "{{ cryptpad_dir }}/config"
     - "{{ cryptpad_dir }}/data/blob"
@@ -37,7 +37,7 @@
     dest: "{{ cryptpad_dir }}/config/config.js"
     mode: '0644'
     owner: "4001"
-    ansible.builtin.file: "4001"
+    group: "4001"
   notify: restart cryptpad
 
 - name: Copy docker-compose configuration

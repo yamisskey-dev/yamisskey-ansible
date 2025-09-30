@@ -29,16 +29,16 @@
     path: "{{ item.path }}"
     state: directory
     owner: "{{ item.owner | default('root') }}"
-    ansible.builtin.file: "{{ item.group | default('root') }}"
+    group: "{{ item.group | default('root') }}"
     mode: "{{ item.mode | default('0755') }}"
   loop:
     - path: "{{ neo_quesdon_dir }}/data/postgres"
       owner: "70"
-      ansible.builtin.file: "70"
+      group: "70"
       mode: '0700'
     - path: "{{ neo_quesdon_dir }}/data/redis"
       owner: "999"
-      ansible.builtin.file: "999"
+      group: "999"
       mode: '0755'
 
 # 設定ファイルの存在確認

@@ -32,7 +32,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
   loop:
     - "{{ mcaptcha_dir }}"
     - "{{ mcaptcha_dir }}/.config"
@@ -44,7 +44,7 @@
     dest: "{{ mcaptcha_dir }}/.env-docker-compose"
     mode: '0600'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Copy docker-compose configuration
   template:
@@ -52,7 +52,7 @@
     dest: "{{ mcaptcha_dir }}/docker-compose.yml"
     mode: '0644'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Ensure external Docker network exists
   community.docker.docker_network:

@@ -35,7 +35,7 @@ provisioner:
         domain: "example.com"
         mcaptcha:
           postgresql:
-            ansible.builtin.user: mcaptcha
+            user: mcaptcha
             password: test-password
             database: mcaptcha
           cookie_secret: test-cookie-secret

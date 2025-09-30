@@ -38,7 +38,7 @@ provisioner:
           macaroon_secret_key: macaroon-secret
           form_secret: form-secret
           postgresql:
-            ansible.builtin.user: synapse
+            user: synapse
             password: synapse-pass
             database: synapse
             host: localhost
