@@ -101,7 +101,7 @@
         state: directory
         mode: '0755'
         owner: "4001"
-        ansible.builtin.file: "4001"
+        group: "4001"
       with_items:
         - "/opt/cryptpad/config"
         - "/opt/cryptpad/data/blob"

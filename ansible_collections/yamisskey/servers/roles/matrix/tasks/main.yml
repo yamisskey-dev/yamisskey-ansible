@@ -99,7 +99,7 @@
     path: /var/www/synapse/.well-known/matrix
     state: directory
     owner: www-data
-    ansible.builtin.file: www-data
+    group: www-data
     mode: '0755'
   become: true
 
@@ -108,7 +108,7 @@
     src: synapse_well_known_client.json.j2
     dest: /var/www/synapse/.well-known/matrix/client
     owner: www-data
-    ansible.builtin.file: www-data
+    group: www-data
     mode: '0644'
 
 - name: Start Synapse container

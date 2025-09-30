@@ -20,7 +20,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
   loop:
     - "{{ lemmy_dir }}"
     - "{{ lemmy_dir }}/volumes"
@@ -32,7 +32,7 @@
     dest: "{{ lemmy_dir }}/lemmy.hjson"
     mode: '0644'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Deploy PostgreSQL configuration
   template:
@@ -40,7 +40,7 @@
     dest: "{{ lemmy_dir }}/customPostgresql.conf"
     mode: '0644'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Deploy Nginx internal configuration
   template:
@@ -48,7 +48,7 @@
     dest: "{{ lemmy_dir }}/nginx_internal.conf"
     mode: '0644'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Deploy proxy_params file
   template:
@@ -56,7 +56,7 @@
     dest: "{{ lemmy_dir }}/proxy_params"
     mode: '0644'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Deploy docker-compose.yml
   template:
@@ -64,14 +64,14 @@
     dest: "{{ lemmy_dir }}/docker-compose.yml"
     mode: '0644'
     owner: "{{ ansible_user }}"
-    ansible.builtin.file: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
 
 - name: Set pictrs folder permissions
   file:
     path: "{{ lemmy_dir }}/volumes/pictrs"
     state: directory
     owner: 991
-    ansible.builtin.file: 991
+    group: 991
     mode: '0755'
     recurse: true
   become: true

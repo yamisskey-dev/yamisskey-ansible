@@ -52,7 +52,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user | default('root') }}"
-    ansible.builtin.file: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   when: ghq_version_check.rc != 0
 
 - name: Verify Go installation
@@ -122,7 +122,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user | default('root') }}"
-    ansible.builtin.file: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create ghq configuration directory (test environment)
@@ -142,7 +142,7 @@
     dest: "{{ ansible_env.HOME }}/.config/ghq/config"
     mode: '0644'
     owner: "{{ ansible_user | default('root') }}"
-    ansible.builtin.file: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   register: ghq_config_result
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
@@ -164,7 +164,7 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user | default('root') }}"
-    ansible.builtin.file: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
 
 - name: Create ghq root directory (test environment)

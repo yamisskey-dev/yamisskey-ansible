@@ -9,7 +9,7 @@
     path: '{{ misskey_dir }}'
     state: directory
     owner: "{{ ansible_user | default('root') }}"
-    ansible.builtin.file: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
     mode: '0755'
 
 - name: Create required directories
@@ -139,7 +139,7 @@
     path: '{{ backup_dir }}/misskey'
     state: directory
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
     mode: '0755'
 
 - name: Check if VAPID keys file exists

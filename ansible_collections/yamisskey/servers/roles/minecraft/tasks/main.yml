@@ -25,7 +25,7 @@
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
 
 - name: Create Minecraft data directory
   file:
@@ -33,7 +33,7 @@
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
 
 - name: Create ops.json
   ansible.builtin.copy:
@@ -49,7 +49,7 @@
       ]
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
 
 - name: Copy .env file
   template:
@@ -57,7 +57,7 @@
     dest: '{{ minecraft_dir }}/.env'
     mode: '0600'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   notify: restart minecraft
 
 - name: Copy docker-compose.yml
@@ -66,7 +66,7 @@
     dest: '{{ minecraft_dir }}/docker-compose.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   notify: restart minecraft
 
 - name: Create Minecraft plugins config directories
@@ -75,7 +75,7 @@
     state: directory
     mode: '0755'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   loop:
     - '{{ minecraft_dir }}/data/plugins'
     - '{{ minecraft_dir }}/data/plugins/Geyser-Spigot'
@@ -87,7 +87,7 @@
     dest: '{{ minecraft_dir }}/data/plugins/Geyser-Spigot/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   notify: restart minecraft
 
 - name: Copy Floodgate config
@@ -96,7 +96,7 @@
     dest: '{{ minecraft_dir }}/data/plugins/floodgate/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   notify: restart minecraft
 
 - name: Copy server.properties
@@ -105,7 +105,7 @@
     dest: '{{ minecraft_dir }}/data/server.properties'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
   notify: restart minecraft
 
 - name: Start Minecraft server
@@ -131,7 +131,7 @@
     dest: '{{ minecraft_dir }}/data/plugins/Geyser-Spigot/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
     force: true
   notify: restart minecraft
 
@@ -141,7 +141,7 @@
     dest: '{{ minecraft_dir }}/data/plugins/floodgate/config.yml'
     mode: '0644'
     owner: '{{ ansible_user }}'
-    ansible.builtin.file: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
     force: true
   notify: restart minecraft
 
