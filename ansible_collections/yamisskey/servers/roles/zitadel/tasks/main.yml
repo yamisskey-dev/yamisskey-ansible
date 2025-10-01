@@ -59,4 +59,21 @@
 - name: Start Zitadel services with Docker Compose v2
   community.docker.docker_compose_v2:
     project_src: "{{ zitadel_dir }}"
-    pull: always
+    pull: "{{ 'never' if (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != '' else 'missing' }}"
+    remove_orphans: true
+  failed_when: false
+  register: zitadel_compose_result
+  changed_when: zitadel_compose_result.changed | default(false)
+  when:
+    - (ansible_env.MOLECULE_SCENARIO_NAME | default('')) == ''
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
+
+- name: Start Zitadel services with Docker Compose v2 (test environment)
+  community.docker.docker_compose_v2:
+    project_src: "{{ zitadel_dir }}"
+    pull: never
+    remove_orphans: true
+  failed_when: false
+  register: zitadel_compose_test_result
+  changed_when: false
+  when: (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != ''
