@@ -50,12 +50,30 @@
 - name: Start Minio using Docker Compose v2
   community.docker.docker_compose_v2:
     project_src: /opt/minio
-    pull: always
+    pull: "{{ 'never' if (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != '' else 'missing' }}"
+    remove_orphans: true
   register: minio_start_result
   retries: 3
   delay: 5
   until: minio_start_result is succeeded
   failed_when: false
+  changed_when: minio_start_result.changed | default(false)
+  when:
+    - (ansible_env.MOLECULE_SCENARIO_NAME | default('')) == ''
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
+
+- name: Start Minio using Docker Compose v2 (test environment)
+  community.docker.docker_compose_v2:
+    project_src: /opt/minio
+    pull: never
+    remove_orphans: true
+  register: minio_start_test_result
+  retries: 3
+  delay: 5
+  until: minio_start_test_result is succeeded
+  failed_when: false
+  changed_when: false
+  when: (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != ''
 
 - name: Allow MinIO access from Tailscale network
   ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
