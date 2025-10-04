@@ -24,9 +24,9 @@
 ┌─────────────────────────────────────────────────────────┐
 │ Layer 1: Cloudflare (WAF, DDoS Protection, Zero Trust) │
 ├─────────────────────────────────────────────────────────┤
-│ Layer 2: ModSecurity + CrowdSec (Application Firewall) │
+│ Layer 2: ModSecurity (Application Firewall)            │
 ├─────────────────────────────────────────────────────────┤
-│ Layer 3: UFW + fail2ban (Host-based Firewall)          │
+│ Layer 3: UFW (Host-based Firewall)                     │
 ├─────────────────────────────────────────────────────────┤
 │ Layer 4: Encrypted Storage (MinIO KMS + Age)           │
 ├─────────────────────────────────────────────────────────┤

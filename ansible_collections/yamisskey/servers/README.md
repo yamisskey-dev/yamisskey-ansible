@@ -126,7 +126,6 @@ proxy1.example.com
 ## 🛡️ Security Features
 
 - Automated security updates via `unattended-upgrades`
-- Fail2ban intrusion detection system
 - System audit logging with `auditd`
 - AppArmor security profiles
 

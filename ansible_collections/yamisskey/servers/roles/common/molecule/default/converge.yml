@@ -21,7 +21,6 @@
           - zip
           - htop
           - debsums
-          - fail2ban
           - clamav
           - clamav-daemon
           - apparmor

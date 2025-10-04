@@ -8,8 +8,6 @@ regexes = [
   '\{\{\s*.*_key\s*\}\}',
   '\{\{\s*.*_token\s*\}\}',
   '\{\{\s*.*_api_key\s*\}\}',
-  # Ansible stdout_lines references (CrowdSec bouncer token generation)
-  'bouncer_token\.stdout_lines\[2\]\s*\|\s*trim',
   # Placeholder values in configuration files
   'POSTGRES_PASSWORD:\s*"\{\{\s*postgres_password\s*\}\}"',
   'PICTRS__SERVER__API_KEY:\s*"\{\{\s*postgres_password\s*\}\}"'

@@ -1,9 +1,9 @@
 # yamisskey.servers role: security - tasks
 
-`security` ロールのタスク定義を格納します。ログ整備、UFW、Fail2ban、Cloudflare/WARP対応、sysctl強化などのハードニングを行います。
+`security` ロールのタスク定義を格納します。ログ整備、UFW、Cloudflare/WARP対応、sysctl強化などのハードニングを行います。
 
 主な処理:
-- 依存パッケージ導入: `rsyslog`, `logrotate`, `ufw`, `tailscale`, `fail2ban`, `lynis`
+- 依存パッケージ導入: `rsyslog`, `logrotate`, `ufw`, `tailscale`, `lynis`
 - `rsyslog.conf` のテンプレート適用、`logrotate` 設定の配備
 - UFW 既定ポリシー設定 + 指定ポート許可（`ufw_ports`, `tailscale_ports`）
 - Cloudflare Tunnel/HTTPS/WARP 用のポートと IP 範囲の許可

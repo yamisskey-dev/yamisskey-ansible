@@ -16,7 +16,6 @@ packages:
   - mecab-ipadic-utf8
   - prometheus
   - rclone
-  - fail2ban
   - unattended-upgrades
   - debsums
   - apt-show-versions

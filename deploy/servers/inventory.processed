@@ -80,7 +80,7 @@ squid_proxy_enabled=true
 # INI形式ではリスト構造はサポートされないため、コメントとして記載
 # service_tags_social="misskey,neo-quesdon,outline"
 # service_tags_monitoring="prometheus,grafana,uptime-kuma"
-# service_tags_security="modsecurity,crowdsec,fail2ban"
+# service_tags_security="modsecurity"
 # service_tags_proxy="squid,cloudflared,warp"
 # service_tags_storage="minio,backup"
 
@@ -108,7 +108,6 @@ service_priority=primary
 # Security Tags
 security_level=high
 modsecurity_enabled=true
-crowdsec_enabled=true
 
 # --- Caspar (Security & Monitoring) ---
 [monitoring_servers:vars]
@@ -130,7 +129,6 @@ service_priority=critical
 # Security Tags
 security_level=maximum
 modsecurity_enabled=true
-crowdsec_enabled=true
 additional_monitoring=true
 
 # --- Linode Proxy (External Services) ---
