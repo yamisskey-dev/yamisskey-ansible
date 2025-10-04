@@ -99,7 +99,6 @@
       vars:
         # Test-specific configuration will be added here
         ansible_user: "root"
-        security_manage_fail2ban_service: false
 
     - name: Basic role verification
       ansible.builtin.debug:

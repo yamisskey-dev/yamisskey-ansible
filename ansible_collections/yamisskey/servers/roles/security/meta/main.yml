@@ -18,7 +18,6 @@ galaxy_info:
     - security
     - hardening
     - monitoring
-    - fail2ban
     - firewall
     - audit
 

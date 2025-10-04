@@ -11,31 +11,6 @@
     state: restarted
   become: true
 
-- name: Restart fail2ban
-  ansible.builtin.systemd:
-    name: fail2ban
-    state: restarted
-    enabled: true
-  become: true
-  when:
-    - ansible_env.MOLECULE_SCENARIO_NAME is undefined
-    - ansible_virtualization_type is undefined or ansible_virtualization_type not in ['docker', 'container']
-  failed_when: false
-
-- name: Restart crowdsec
-  ansible.builtin.systemd:
-    name: crowdsec
-    state: restarted
-    daemon_reload: true
-  become: true
-
-- name: Restart crowdsec-firewall-bouncer
-  ansible.builtin.systemd:
-    name: crowdsec-firewall-bouncer
-    state: restarted
-    daemon_reload: true
-  become: true
-
 - name: Reload sysctl
   ansible.builtin.command: sysctl -p
   become: true
