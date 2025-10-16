@@ -29,24 +29,6 @@ print_info() {
 
 print_status "Setting up SOPS encryption for yamisskey-provision..."
 
-# Check if sops is installed
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-SOPS_CMD="$PROJECT_ROOT/.bin/sops"
-if [ ! -f "$SOPS_CMD" ]; then
-    print_error "SOPS is not found at $SOPS_CMD. Please install it first."
-    exit 1
-fi
-
-# Check if age is installed
-if ! command -v age &> /dev/null; then
-    print_error "Age is not installed. Please install it first:"
-    print_error "  - macOS: brew install age"
-    print_error "  - Ubuntu/Debian: apt-get install age"
-    print_error "  - Or download from: https://github.com/FiloSottile/age/releases"
-    exit 1
-fi
-
 # Create age key directory
 AGE_KEY_DIR="${HOME}/.config/sops/age"
 mkdir -p "$AGE_KEY_DIR"

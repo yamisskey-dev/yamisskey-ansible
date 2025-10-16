@@ -1,16 +1,16 @@
 # SOPS configuration for yamisskey-provision
 creation_rules:
-  # Rule for secrets files
-  - path_regex: .*secrets\.yml$
-    age: age1rxp34jln2puhpu4r6tu8f7f5tg3mxc60eeve0cflnhtgygsl9f2s9thq0q
+  # Rule for SOPS encrypted files
+  - path_regex: .*secrets\.sops\.yml$
+    age: age1d5e2h2mvh3unluf2yx5euxwaqzv6h76grw89w5j6mfhary6gsa3qu27r25
     unencrypted_suffix: _unencrypted
 
   # Rule for other sensitive files
   - path_regex: .*\.(key|pem|crt|p12|pfx)$
-    age: age1rxp34jln2puhpu4r6tu8f7f5tg3mxc60eeve0cflnhtgygsl9f2s9thq0q
+    age: age1d5e2h2mvh3unluf2yx5euxwaqzv6h76grw89w5j6mfhary6gsa3qu27r25
     unencrypted_suffix: _unencrypted
 
   # Rule for environment files
   - path_regex: .*\.env\.(secure|prod|staging)$
-    age: age1rxp34jln2puhpu4r6tu8f7f5tg3mxc60eeve0cflnhtgygsl9f2s9thq0q
+    age: age1d5e2h2mvh3unluf2yx5euxwaqzv6h76grw89w5j6mfhary6gsa3qu27r25
     unencrypted_suffix: _unencrypted

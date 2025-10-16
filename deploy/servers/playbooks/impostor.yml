@@ -1,5 +1,0 @@
-- name: Setup Impostor server
-  hosts: all
-  become: true
-  roles:
-    - yamisskey.servers.impostor

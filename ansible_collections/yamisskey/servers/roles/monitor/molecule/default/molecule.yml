@@ -29,7 +29,6 @@ provisioner:
       monitor-test-instance:
         # Test configuration for Docker-based monitoring
         domain: "test.local"
-        primary_domain: "test.local"
         monitor_compose_dir: "/opt/monitor"
         grafana_admin_password: "testpassword123"
 

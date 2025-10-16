@@ -307,7 +307,7 @@
 
         - name: Wait for Misskey to be ready
           uri:
-            url: "https://{{ primary_domain }}/api/meta"
+            url: "https://{{ domain }}/api/meta"
             method: POST
             headers:
               Content-Type: "application/json"
@@ -389,8 +389,8 @@
               - Restore Backup: {{ postgres_backup_path }}/dr-restore-backup.sql
 
               🔗 Service Health:
-              - Misskey API: https://{{ primary_domain }}/api/meta
-              - Admin Panel: https://{{ primary_domain }}/admin
+              - Misskey API: https://{{ domain }}/api/meta
+              - Admin Panel: https://{{ domain }}/admin
 
               ⏭️ Next: Review the report and update DR procedures if needed
       rescue:

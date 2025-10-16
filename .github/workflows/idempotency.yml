@@ -54,7 +54,7 @@ jobs:
           ansible_become=false
           truenas_api_key=dummy_key
           truenas_pool_name=test_pool
-          primary_domain=test.local
+          domain=test.local
           EOF
 
       - name: Upload inventory artifacts

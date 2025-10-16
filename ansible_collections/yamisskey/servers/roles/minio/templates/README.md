@@ -8,7 +8,7 @@
 
 関連変数（抜粋）:
 - `minio_alias`（例: `yaminio`）
-- `minio_api_server_name`, `minio_web_server_name`
+- `minio_api_server_name`
 - `minio_bucket_name_for_misskey`（例: `files`）, `minio_bucket_name_for_outline`（例: `assets`）
 
 実行例:

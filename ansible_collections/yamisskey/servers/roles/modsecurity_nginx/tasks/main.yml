@@ -109,7 +109,6 @@
     - ctfd           # CTFd platform
     - grafana        # Grafana monitoring
     - minio          # MinIO object storage
-    - vikunja        # Vikunja task management
     - cryptpad       # CryptPad collaborative editor
     - zitadel        # Zitadel identity provider
     - searxng        # SearXNG search engine
@@ -117,7 +116,6 @@
     - uptime         # Uptime Kuma monitoring
     - mcaptcha       # mCaptcha service
     - neo_quesdon    # Neo-Quesdon Q&A
-    - lemmy          # Lemmy link aggregator
   notify: restart modsecurity nginx
 
 - name: Create security monitoring script

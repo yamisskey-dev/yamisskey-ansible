@@ -7,7 +7,6 @@ backup_dir: /var/backups
 docker_services_www:
   - misskey
   - synapse
-  - vikunja
 docker_services_opt:
   - misskey-backup
   - minio

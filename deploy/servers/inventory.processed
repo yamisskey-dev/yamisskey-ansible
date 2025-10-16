@@ -62,7 +62,7 @@ external_interface=eth0
 internal_interface=eth1
 
 # --- Domain Configuration (必須) ---
-primary_domain=yami.ski
+domain=yami.ski
 misskey_domain=yami.ski
 
 # --- Cloudflare Tunnel Configuration (必須) ---

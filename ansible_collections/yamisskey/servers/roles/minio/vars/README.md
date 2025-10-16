@@ -5,7 +5,6 @@
 ```yaml
 minio_alias: yaminio
 minio_api_server_name: "drive.{{ domain }}"
-minio_web_server_name: "minio.{{ domain }}"
 minio_bucket_name_for_misskey: "files"
 minio_bucket_name_for_outline: "assets"
 ```

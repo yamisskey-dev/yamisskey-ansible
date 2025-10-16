@@ -6,16 +6,10 @@
     - rsyslog
     - logrotate
     - ufw
+    - tailscale
     - lynis
     - curl
     - dnsutils
-  become: true
-
-- name: Ensure tailscale is installed (optional)
-  ansible.builtin.apt:
-    name: tailscale
-    state: present
-  when: install_tailscale | default(false)
   become: true
 
 - name: Check if tailscale CLI is available
@@ -50,6 +44,7 @@
         group: root
         mode: '0644'
       notify: Validate rsyslog configuration
+      tags: ['security', 'rsyslog']
   when: (ansible_become | default(false)) | bool
 
 - name: Deploy custom logrotate configuration for rsyslog
@@ -77,49 +72,49 @@
     - name: Allow specified TCP ports
       ansible.builtin.command: ufw allow {{ item }}/tcp
       changed_when: false
-      loop: "{{ ufw_ports }}"
+      loop: "{{ security_ufw_ports }}"
       become: true
 
     - name: Allow specified Tailscale UDP ports
       ansible.builtin.command: ufw allow {{ item }}/udp
       changed_when: false
-      loop: "{{ tailscale_ports }}"
+      loop: "{{ security_tailscale_ports }}"
       become: true
 
     - name: Allow QUIC and HTTP2 traffic to Cloudflare Tunnel for IPv4 addresses
-      ansible.builtin.command: ufw allow proto udp to {{ item }} port {{ cloudflared_quic_port }}
+      ansible.builtin.command: ufw allow proto udp to {{ item }} port {{ security_cloudflared_quic_port }}
       changed_when: false
-      loop: "{{ cloudflare_region1_ips_v4 + cloudflare_region2_ips_v4 }}"
+      loop: "{{ security_cloudflare_region1_ips_v4 + security_cloudflare_region2_ips_v4 }}"
       become: true
 
     - name: Allow QUIC and HTTP2 traffic to Cloudflare Tunnel for IPv6 addresses
-      ansible.builtin.command: ufw allow proto udp to {{ item }} port {{ cloudflared_quic_port }}
+      ansible.builtin.command: ufw allow proto udp to {{ item }} port {{ security_cloudflared_quic_port }}
       changed_when: false
-      loop: "{{ cloudflare_region1_ips_v6 + cloudflare_region2_ips_v6 }}"
+      loop: "{{ security_cloudflare_region1_ips_v6 + security_cloudflare_region2_ips_v6 }}"
       become: true
 
     - name: Optionally allow HTTPS traffic for Cloudflare services (IPv4)
-      ansible.builtin.command: ufw allow proto tcp to {{ item }} port {{ cloudflared_https_port }}
+      ansible.builtin.command: ufw allow proto tcp to {{ item }} port {{ security_cloudflared_https_port }}
       changed_when: false
-      loop: "{{ cloudflare_region1_ips_v4 + cloudflare_region2_ips_v4 }}"
+      loop: "{{ security_cloudflare_region1_ips_v4 + security_cloudflare_region2_ips_v4 }}"
       become: true
 
     - name: Optionally allow HTTPS traffic for Cloudflare services (IPv6)
-      ansible.builtin.command: ufw allow proto tcp to {{ item }} port {{ cloudflared_https_port }}
+      ansible.builtin.command: ufw allow proto tcp to {{ item }} port {{ security_cloudflared_https_port }}
       changed_when: false
-      loop: "{{ cloudflare_region1_ips_v6 + cloudflare_region2_ips_v6 }}"
+      loop: "{{ security_cloudflare_region1_ips_v6 + security_cloudflare_region2_ips_v6 }}"
       become: true
 
     - name: Open necessary ports for WARP and WireGuard
       ansible.builtin.command: ufw allow {{ item }}/udp
       changed_when: false
-      loop: "{{ warp_wireguard_ports }}"
+      loop: "{{ security_warp_wireguard_ports }}"
       become: true
 
     - name: Allow Cloudflare WARP IP ranges
       ansible.builtin.command: ufw allow from {{ item }}
       changed_when: false
-      loop: "{{ cloudflare_warp_ips }}"
+      loop: "{{ security_cloudflare_warp_ips }}"
       become: true
 
     - name: Open necessary ports for QUIC (UDP 443)
@@ -159,7 +154,7 @@
   changed_when: false
   become: true
   when:
-    - ufw_enable | default(true)
+    - security_ufw_enable | default(true)
     - (ansible_become | default(false)) | bool
 - name: Check UFW status (post-enable)
   ansible.builtin.command: ufw status verbose
@@ -250,7 +245,7 @@
         path: /var/log/clamav
         state: directory
         owner: clamav
-        ansible.builtin.file: adm
+        group: adm
         mode: '0755'
       become: true
 
@@ -269,7 +264,7 @@
         path: /var/log/clamav/freshclam.log
         state: touch
         owner: clamav
-        ansible.builtin.file: adm
+        group: adm
         mode: '0644'
       become: true
 
@@ -291,7 +286,7 @@
         name: 'Daily ClamAV scan'
         minute: '0'
         hour: '19'    # UTC 19:00 = JST 04:00
-        job: "/usr/bin/timeout 1h45m /usr/bin/nice -n 19 /usr/bin/clamdscan -m --fdpass --config-file=/etc/clamav/clamd.conf -l /var/log/clamav/clamav-$(date +\\%Y\\%m\\%d).log /"
+        job: "/usr/bin/timeout 1h45m /usr/bin/nice -n 19 /usr/bin/clamdscan -m --fdpass --config-file=/etc/clamav/clamd.conf -l /var/log/clamav/clamav-$(date +%Y%m%d).log /"
       become: true
   when:
     - security_manage_clamav | default(true)
@@ -302,7 +297,7 @@
     - name: Check if sysctl settings need to be applied
       ansible.builtin.command: "sysctl -n {{ item.name }}"
       register: current_value
-      loop: "{{ sysctl_settings }}"
+      loop: "{{ security_sysctl_settings }}"
       changed_when: current_value.stdout != item.value
 
     - name: Apply sysctl settings if changes are detected
@@ -310,7 +305,7 @@
         name: "{{ item.name }}"
         value: "{{ item.value }}"
         reload: true
-      loop: "{{ sysctl_settings }}"
+      loop: "{{ security_sysctl_settings }}"
   notify: Reload sysctl
   become: true
   when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']

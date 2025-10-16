@@ -10,6 +10,7 @@ deploy/appliances/inventory
 .env.secure
 deploy/**/group_vars/vault.yml
 deploy/**/ansible.cfg.debug
+.decrypted~secrets.sops.yml
 
 # SOPS secrets management
 .sops.yaml.backup

@@ -89,7 +89,6 @@ host_services:
     jitsi: 8080
     ctfd: 8000
     grafana: 3000
-    vikunja: 8080
     cryptpad: 3000
     zitadel: 8080
     searxng: 8080
@@ -97,9 +96,6 @@ host_services:
     uptime: 3001
     mcaptcha: 8080
     neo_quesdon: 3025
-    lemmy: 8536
-  joseph:
-    minio_api: 9000
 
 # Server names configuration
 misskey_server_name: "misskey.example.com"
@@ -108,7 +104,6 @@ element_server_name: "element.example.com"
 jitsi_server_name: "jitsi.example.com"
 ctfd_server_name: "ctf.example.com"
 grafana_server_name: "grafana.example.com"
-vikunja_server_name: "vikunja.example.com"
 cryptpad_server_name: "cryptpad.example.com"
 zitadel_server_name: "zitadel.example.com"
 searxng_server_name: "searx.example.com"
@@ -116,7 +111,6 @@ outline_server_name: "outline.example.com"
 uptime_server_name: "uptime.example.com"
 mcaptcha_server_name: "mcaptcha.example.com"
 neo_quesdon_server_name: "neo-quesdon.example.com"
-lemmy_server_name: "lemmy.example.com"
 minio_api_server_name: "minio.example.com"
 
 # MinIO configuration
@@ -150,7 +144,6 @@ modsecurity_services:
   - "ctfd"
   - "grafana"
   - "minio"
-  - "vikunja"
   - "cryptpad"
   - "zitadel"
   - "searxng"
@@ -158,7 +151,6 @@ modsecurity_services:
   - "uptime"
   - "mcaptcha"
   - "neo_quesdon"
-  - "lemmy"
 
 # Monitoring configuration
 modsecurity_monitoring_enabled: true

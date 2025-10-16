@@ -1,6 +1,13 @@
+- name: Set dynamic MinIO server names
+  set_fact:
+    minio_api_server_name: "drive.{{ domain }}"
+    minio_api_port: "9000"
+  tags: ['minio', 'setup']
+
 - name: Load MinIO secrets from inventory
   set_fact:
-    minio_inventory_secrets: "{{ hostvars[inventory_hostname].minio | default({}) }}"
+    minio_inventory_secrets: "{{ minio | default({}) }}"
+  tags: ['minio', 'setup']
 
 - name: Prepare MinIO secret values
   set_fact:
@@ -9,6 +16,7 @@
     misskey_s3_access_key: "{{ minio_inventory_secrets.misskey_s3_access_key | default('CHANGE_ME_MISSKEY_ACCESS_KEY') }}"
     misskey_s3_secret_key: "{{ minio_inventory_secrets.misskey_s3_secret_key | default('CHANGE_ME_MISSKEY_SECRET_KEY') }}"
     minio_kms_master_key: "{{ minio_inventory_secrets.kms_master_key | default('CHANGE_ME_MINIO_KMS_KEY') }}"
+  tags: ['minio', 'setup']
 
 - name: Warn about placeholder MinIO secrets
   debug:
@@ -22,6 +30,7 @@
     - { key: misskey_s3_secret_key, value: "{{ misskey_s3_secret_key }}" }
     - { key: kms_master_key, value: "{{ minio_kms_master_key }}" }
   when: item.value is string and item.value is search('^CHANGE_ME_')
+  tags: ['minio', 'setup']
 
 - name: Create required directories
   file:
@@ -33,6 +42,7 @@
   loop:
     - "{{ minio_dir }}"
     - "{{ minio_data_dir }}"
+  tags: ['minio', 'setup']
 
 - name: Deploy Docker Compose file for Minio
   template:
@@ -42,10 +52,12 @@
     group: root
     mode: '0644'
     backup: true
+  tags: ['minio', 'setup', 'config']
 
 - name: Create Docker network if not exists
   community.docker.docker_network:
     name: external_network
+  tags: ['minio', 'setup', 'docker']
 
 - name: Start Minio using Docker Compose v2
   community.docker.docker_compose_v2:
@@ -61,6 +73,7 @@
   when:
     - (ansible_env.MOLECULE_SCENARIO_NAME | default('')) == ''
     - ansible_virtualization_type | default('') not in ['docker', 'container']
+  tags: ['minio', 'deploy', 'docker']
 
 - name: Start Minio using Docker Compose v2 (test environment)
   community.docker.docker_compose_v2:
@@ -76,18 +89,20 @@
   when: (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != ''
 
 - name: Allow MinIO access from Tailscale network
-  ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ host_services[inventory_hostname].minio_api }} proto tcp
+  ansible.builtin.command: ufw allow from 100.64.0.0/10 to any port {{ minio_api_port }} proto tcp
   changed_when: false
   become: true
   when:
     - ansible_env.MOLECULE_SCENARIO_NAME is undefined
     - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
   failed_when: false  # UFW command may fail if ufw is not installed or configured
+  tags: ['minio', 'security']
 
 - name: Check if Minio Client exists
   ansible.builtin.stat:
     path: /usr/local/bin/mc
   register: mc_check
+  tags: ['minio', 'client']
 
 - name: Download Minio Client (architecture-aware)
   ansible.builtin.get_url:
@@ -95,6 +110,7 @@
     dest: /usr/local/bin/mc
     mode: '0755'
   when: not mc_check.stat.exists
+  tags: ['minio', 'client']
 
 - name: Get MinIO container IP
   command: docker inspect -f "{% raw %}{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}{% endraw %}" minio
@@ -102,17 +118,21 @@
   changed_when: false
   failed_when: false
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  tags: ['minio', 'config', 'client']
 
 - name: Set default MinIO IP for test environment
   set_fact:
     minio_ip:
       stdout: "localhost"
-  when: minio_ip is not defined or minio_ip.stdout == ""
+  when:
+    - ansible_env.MOLECULE_SCENARIO_NAME is defined
+    - (minio_ip is not defined or minio_ip.stdout == "")
+  tags: ['minio', 'config', 'client']
 
 - name: Set Minio Client alias with retry mechanism
   command: >
     /usr/local/bin/mc alias set "{{ minio_alias }}"
-    http://{{ minio_ip.stdout }}:{{ host_services[inventory_hostname].minio_api }}
+    http://{{ minio_ip.stdout }}:{{ minio_api_port }}
     "{{ minio_root_user }}"
     "{{ minio_root_password }}"
   register: mc_alias_result
@@ -122,6 +142,7 @@
   changed_when: mc_alias_result.rc == 0
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
   failed_when: false
+  tags: ['minio', 'config', 'client']
 
 - name: Create and configure secure buckets
   block:
@@ -280,9 +301,9 @@
           ✅ Tailscale network access (internal communication)
           ✅ Rate limiting (basic DDoS protection)
 
-          🔑 Misskey Configuration (balthasar):
+          🔑 Misskey Configuration
           S3_BUCKET={{ minio_bucket_name_for_misskey }}
-          S3_ENDPOINT=http://[TAILSCALE_RASPBERRYPI_IP]:{{ host_services[inventory_hostname].minio_api }}
+          S3_ENDPOINT=http://[TAILSCALE_BALTHASAR_IP]:{{ minio_api_port }}
           S3_ACCESS_KEY={{ misskey_s3_access_key }}
           S3_SECRET_KEY={{ misskey_s3_secret_key }}
           S3_BASE_URL=https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}
@@ -294,9 +315,10 @@
           AWS_S3_UPLOAD_BUCKET_URL=https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_outline }}
 
           Testing Steps:
-          1. ✅ Tailscale connectivity: balthasar → raspberrypi
+          1. ✅ Tailscale connectivity
           2. ✅ Misskey file upload functionality
           3. ✅ Federation image display via Cloudflare
           4. ✅ URL preservation: https://{{ minio_api_server_name }}/{{ minio_bucket_name_for_misskey }}/
           ==============================================
   when: ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  tags: ['minio', 'buckets', 'security']

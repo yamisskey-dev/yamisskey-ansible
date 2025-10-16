@@ -20,7 +20,7 @@
 
     - name: Set config files to verify
       set_fact:
-        config_files_to_verify: "{{ config_files_base + (['blackbox/blackbox.yml'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
+        config_files_to_verify: "{{ config_files_base + (['blackbox/blackbox.yml'] if domain not in ['test.local', 'localhost.localdomain'] else []) }}"
       vars:
         config_files_base:
           - prometheus/prometheus.yml
@@ -53,7 +53,7 @@
 
     - name: Set containers list for verification
       set_fact:
-        containers_to_verify: "{{ containers_base + (['blackbox'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
+        containers_to_verify: "{{ containers_base + (['blackbox'] if domain not in ['test.local', 'localhost.localdomain'] else []) }}"
       vars:
         containers_base:
           - prometheus
