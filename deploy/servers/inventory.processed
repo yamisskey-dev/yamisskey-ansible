@@ -22,7 +22,7 @@ caspar ansible_host=100.72.71.32
 
 # --- External Proxy Services ---
 [proxy_servers]
-linode-proxy ansible_host=100.84.18.109
+linode_prox ansible_host=100.84.18.109
 
 # --- Storage Servers ---
 [storage_servers]

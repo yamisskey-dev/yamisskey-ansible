@@ -6,7 +6,7 @@
     src: config.yml.j2
     dest: "{{ cloudflared_config_file }}"
     owner: "{{ cloudflared_user }}"
-    ansible.builtin.file: "{{ cloudflared_group }}"
+    group: "{{ cloudflared_group }}"
     mode: '0640'
   register: config_deployed
 
@@ -40,18 +40,25 @@
   register: system_credentials_deployed
   when: cloudflared_tunnel_uuid is defined
 
+- name: Check if cloudflared is installed
+  command: which cloudflared
+  register: cloudflared_installed
+  failed_when: false
+  changed_when: false
+
 - name: Validate configuration syntax
   command: cloudflared tunnel --config {{ cloudflared_config_file }} ingress validate
   register: config_validation
   changed_when: false
+  when: cloudflared_installed.rc == 0
 
 - name: Display configuration validation
   debug:
     msg: |
       Configuration Validation:
-      {{ config_validation.stdout }}
+      {{ config_validation.stdout if cloudflared_installed.rc == 0 else 'Skipped - cloudflared not installed' }}
 
 - name: Fail if configuration is invalid
   fail:
     msg: "Invalid cloudflared configuration: {{ config_validation.stderr }}"
-  when: config_validation.rc != 0
+  when: cloudflared_installed.rc == 0 and config_validation.rc != 0

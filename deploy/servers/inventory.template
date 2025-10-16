@@ -22,7 +22,7 @@ caspar ansible_host=${IP_CASPAR}
 
 # --- External Proxy Services ---
 [proxy_servers]
-linode-proxy ansible_host=${IP_LINODE}
+linode_prox ansible_host=${IP_LINODE}
 
 # --- Storage Servers ---
 [storage_servers]
