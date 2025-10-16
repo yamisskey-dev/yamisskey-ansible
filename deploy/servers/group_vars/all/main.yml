@@ -23,6 +23,8 @@ host_services:
     lemmy: 8536                # Lemmy
     vikunja: 3456              # Vikunja
     cadvisor: 8085             # cAdvisor
+    minio_api: 9000            # MinIO API (moved from raspberrypi)
+    minio_console: 9001        # MinIO Console (moved from raspberrypi)
     # All public services route through modsecurity_nginx:8080
 
   caspar:
@@ -47,9 +49,7 @@ host_services:
     squid: 3128                # Squid proxy
 
   joseph:
-    # TrueNAS SCALE storage server
-    minio_api: 9000            # MinIO API
-    minio_console: 9001        # MinIO Console
+    # TrueNAS SCALE storage server (MinIO moved to balthasar)
     node_exporter: 9100        # Node Exporter (monitoring agent)
 
   raspberrypi:
@@ -89,6 +89,8 @@ cloudflared_ingress:
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "lemmy.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
+    - hostname: "drive.{{ domain }}"
+      service: "http://localhost:{{ host_services.balthasar.minio_api }}"
 
   caspar:
     # Security & monitoring services behind ModSecurity-Nginx

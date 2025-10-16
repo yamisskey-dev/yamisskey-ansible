@@ -7,8 +7,8 @@ readme: README.md
 authors:
   - yamisskey-dev <https://github.com/yamisskey-dev>
 description: >-
-  Enterprise-grade appliance infrastructure automation collection for TrueNAS,
-  MinIO migration, and storage appliance management. Specialized for NAS and
+  Enterprise-grade appliance infrastructure automation collection for TrueNAS
+  and storage appliance management. Specialized for NAS backup and
   storage appliance environments.
 
 license:
@@ -21,8 +21,6 @@ tags:
   - appliances
   - truenas
   - nas
-  - minio
-  - migration
   - storage
   - zfs
   - backup
