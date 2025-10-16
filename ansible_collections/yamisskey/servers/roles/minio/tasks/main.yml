@@ -1,6 +1,6 @@
 - name: Set dynamic MinIO server names
   set_fact:
-    minio_api_server_name: "drive.{{ domain }}"
+    minio_api_server_name: "drive.{{ domain | default('test.example.com') }}"
     minio_api_port: "9000"
   tags: ['minio', 'setup']
 
