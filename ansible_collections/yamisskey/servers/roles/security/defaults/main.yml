@@ -6,7 +6,6 @@ security_packages:
   - rsyslog
   - logrotate
   - ufw
-  - tailscale
   - lynis
   - clamav
   - clamav-daemon

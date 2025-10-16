@@ -6,7 +6,6 @@
     - rsyslog
     - logrotate
     - ufw
-    - tailscale
     - lynis
     - curl
     - dnsutils
