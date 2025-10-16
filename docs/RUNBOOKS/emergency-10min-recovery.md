@@ -61,7 +61,7 @@ docker compose exec web node built/disable-posting.js
 #### トンネル死亡時の緊急切り替え
 ```bash
 # Linodeプロキシ経由への一時切り替え
-yamisskey-provision run deploy-proxy-services TARGET=servers LIMIT=linode-proxy
+yamisskey-provision run deploy-proxy-services TARGET=servers LIMIT=linode_prox
 
 # DNS切り替え（Cloudflare管理画面）
 # A yami.ski -> Linode IP に変更

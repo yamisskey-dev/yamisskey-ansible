@@ -13,7 +13,7 @@
     path: "{{ cloudflared_config_dir }}"
     state: directory
     owner: "{{ cloudflared_user }}"
-    ansible.builtin.file: "{{ cloudflared_group }}"
+    group: "{{ cloudflared_group }}"
     mode: '0755'
 
 - name: Ensure system cloudflared config directory exists

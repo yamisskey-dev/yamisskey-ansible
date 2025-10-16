@@ -17,7 +17,7 @@
   debug:
     msg: |
       Service Installation:
-      {{ service_install_result.stdout if service_install_result is defined else 'Service already exists' }}
+      {{ service_install_result.stdout if service_install_result is defined and service_install_result.stdout is defined else 'Service already exists or cloudflared not installed' }}
 
 - name: Enable cloudflared service
   systemd:
