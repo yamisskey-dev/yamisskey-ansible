@@ -23,4 +23,4 @@ minio_enable_console: true
 minio_external_network: 'external_network'
 
 # Server names - resolved at task execution time
-minio_api_server_name: "drive.{{ domain }}"
+minio_api_server_name: "drive.{{ domain | default('test.example.com') }}"
