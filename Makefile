@@ -165,9 +165,8 @@ inventory:
 		echo "🖥️  Detected system information:"; \
 		echo "   - Hostname: $$CURRENT_HOST"; echo "   - User: $$CURRENT_USER"; echo "   - IP: $$HOST_IP"; echo "   - Role: $$HOST_ROLE"; echo "   - Domain: $$DOMAIN"; \
 		echo "📄 Processing local template..."; \
-		cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
-		sed -i.bak -e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" -e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" -e "s|HOST_IP_PLACEHOLDER|$$HOST_IP|g" -e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" -e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" -e "s|HOST_ROLE_PLACEHOLDER|$$HOST_ROLE|g" -e "s|TIMESTAMP_PLACEHOLDER|$$(date)|g" -e "s|GENERATED_DATE_PLACEHOLDER|$$(date -Iseconds)|g" "$$INV_PATH"; \
-		rm "$$INV_PATH.bak" 2>/dev/null || true; \
+		export HOSTNAME="$$CURRENT_HOST" USER="$$CURRENT_USER" HOST_IP="$$HOST_IP" DOMAIN="$$DOMAIN" NETWORK="$$NETWORK" HOST_ROLE="$$HOST_ROLE" TIMESTAMP="$$(date)" GENERATED_DATE="$$(date -Iseconds)"; \
+		envsubst < "$$TEMPLATE_PATH" > "$$INV_PATH"; \
 		echo "✅ Local inventory created at $$INV_PATH"; \
 	else \
 		echo "📋 Creating $(TARGET) inventory from template..."; \
@@ -175,14 +174,13 @@ inventory:
 		if [ ! -f "$$TEMPLATE_PATH" ]; then echo "❌ Template not found: $$TEMPLATE_PATH"; exit 1; fi; \
 		if [ -f "$$INV_PATH" ]; then echo "⚠️ Inventory already exists. Creating backup..."; cp "$$INV_PATH" "$(BACKUP_DIR)/$(TARGET)-inventory-$(TIMESTAMP).bak"; fi; \
 		echo "📄 Processing template with Tailscale IPs..."; \
-		cp "$$TEMPLATE_PATH" "$$INV_PATH"; \
 		CURRENT_HOST=$$(hostname); CURRENT_USER=$$(whoami); DOMAIN="yami.ski"; NETWORK="100.64.0.0/10"; \
-		BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); LINODE_IP=$$(tailscale ip -4 linode-prox 2>/dev/null); JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); RASPBERRY_IP=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
-		if [ -z "$$BALTHASAR_IP" ] || [ -z "$$CASPAR_IP" ] || [ -z "$$LINODE_IP" ]; then echo "❌ Failed to resolve required Tailscale IPs. Check 'tailscale status'"; exit 1; fi; \
-		if [ "$(TARGET)" = "servers" ] && [ -z "$$RASPBERRY_IP" ]; then echo "❌ raspberrypi not found in Tailscale"; exit 1; fi; \
-		if [ "$(TARGET)" = "appliances" ] && [ -z "$$JOSEPH_IP" ]; then echo "❌ joseph not found in Tailscale"; exit 1; fi; \
-		sed -i.bak -e "s|HOSTNAME_PLACEHOLDER|$$CURRENT_HOST|g" -e "s|DOMAIN_PLACEHOLDER|$$DOMAIN|g" -e "s|USER_PLACEHOLDER|$$CURRENT_USER|g" -e "s|BALTHASAR_IP_PLACEHOLDER|$$BALTHASAR_IP|g" -e "s|CASPAR_IP_PLACEHOLDER|$$CASPAR_IP|g" -e "s|LINODE_IP_PLACEHOLDER|$$LINODE_IP|g" -e "s|JOSEPH_IP_PLACEHOLDER|$$JOSEPH_IP|g" -e "s|RASPBERRY_IP_PLACEHOLDER|$$RASPBERRY_IP|g" -e "s|NETWORK_PLACEHOLDER|$$NETWORK|g" "$$INV_PATH"; \
-		rm "$$INV_PATH.bak" 2>/dev/null || true; \
+		IP_BALTHASAR=$$(tailscale ip -4 balthasar 2>/dev/null); IP_CASPAR=$$(tailscale ip -4 caspar 2>/dev/null); IP_LINODE=$$(tailscale ip -4 linode-prox 2>/dev/null); IP_JOSEPH=$$(tailscale ip -4 joseph 2>/dev/null); IP_RASPBERRY=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
+		if [ -z "$$IP_BALTHASAR" ] || [ -z "$$IP_CASPAR" ] || [ -z "$$IP_LINODE" ]; then echo "❌ Failed to resolve required Tailscale IPs. Check 'tailscale status'"; exit 1; fi; \
+		if [ "$(TARGET)" = "servers" ] && [ -z "$$IP_RASPBERRY" ]; then echo "❌ raspberrypi not found in Tailscale"; exit 1; fi; \
+		if [ "$(TARGET)" = "appliances" ] && [ -z "$$IP_JOSEPH" ]; then echo "❌ joseph not found in Tailscale"; exit 1; fi; \
+		export HOSTNAME="$$CURRENT_HOST" USER="$$CURRENT_USER" DOMAIN="$$DOMAIN" NETWORK="$$NETWORK" IP_BALTHASAR="$$IP_BALTHASAR" IP_CASPAR="$$IP_CASPAR" IP_LINODE="$$IP_LINODE" IP_JOSEPH="$$IP_JOSEPH" IP_RASPBERRY="$$IP_RASPBERRY"; \
+		envsubst < "$$TEMPLATE_PATH" > "$$INV_PATH"; \
 		echo "✅ $(TARGET) inventory created from template at $$INV_PATH"; \
 	fi
 
@@ -203,16 +201,16 @@ status:
 	@if command -v tailscale >/dev/null 2>&1; then \
 		if tailscale status >/dev/null 2>&1; then \
 			echo "   ✅ Tailscale connected"; \
-			BALTHASAR_IP=$$(tailscale ip -4 balthasar 2>/dev/null); \
-			CASPAR_IP=$$(tailscale ip -4 caspar 2>/dev/null); \
-			JOSEPH_IP=$$(tailscale ip -4 joseph 2>/dev/null); \
-			RASPBERRY_IP=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
-			LINODE_IP=$$(tailscale ip -4 linode-prox 2>/dev/null); \
-			[ -n "$$BALTHASAR_IP" ] && echo "   ✅ balthasar: $$BALTHASAR_IP" || echo "   ❌ balthasar: offline"; \
-			[ -n "$$CASPAR_IP" ] && echo "   ✅ caspar: $$CASPAR_IP" || echo "   ❌ caspar: offline"; \
-			[ -n "$$JOSEPH_IP" ] && echo "   ✅ joseph: $$JOSEPH_IP" || echo "   ❌ joseph: offline"; \
-			[ -n "$$RASPBERRY_IP" ] && echo "   ✅ raspberrypi: $$RASPBERRY_IP" || echo "   ❌ raspberrypi: offline"; \
-			[ -n "$$LINODE_IP" ] && echo "   ✅ linode-prox: $$LINODE_IP" || echo "   ❌ linode-prox: offline"; \
+			IP_BALTHASAR=$$(tailscale ip -4 balthasar 2>/dev/null); \
+			IP_CASPAR=$$(tailscale ip -4 caspar 2>/dev/null); \
+			IP_JOSEPH=$$(tailscale ip -4 joseph 2>/dev/null); \
+			IP_RASPBERRY=$$(tailscale ip -4 raspberrypi 2>/dev/null); \
+			IP_LINODE=$$(tailscale ip -4 linode-prox 2>/dev/null); \
+			[ -n "$$IP_BALTHASAR" ] && echo "   ✅ balthasar: $$IP_BALTHASAR" || echo "   ❌ balthasar: offline"; \
+			[ -n "$$IP_CASPAR" ] && echo "   ✅ caspar: $$IP_CASPAR" || echo "   ❌ caspar: offline"; \
+			[ -n "$$IP_JOSEPH" ] && echo "   ✅ joseph: $$IP_JOSEPH" || echo "   ❌ joseph: offline"; \
+			[ -n "$$IP_RASPBERRY" ] && echo "   ✅ raspberrypi: $$IP_RASPBERRY" || echo "   ❌ raspberrypi: offline"; \
+			[ -n "$$IP_LINODE" ] && echo "   ✅ linode-prox: $$IP_LINODE" || echo "   ❌ linode-prox: offline"; \
 		else echo "   ❌ Tailscale disconnected"; fi \
 	else echo "   ⚠️  Tailscale not installed"; fi
 	@echo ""

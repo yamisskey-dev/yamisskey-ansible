@@ -22,7 +22,7 @@ localhost ansible_connection=local ansible_become=true
 # ========================================
 [all:vars]
 # --- Basic Connection Settings ---
-ansible_user=USER
+ansible_user=${USER}
 ansible_python_interpreter=/usr/bin/python3
 ansible_become=true
 ansible_become_method=sudo
@@ -44,10 +44,10 @@ truenas_apps_config_path="/mnt/{{ truenas_pool_name }}/apps-config"
 truenas_backup_path="/mnt/{{ truenas_pool_name }}/backups"
 
 # --- Domain & Network Configuration ---
-primary_domain=DOMAIN
-truenas_minio_domain="drive.DOMAIN"
-internal_network=NETWORK
-truenas_internal_ip=HOST_IP
+primary_domain=${DOMAIN}
+truenas_minio_domain="drive.${DOMAIN}"
+internal_network=${NETWORK}
+truenas_internal_ip=${HOST_IP}
 
 # --- Cloudflare Tunnel Configuration ---
 # 秘匿情報は group_vars/all/secrets.yml (SOPS) で管理されます
@@ -155,10 +155,10 @@ truenas_cloudflared_keep_alive_timeout="15s"
 # ========================================
 
 # --- Host Information ---
-host_hostname=HOSTNAME
-host_ip=HOST_IP
+host_hostname=${HOSTNAME}
+host_ip=${HOST_IP}
 auto_generated=true
-generated_date=GENERATED_DATE
+generated_date=${GENERATED_DATE}
 
 # --- Execution Mode ---
 deployment_mode=self_provisioning

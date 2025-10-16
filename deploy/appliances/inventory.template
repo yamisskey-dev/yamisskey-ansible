@@ -6,7 +6,7 @@
 
 # === TrueNAS SCALE Storage ===
 [truenas]
-joseph ansible_host=IP_JOSEPH
+joseph ansible_host=${IP_JOSEPH}
 
 # === NAS Group Aliases ===
 [joseph]
@@ -26,14 +26,14 @@ HOSTNAME ansible_connection=local
 # ========================================
 [all:vars]
 # --- Basic Connection Settings ---
-ansible_user=USER
+ansible_user=${USER}
 ansible_python_interpreter=/usr/bin/python3
 ansible_become=true
 ansible_become_method=sudo
 ansible_become_user=root
 
 # --- TrueNAS API Configuration (必須) ---
-truenas_api_url="https://IP_JOSEPH"
+truenas_api_url="https://${IP_JOSEPH}"
 truenas_api_key="{{ truenas_api_key }}"
 truenas_api_timeout=10
 truenas_health_check_timeout=30
@@ -48,10 +48,10 @@ truenas_apps_config_path="/mnt/{{ truenas_pool_name }}/apps-config"
 truenas_backup_path="/mnt/{{ truenas_pool_name }}/backups"
 
 # --- Domain & Network Configuration (必須) ---
-primary_domain=DOMAIN
-truenas_minio_domain="drive.DOMAIN"
-internal_network=NETWORK
-truenas_internal_ip=IP_JOSEPH
+primary_domain=${DOMAIN}
+truenas_minio_domain="drive.${DOMAIN}"
+internal_network=${NETWORK}
+truenas_internal_ip=${IP_JOSEPH}
 
 # --- Cloudflare Tunnel Configuration (必須) ---
 # 秘匿情報は group_vars/all/secrets.yml (SOPS) で管理されます
