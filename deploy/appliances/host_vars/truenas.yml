@@ -1,53 +1,24 @@
 ---
-# TrueNAS Scale 25.04 (Docker Compose固定)
+# TrueNAS Scale 25.04 (Backup専用)
 ansible_host: "truenas.local"  # 実際のTrueNAS ScaleのIPアドレスに変更
 ansible_user: root
 ansible_connection: ssh
 
-# シンプル化: TrueNAS = Docker Compose確定
-minio_platform: "truenas"  # シンプルな識別子
-
-# TrueNAS Scale 25.04 設定 (Cloudflare Tunnel統合)
-truenas_minio_domain: "drive.yami.ski"
-truenas_minio_app_name: "minio-cloudflared"
-truenas_minio_version: "RELEASE.2025-01-01T00-00-00Z"
-truenas_cloudflared_version: "latest"
-
-# API設定 (Custom App管理用)
+# API設定 (システム管理用)
 truenas_api_url: "https://{{ ansible_host }}"
 # truenas_api_key は group_vars/all/secrets.yml (SOPS) で管理
-
-# Cloudflare Tunnel設定 (SOPS 管理)
-truenas_tunnel_id: "{{ truenas_tunnel_id }}"
-truenas_tunnel_token: "{{ truenas_tunnel_token }}"
-truenas_tunnel_credentials: "{{ truenas_tunnel_credentials }}"
-
-# MinIO Secrets (SOPS 管理)
-truenas_minio_root_user: "{{ minio_root_user }}"
-truenas_minio_root_password: "{{ minio_root_password }}"
-truenas_minio_kms_key: "{{ minio_kms_secret_key }}"
 
 # Backup設定
 truenas_backup_path: "/mnt/{{ truenas_pool_name }}/backups"
 truenas_backup_config: true
 
-# 移行設定 (Cloudflare Tunnel対応)
-target_minio_alias: "truenas-tunnel"
-target_minio_endpoint: "https://{{ truenas_minio_domain }}"
-
 # ストレージ設定 (ZFS Dataset)
 truenas_pool_name: "tank"  # 実際のプール名に変更
-truenas_minio_data_path: "/mnt/{{ truenas_pool_name }}/minio"
-truenas_cloudflared_config_path: "/mnt/{{ truenas_pool_name }}/cloudflared"
 truenas_apps_config_path: "/mnt/{{ truenas_pool_name }}/apps-config"
 
-# Custom App設定
+# Dataset設定（バックアップ専用）
 truenas_datasets:
-  - name: "minio"   # already created via WebUI
-    owner: "root"
-    group: "root"
-    mode: "0755"
-  - name: "cloudflared"
+  - name: "backups"
     owner: "root"
     group: "root"
     mode: "0755"
@@ -55,8 +26,3 @@ truenas_datasets:
     owner: "root"
     group: "root"
     mode: "0755"
-
-# リソース制限
-truenas_minio_memory_limit: "4G"
-truenas_minio_cpu_limit: "2.0"
-truenas_minio_memory_reservation: "1G"
