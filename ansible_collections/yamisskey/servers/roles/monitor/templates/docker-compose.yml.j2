@@ -77,7 +77,7 @@ services:
     restart: unless-stopped
     user: "65534:65534"
 
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+{% if domain != 'test.local' and domain != 'localhost.localdomain' %}
   blackbox:
     image: prom/blackbox-exporter:{{ monitor_blackbox_version | default('latest') }}
     container_name: blackbox

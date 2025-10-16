@@ -5,13 +5,13 @@ Modern Ansible infrastructure management with SOPS secrets management.
 ## System Requirements
 
 - Linux distribution providing a writable `systemd`
-- Python 3 available as `/usr/bin/python3`
+- Python 3 available to install `ansible` via `uv`
+- Go available to install `sops` and `age`
 
 ## Prerequisites
 
 Install minimum required packages
 - [make](https://www.gnu.org/software/make/)
-- [age](https://github.com/FiloSottile/age)
 - [tailscale](https://tailscale.com/download/linux)
 
 Ensure servers can be reached in Tailscale

@@ -35,12 +35,12 @@ alertmanager_discord_webhook_url: "{{ discord_webhook_url | default('') }}"
 
 # SMTP settings for email alerts
 alertmanager_smtp_host: "{{ smtp_host | default('localhost:587') }}"
-alertmanager_smtp_from: "{{ smtp_from | default('alertmanager@' + primary_domain) }}"
+alertmanager_smtp_from: "{{ smtp_from | default('alertmanager@' + domain) }}"
 alertmanager_smtp_username: "{{ smtp_username | default('') }}"
 alertmanager_smtp_password: "{{ smtp_password | default('') }}"
 
 # Domain settings
-primary_domain: "{{ domain | default('localhost.localdomain') }}"
+# Domain setting unified to use 'domain' variable consistently
 
 # Default service ports
 default_monitor_ports:

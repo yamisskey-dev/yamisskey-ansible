@@ -1,3 +1,0 @@
----
-# Vikunja specific variables
-vikunja_server_name: "task.{{ domain }}"

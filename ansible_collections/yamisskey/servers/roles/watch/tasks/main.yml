@@ -29,16 +29,17 @@
       tags:
         - node_exporter
 
-    - name: Install Node Exporter (Gentoo)
-      community.general.portage:
-        package: "{{ node_exporter_gentoo.package_name }}"
-        state: present
-      when:
-        - node_exporter.enabled | default(true)
-        - ansible_os_family == "Gentoo"
-        - not (skip_system_checks | default(false) | bool)
-      tags:
-        - node_exporter
+    # NOTE: Gentoo support disabled due to missing community.general collection
+    # - name: Install Node Exporter (Gentoo)
+    #   community.general.portage:
+    #     package: "{{ node_exporter_gentoo.package_name }}"
+    #     state: present
+    #   when:
+    #     - node_exporter.enabled | default(true)
+    #     - ansible_os_family == "Gentoo"
+    #     - not (skip_system_checks | default(false) | bool)
+    #   tags:
+    #     - node_exporter
 
     - name: Start and enable Node Exporter service
       systemd:

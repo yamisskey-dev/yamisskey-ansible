@@ -10,7 +10,7 @@
 
 - name: Set config directories list
   set_fact:
-    config_directories: "{{ config_directories_base + (['blackbox'] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
+    config_directories: "{{ config_directories_base + (['blackbox'] if domain not in ['test.local', 'localhost.localdomain'] else []) }}"
   vars:
     config_directories_base:
       - prometheus
@@ -58,7 +58,7 @@
     dest: '{{ monitor_compose_dir }}/config/blackbox/blackbox.yml'
     mode: '0644'
   register: blackbox_config
-  when: primary_domain not in ['test.local', 'localhost.localdomain']
+  when: domain not in ['test.local', 'localhost.localdomain']
 
 # ==================================================
 # Grafana Configuration
@@ -97,7 +97,7 @@
     dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/blackbox.json'
     mode: '0644'
   register: grafana_blackbox_dashboard
-  when: primary_domain not in ['test.local', 'localhost.localdomain']
+  when: domain not in ['test.local', 'localhost.localdomain']
 
 - name: Deploy monitoring Docker Compose
   template:
@@ -109,14 +109,14 @@
 - name: Create .env file for Docker Compose
   ansible.builtin.copy:
     content: |
-      DOMAIN={{ primary_domain }}
+      DOMAIN={{ domain }}
       GRAFANA_PASSWORD={{ grafana_admin_password }}
     dest: '{{ monitor_compose_dir }}/.env'
     mode: '0600'
 
 - name: Set Docker images list
   set_fact:
-    docker_images: "{{ docker_images_base + (['prom/blackbox-exporter:' + (monitor_blackbox_version | default('latest'))] if primary_domain not in ['test.local', 'localhost.localdomain'] else []) }}"
+    docker_images: "{{ docker_images_base + (['prom/blackbox-exporter:' + (monitor_blackbox_version | default('latest'))] if domain not in ['test.local', 'localhost.localdomain'] else []) }}"
   vars:
     docker_images_base:
       - "prom/prometheus:{{ monitor_prometheus_version | default('latest') }}"

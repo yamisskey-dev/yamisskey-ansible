@@ -1,5 +1,5 @@
 .PHONY: help install inventory run check list logs backup deploy test
-.PHONY: build publish sanity
+.PHONY: build publish sanity update
 .PHONY: secrets
 
 ## Configuration - Modern Collections Architecture
@@ -76,6 +76,7 @@ run:
 	@echo "🚀 Running $(COLLECTION): $(PLAYBOOK)"
 	@export ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)"; \
 	if [ -f "$(CONFIG_ABS)" ]; then export ANSIBLE_CONFIG="$(CONFIG_ABS)"; fi; \
+	export SOPS_AGE_KEY_FILE="$(AGE_KEY_FILE)"; \
 	"$(SHIM_DIR)/ansible-playbook" -i "$(INV)" "$(PLAY)/$(PLAYBOOK).yml" \
 		$(if $(LIMIT),--limit $(LIMIT)) \
 		$(if $(TAGS),--tags $(TAGS)) \
@@ -124,16 +125,25 @@ install:
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-playbook "$$@"' > "$(SHIM_DIR)/ansible-playbook";   chmod +x "$(SHIM_DIR)/ansible-playbook"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from "$(ANSIBLE_CORE_SPEC)" ansible-galaxy "$$@"'   > "$(SHIM_DIR)/ansible-galaxy";     chmod +x "$(SHIM_DIR)/ansible-galaxy"
 	@printf '%s\n' '#!/bin/sh' 'exec uvx --python $(UV_PY) --from pre-commit pre-commit "$$@"'                  > "$(SHIM_DIR)/pre-commit";        chmod +x "$(SHIM_DIR)/pre-commit"
-	@echo "🔐 Installing SOPS for secrets management..."
+	@echo "🔐 Installing SOPS and Age for secrets management..."
+	@if ! command -v go >/dev/null 2>&1; then \
+		echo "❌ Go is required for SOPS and Age installation. Please install Go first."; \
+		exit 1; \
+	fi
 	@if ! command -v sops >/dev/null 2>&1; then \
-		echo "📥 Downloading SOPS v3.10.2..."; \
-		curl -LO https://github.com/getsops/sops/releases/download/v3.10.2/sops-v3.10.2.linux.amd64; \
-		echo "📦 Installing SOPS to $(SHIM_DIR)/sops..."; \
-		mv sops-v3.10.2.linux.amd64 "$(SHIM_DIR)/sops"; \
-		chmod +x "$(SHIM_DIR)/sops"; \
+		echo "📥 Installing SOPS (latest version) via go install..."; \
+		go install github.com/getsops/sops/v3/cmd/sops@latest; \
 		echo "✅ SOPS installed successfully"; \
 	else \
 		echo "✅ SOPS already installed: $$(sops --version)"; \
+	fi
+	@if ! command -v age >/dev/null 2>&1; then \
+		echo "📥 Installing Age (latest version) via go install..."; \
+		go install filippo.io/age/cmd/age@latest; \
+		go install filippo.io/age/cmd/age-keygen@latest; \
+		echo "✅ Age installed successfully"; \
+	else \
+		echo "✅ Age already installed: $$(age --version)"; \
 	fi
 	@echo "� Installing Galaxy collections to $(GALAXY_DIR) ..."
 	@ANSIBLE_CONFIG="$(REPO_ROOT)/ansible.cfg" \
@@ -151,6 +161,24 @@ install:
 	@echo "🔐 SOPS/Age verification:"
 	@if command -v sops >/dev/null 2>&1 || [ -x "$(SHIM_DIR)/sops" ]; then echo "✅ SOPS available"; else echo "❌ SOPS not found"; fi
 	@if command -v age >/dev/null 2>&1; then echo "✅ Age available: $$(age --version)"; else echo "❌ Age not found"; fi
+
+# Update Galaxy collections to latest versions and clear caches
+update:
+	@echo "🔄 Updating Galaxy collections to latest versions..."
+	@echo "🧹 Clearing ansible caches and temporary files..."
+	@rm -rf "$(REPO_ROOT)/.vendor/.cache" || true
+	@rm -rf "$(HOME)/.ansible/collections" || true
+	@rm -rf "$(HOME)/.cache/ansible-compat" || true
+	@rm -rf "$(REPO_ROOT)/.ansible" || true
+	@mkdir -p "$(REPO_ROOT)/.vendor/.cache" "$(GALAXY_DIR)"
+	@echo "🌌 Installing fresh Galaxy collections..."
+	@ANSIBLE_CONFIG="$(REPO_ROOT)/ansible.cfg" \
+	ANSIBLE_GALAXY_CACHE_DIR="$(REPO_ROOT)/.vendor/.cache" \
+	ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" \
+		"$(SHIM_DIR)/ansible-galaxy" collection install --force -p "$(GALAXY_DIR)" -r requirements-dev.yml
+	@echo "🔍 Verifying updated collections:"
+	@ANSIBLE_COLLECTIONS_PATH="$(ANSIBLE_PATHS)" env -i PATH="$(SHIM_DIR):/usr/bin:/bin:$(UV_BIN)" ansible-galaxy collection list | grep yamisskey || true
+	@echo "✅ Galaxy collections updated successfully!"
 
 inventory:
 	@if [ "$(TYPE)" = "local" ]; then \

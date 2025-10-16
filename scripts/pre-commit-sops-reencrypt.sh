@@ -22,15 +22,6 @@ print_error() {
     echo -e "${RED}[SOPS ERROR]${NC} $1"
 }
 
-# Check if sops is installed
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-SOPS_CMD="$PROJECT_ROOT/.bin/sops"
-if [ ! -f "$SOPS_CMD" ]; then
-    print_error "SOPS is not found at $SOPS_CMD. Please install it first."
-    exit 1
-fi
-
 # Check if age key file exists
 AGE_KEY_FILE="${HOME}/.config/sops/age/keys.txt"
 if [ ! -f "$AGE_KEY_FILE" ]; then

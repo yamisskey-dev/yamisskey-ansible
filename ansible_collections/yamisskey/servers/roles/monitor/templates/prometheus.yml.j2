@@ -23,7 +23,7 @@ alerting:
 # ==================================================
 # Rule Files Configuration
 # ==================================================
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+{% if domain != 'test.local' and domain != 'localhost.localdomain' %}
 rule_files:
   - "/etc/prometheus/rules/*.yml"
 {% endif %}
@@ -84,7 +84,7 @@ scrape_configs:
           role: 'cadvisor'
 {% endif %}
 
-{% if primary_domain != 'test.local' and primary_domain != 'localhost.localdomain' %}
+{% if domain != 'test.local' and domain != 'localhost.localdomain' %}
   # --- Blackbox HTTP/HTTPS Monitoring ---
   - job_name: 'blackbox-http'
     metrics_path: /probe
@@ -101,10 +101,10 @@ scrape_configs:
           # Default test endpoint
           - http://localhost:3000
 {% endif %}
-{% if primary_domain != 'localhost.localdomain' and primary_domain != 'test.local' %}
+{% if domain != 'localhost.localdomain' and domain != 'test.local' %}
           # Domain Health Checks
-          - https://{{ primary_domain }}
-          - https://grafana.{{ primary_domain }}
+          - https://{{ domain }}
+          - https://grafana.{{ domain }}
 {% endif %}
     relabel_configs:
       - source_labels: [__address__]

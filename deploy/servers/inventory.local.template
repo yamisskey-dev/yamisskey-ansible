@@ -33,7 +33,7 @@ ansible_become_method=sudo
 ansible_become_user=root
 
 # Network Configuration
-primary_domain=${DOMAIN}
+domain=${DOMAIN}
 misskey_domain=${DOMAIN}
 internal_network=${NETWORK}
 

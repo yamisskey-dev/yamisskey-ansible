@@ -4,7 +4,7 @@
 
 ```yaml
 backup_dir: /var/backups
-docker_services_www: [misskey, synapse, vikunja]
+docker_services_www: [misskey, synapse]
 docker_services_opt: [misskey-backup, minio]
 docker_services_home: [ai, ctfd]
 ```
