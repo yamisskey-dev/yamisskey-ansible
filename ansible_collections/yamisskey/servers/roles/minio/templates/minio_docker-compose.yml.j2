@@ -35,7 +35,7 @@ services:
     ports:
       - "{{ host_services[inventory_hostname].minio_api }}:9000"
     volumes:
-      - {{ minio_data_path | default('/opt/minio/minio-data') }}:/data
+      - {{ minio_data_dir }}:/data
     networks:
       - external_network
     logging:
