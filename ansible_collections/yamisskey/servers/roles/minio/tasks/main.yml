@@ -236,8 +236,8 @@
       changed_when: false
       failed_when: false
 
-    - name: Apply secure bucket policy for ActivityPub federation access control
-      command: /usr/local/bin/mc anonymous set download "{{ minio_alias }}/{{ item }}"
+    - name: Apply public bucket policy for ActivityPub federation access control
+      command: /usr/local/bin/mc anonymous set public "{{ minio_alias }}/{{ item }}"
       loop:
         - "{{ minio_bucket_name_for_misskey }}"
         - "{{ minio_bucket_name_for_outline }}"
