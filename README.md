@@ -11,7 +11,7 @@ Modern Ansible infrastructure management with SOPS secrets management.
 ## Prerequisites
 
 Install minimum required packages
-- [make](https://www.gnu.org/software/make/)
+- [task](https://taskfile.dev/)
 - [tailscale](https://tailscale.com/download/linux)
 
 Ensure servers can be reached in Tailscale
@@ -30,8 +30,8 @@ tailscale ssh <hostname>
 ```bash
 git clone https://github.com/yamisskey-dev/yamisskey-provision.git
 cd yamisskey-provision
-make install
-make inventory
+task install
+task inventory
 ```
 
 `ansible` and `sops` will be installed.
@@ -39,5 +39,5 @@ make inventory
 ## Help
 
 ```bash
-make help
+task help
 ```
