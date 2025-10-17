@@ -1,0 +1,72 @@
+---
+# MinIO Migration Role - Main Tasks
+# Unified migration role with tag-based phase control
+
+- name: Display migration banner
+  debug:
+    msg: |
+      ╔═══════════════════════════════════════════════╗
+      ║             MinIO Migration Role              ║
+      ║    Unified migration with flexible control    ║
+      ╚═══════════════════════════════════════════════╝
+
+      📋 Migration Plan:
+      ├─ Source: {{ source_minio_host }}:{{ source_minio_port }}
+      ├─ Target: {{ target_minio_host }}:{{ target_minio_port }}
+      ├─ Buckets: {{ buckets_to_migrate | join(', ') }}
+      └─ Phase Control: Tag-based execution
+
+      🏷️  Available Tags:
+      ├─ setup: MinIO CLI installation and configuration
+      ├─ validate: Pre-migration validation
+      ├─ migrate: Data migration execution
+      ├─ verify: Post-migration verification
+      ├─ cleanup: Temporary files cleanup
+      └─ all: Execute all phases
+  tags: ['always']
+
+- name: Set up MinIO CLI and configuration
+  include_tasks: setup.yml
+  when: minio_migration_phases.setup | default(true)
+  tags: ['setup', 'all']
+
+- name: Pre-migration validation
+  include_tasks: validate.yml
+  when: minio_migration_phases.validate | default(true)
+  tags: ['validate', 'all']
+
+- name: Execute data migration
+  include_tasks: migrate.yml
+  when: minio_migration_phases.migrate | default(true)
+  tags: ['migrate', 'all']
+
+- name: Post-migration verification
+  include_tasks: verify.yml
+  when: minio_migration_phases.verify | default(true)
+  tags: ['verify', 'all']
+
+- name: Clean up temporary files
+  include_tasks: cleanup.yml
+  when: minio_migration_phases.cleanup | default(true)
+  tags: ['cleanup', 'all']
+
+- name: Display migration completion summary
+  debug:
+    msg: |
+      ✅ MinIO Migration Completed Successfully
+      ═══════════════════════════════════════════════
+
+      📊 Migration Summary:
+      ├─ Source: {{ source_minio_host }}:{{ source_minio_port }}
+      ├─ Target: {{ target_minio_host }}:{{ target_minio_port }}
+      ├─ Buckets: {{ buckets_to_migrate | join(', ') }}
+      ├─ Encryption: {{ 'Enabled' if enable_encryption else 'Disabled' }}
+      └─ Status: ✅ Complete
+
+      🎯 Usage Examples:
+      ├─ ansible-playbook playbook.yml --tags setup
+      ├─ ansible-playbook playbook.yml --tags validate
+      ├─ ansible-playbook playbook.yml --tags migrate
+      ├─ ansible-playbook playbook.yml --tags verify
+      └─ ansible-playbook playbook.yml --tags all
+  tags: ['always']
