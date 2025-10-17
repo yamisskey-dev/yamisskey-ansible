@@ -6,21 +6,10 @@
     - rsyslog
     - logrotate
     - ufw
-    - tailscale
     - lynis
     - curl
     - dnsutils
   become: true
-
-- name: Check if tailscale CLI is available
-  ansible.builtin.command: command -v tailscale
-  register: tailscale_cli_check
-  changed_when: false
-  failed_when: false
-
-- name: Set tailscale availability fact
-  ansible.builtin.set_fact:
-    tailscale_cli_available: "{{ tailscale_cli_check.rc == 0 }}"
 
 - name: Ensure syslog user exists
   ansible.builtin.user:
@@ -73,12 +62,6 @@
       ansible.builtin.command: ufw allow {{ item }}/tcp
       changed_when: false
       loop: "{{ security_ufw_ports }}"
-      become: true
-
-    - name: Allow specified Tailscale UDP ports
-      ansible.builtin.command: ufw allow {{ item }}/udp
-      changed_when: false
-      loop: "{{ security_tailscale_ports }}"
       become: true
 
     - name: Allow QUIC and HTTP2 traffic to Cloudflare Tunnel for IPv4 addresses
@@ -168,53 +151,6 @@
   when:
     - ufw_status_post is defined
     - (ansible_become | default(false)) | bool
-
-- name: Retrieve Tailscale status
-  ansible.builtin.command: tailscale status
-  register: tailscale_status
-  changed_when: false
-  when: tailscale_cli_available | default(false)
-
-- name: Check if Tailscale needs to be started
-  ansible.builtin.set_fact:
-    tailscale_needs_start: "{{ tailscale_status.stdout is not regex('.*100\\..*') }}"
-  when: tailscale_cli_available | default(false)
-
-- name: Start Tailscale only if not already connected
-  ansible.builtin.command: tailscale up --advertise-tags=tag:ssh-access --ssh --accept-dns=false --reset --accept-risk=lose-ssh
-  when:
-    - tailscale_cli_available | default(false)
-    - tailscale_needs_start | default(false) | bool
-  register: tailscale_start
-  changed_when: false
-
-- name: Retrieve and parse Tailscale IP addresses
-  block:
-    - name: Retrieve Tailscale status
-      ansible.builtin.command: tailscale status --json
-      register: tailscale_status
-      changed_when: false
-
-    - name: Set Tailscale IPs
-      ansible.builtin.set_fact:
-        tailscale_ips: "{{ tailscale_status.stdout | from_json | json_query('Peer.*.TailscaleIPs') | flatten | select('match', '100\\..*') | list }}"
-      when:
-        - tailscale_status.stdout is defined
-        - tailscale_status.stdout | length > 0
-        - tailscale_status.stdout != ""
-
-    - name: Allow SSH from Tailscale IPs
-      ansible.builtin.command: ufw allow proto tcp from {{ item }} to any port 22
-      changed_when: false
-      loop: "{{ tailscale_ips }}"
-      when: tailscale_ips is defined
-
-    - name: Allow SSH from self Tailscale IP
-      ansible.builtin.command: ufw allow proto tcp from {{ ansible_default_ipv4.address }} to any port 22
-      changed_when: false
-      when: tailscale_ips is defined
-  become: true
-  when: tailscale_cli_available | default(false)
 
 - name: Configure SSH settings
   ansible.builtin.lineinfile:

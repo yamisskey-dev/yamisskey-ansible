@@ -4,9 +4,6 @@ security_ufw_ports:
   - 443
   - 9000
 
-security_tailscale_ports:
-  - 41641
-
 # Ports required for Cloudflare Tunnel (QUIC and optional HTTPS)
 security_cloudflared_quic_port: 7844
 security_cloudflared_https_port: 443
