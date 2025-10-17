@@ -1,0 +1,134 @@
+---
+- name: MinIO Migration - Unified Role with Tag-based Control
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    # Migration source and target configuration
+    minio_source_host: "{{ migrate_source | default('raspberrypi') }}"
+    minio_target_host: "{{ migrate_target | default('balthasar') }}"
+
+    # Default bucket configuration
+    bucket_name_misskey: "{{ minio_bucket_name_for_misskey | default('files') }}"
+    bucket_name_outline: "{{ minio_bucket_name_for_outline | default('assets') }}"
+
+    # Migration buckets
+    buckets_to_migrate:
+      - "{{ bucket_name_misskey }}"
+      - "{{ bucket_name_outline }}"
+
+  pre_tasks:
+    - name: Display migration overview
+      debug:
+        msg: |
+          ╔═════════════════════════════════════════════════════════════╗
+          ║                    MinIO Migration                         ║
+          ║                   Unified Role v1.0                        ║
+          ╚═════════════════════════════════════════════════════════════╝
+
+          🔄 Migration Configuration:
+          ├─ Source: {{ minio_source_host }}
+          ├─ Target: {{ minio_target_host }}
+          ├─ Buckets: {{ buckets_to_migrate | join(', ') }}
+          └─ Mode: {{ ansible_run_tags | default(['all']) | join(', ') }}
+
+          🏷️  Available execution tags:
+          ├─ setup: MinIO CLI installation and configuration
+          ├─ validate: Pre-migration validation
+          ├─ migrate: Data migration execution
+          ├─ verify: Post-migration verification
+          ├─ cleanup: Temporary files cleanup
+          └─ all: Execute all phases
+
+          💡 Example usage:
+          ansible-playbook minio-migration.yml --tags setup,validate
+
+          🔄 For raspberrypi→balthasar migration:
+          ansible-playbook -i deploy/servers/inventory deploy/servers/playbooks/minio-migration.yml \
+            -e "migrate_source=raspberrypi migrate_target=balthasar" \
+            --limit balthasar --ask-become-pass
+      tags: ['always']
+
+    - name: Validate required variables
+      assert:
+        that:
+          - migrate_source is defined and migrate_source != ""
+          - migrate_target is defined and migrate_target != ""
+          - migrate_source != migrate_target or migrate_source == inventory_hostname
+        fail_msg: |
+          ❌ Required migration variables missing or invalid:
+          - migrate_source: {{ migrate_source | default('UNDEFINED') }}
+          - migrate_target: {{ migrate_target | default('UNDEFINED') }}
+
+          Please provide: -e "migrate_source=SOURCE_HOST migrate_target=TARGET_HOST"
+      tags: ['always']
+
+  roles:
+    - role: yamisskey.servers.minio_migration
+      vars:
+        # Pass through migration configuration
+        source_minio_host: "{{ minio_source_host }}"
+        target_minio_host: "{{ minio_target_host }}"
+
+        # Bucket configuration - use different variable name to avoid recursion
+        migration_buckets: "{{ buckets_to_migrate }}"
+
+        # Enable all features by default
+        enable_encryption: true
+        generate_validation_report: true
+        generate_migration_report: true
+
+        # Safety settings
+        require_confirmation: false  # Skip confirmation in automated runs
+        backup_before_migration: true
+        verify_after_migration: true
+
+  post_tasks:
+    - name: Display migration completion summary
+      debug:
+        msg: |
+          ✅ MinIO Migration Process Completed
+          ═══════════════════════════════════════════════════════════════
+
+          📊 Migration Summary:
+          ├─ Source: {{ minio_source_host }}
+          ├─ Target: {{ minio_target_host }}
+          ├─ Buckets: {{ buckets_to_migrate | join(', ') }}
+          ├─ Executed Tags: {{ ansible_run_tags | default(['all']) | join(', ') }}
+          └─ Status: ✅ Completed
+
+          📝 Next Steps:
+          {% if 'migrate' in (ansible_run_tags | default(['all'])) %}
+          ├─ Update application configurations with new MinIO endpoint
+          ├─ Test file upload/download functionality
+          ├─ Verify federation image display
+          ├─ Update DNS records if needed
+          └─ Consider stopping source MinIO after thorough testing
+          {% else %}
+          ├─ Execute remaining phases as needed
+          └─ Run full migration: --tags all
+          {% endif %}
+
+          🎯 Phase-specific execution examples:
+          ├─ ansible-playbook minio-migration.yml --tags setup
+          ├─ ansible-playbook minio-migration.yml --tags validate
+          ├─ ansible-playbook minio-migration.yml --tags migrate
+          ├─ ansible-playbook minio-migration.yml --tags verify
+          └─ ansible-playbook minio-migration.yml --tags cleanup
+      tags: ['always']
+
+    - name: Display troubleshooting information
+      debug:
+        msg: |
+          🔧 Troubleshooting:
+          ├─ Logs: /tmp/minio-migration/migration.log
+          ├─ Reports: /tmp/minio-migration/*_report_*.md
+          ├─ Debug mode: -e "debug_mode=true"
+          └─ Verbose: -v or -vv
+
+          📞 Support:
+          ├─ Issues: https://github.com/yamisskey-dev/yamisskey-provision/issues
+          └─ Docs: README.md in minio_migration role
+      when: ansible_run_tags is undefined or 'all' in ansible_run_tags
+      tags: ['always']
