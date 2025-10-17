@@ -22,10 +22,6 @@ galaxy_info:
     - backup
     - s3
 
-dependencies:
-  - role: yamisskey.servers.common
-  - role: yamisskey.servers.security
-
 collections:
   - community.docker
   - ansible.posix
