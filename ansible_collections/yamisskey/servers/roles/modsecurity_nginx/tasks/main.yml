@@ -111,7 +111,6 @@
     - minio          # MinIO object storage
     - cryptpad       # CryptPad collaborative editor
     - zitadel        # Zitadel identity provider
-    - searxng        # SearXNG search engine
     - outline        # Outline wiki
     - uptime         # Uptime Kuma monitoring
     - mcaptcha       # mCaptcha service
