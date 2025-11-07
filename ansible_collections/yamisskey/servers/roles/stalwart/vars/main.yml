@@ -1,4 +1,0 @@
----
-# Stalwart specific variables
-stalwart_dir: '/var/www/stalwart'
-stalwart_server_name: mail.{{ domain }}

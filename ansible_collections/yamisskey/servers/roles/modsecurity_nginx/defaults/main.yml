@@ -91,7 +91,6 @@ host_services:
     grafana: 3000
     cryptpad: 3000
     zitadel: 8080
-    searxng: 8080
     outline: 3000
     uptime: 3001
     mcaptcha: 8080
@@ -106,7 +105,6 @@ ctfd_server_name: "ctf.example.com"
 grafana_server_name: "grafana.example.com"
 cryptpad_server_name: "cryptpad.example.com"
 zitadel_server_name: "zitadel.example.com"
-searxng_server_name: "searx.example.com"
 outline_server_name: "outline.example.com"
 uptime_server_name: "uptime.example.com"
 mcaptcha_server_name: "mcaptcha.example.com"
@@ -146,7 +144,6 @@ modsecurity_services:
   - "minio"
   - "cryptpad"
   - "zitadel"
-  - "searxng"
   - "outline"
   - "uptime"
   - "mcaptcha"

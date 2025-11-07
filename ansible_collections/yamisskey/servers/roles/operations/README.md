@@ -89,10 +89,7 @@ ansible-playbook -i inventory playbooks/operations.yml -e op=logs -e service=min
 - `zitadel` - Zitadel
 - `mcaptcha` - mCaptcha
 - `uptime` - Uptime Kuma
-- `deeplx` - DeepLX
 - `minecraft` - Minecraft
-- `stalwart` - Stalwart Mail
-- `searxng` - SearXNG
 
 ## 高度な使用例
 

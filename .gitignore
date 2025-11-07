@@ -54,3 +54,6 @@ logs/secure/
 ansible_collections/ansible/
 ansible_collections/community/
 ansible_collections/*.info/
+
+# Claude
+.claude/
