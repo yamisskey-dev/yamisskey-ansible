@@ -1,5 +1,0 @@
-- name: Configure SearXNG
-  hosts: all
-  become: true
-  roles:
-    - yamisskey.servers.searxng

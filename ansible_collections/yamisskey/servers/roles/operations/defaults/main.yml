@@ -27,10 +27,7 @@ known_services:
   - zitadel
   - mcaptcha
   - uptime
-  - deeplx
   - minecraft
-  - stalwart
-  - searxng
 
 # Custom health endpoints (can be extended per host)
 custom_health_endpoints: []
