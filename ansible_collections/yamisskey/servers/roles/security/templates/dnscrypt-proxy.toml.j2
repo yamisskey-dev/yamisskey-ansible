@@ -1,4 +1,4 @@
-listen_addresses = ['127.0.0.1:5353']
+listen_addresses = ['{{ security_dnscrypt_proxy_listen_address }}']
 server_names = ['cloudflare', 'cloudflare-security']
 
 fallback_resolvers = ['1.1.1.1:53', '1.0.0.1:53']
