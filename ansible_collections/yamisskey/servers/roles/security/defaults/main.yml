@@ -43,7 +43,7 @@ security_clamav_scan_schedule:
   job: "/usr/bin/timeout 1h45m /usr/bin/nice -n 19 /usr/bin/clamdscan -m --fdpass --config-file=/etc/clamav/clamd.conf -l /var/log/clamav/clamav-$(date +\\%Y\\%m\\%d).log /"
 
 # DNS over HTTPS configuration
-security_dnscrypt_proxy_listen_address: "127.0.0.1:53"
+security_dnscrypt_proxy_listen_address: "127.0.0.1:5300"
 security_dnscrypt_proxy_servers:
   - "cloudflare"
   - "cloudflare-ipv6"

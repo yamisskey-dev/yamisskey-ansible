@@ -1,11 +1,11 @@
 [Resolve]
-DNS=127.0.0.1:5353
-FallbackDNS=
+DNS={{ security_dnscrypt_proxy_listen_address }}
+FallbackDNS=1.1.1.1 1.0.0.1
 Cache=yes
 DNSStubListener=yes
 CacheFromLocalhost=yes
 DNSOverTLS=no
-DNSSEC=no
+DNSSEC=allow-downgrade
 ReadEtcHosts=yes
 MulticastDNS=no
 LLMNR=no
