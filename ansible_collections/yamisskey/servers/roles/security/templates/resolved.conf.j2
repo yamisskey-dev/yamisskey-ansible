@@ -1,11 +1,11 @@
 [Resolve]
 DNS={{ security_dnscrypt_proxy_listen_address }}
-FallbackDNS=
+FallbackDNS=1.1.1.1 1.0.0.1
 Cache=yes
 DNSStubListener=yes
 CacheFromLocalhost=yes
 DNSOverTLS=no
-DNSSEC=no
+DNSSEC=allow-downgrade
 ReadEtcHosts=yes
 MulticastDNS=no
 LLMNR=no
