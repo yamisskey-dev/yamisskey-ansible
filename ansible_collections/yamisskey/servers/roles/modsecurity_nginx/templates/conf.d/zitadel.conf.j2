@@ -3,7 +3,7 @@
 
 # Upstream definition
 upstream zitadel_backend {
-    server localhost:8993;
+    server localhost:{{ zitadel_port | default(8993) }};
     keepalive 8;
 }
 
@@ -18,7 +18,7 @@ server {
 
     # Maintenance page redirect location
     location @maintenance_redirect {
-        return 302 https://down.yami.ski;
+        return 302 https://{{ maintenance_redirect_url | default('down.yami.ski') }};
     }
 
     # Buffer settings for gRPC
@@ -54,12 +54,29 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
+    # Login v2 UI (^~ ensures this takes priority over regex locations)
+    location ^~ /ui/v2/login {
+        proxy_pass http://localhost:{{ zitadel_login_port | default(3002) }};
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        proxy_cache off;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
     # Health check endpoint
     location /healthz {
         proxy_pass http://zitadel_backend;
         proxy_http_version 1.1;
 
-        # Health check specific settings
         access_log off;
         proxy_connect_timeout 5s;
         proxy_read_timeout 5s;
@@ -74,7 +91,6 @@ server {
         grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         grpc_set_header X-Forwarded-Proto https;
 
-        # gRPC timeouts
         grpc_connect_timeout 60s;
         grpc_send_timeout 60s;
         grpc_read_timeout 60s;
@@ -93,32 +109,28 @@ server {
         grpc_read_timeout 60s;
     }
 
-    # Main Zitadel application (HTTP fallback)
+    # Main Zitadel application
     location / {
         proxy_pass http://zitadel_backend;
         proxy_http_version 1.1;
 
-        # Authentication flow timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
 
-        # Buffering
         proxy_buffering on;
         proxy_buffer_size 128k;
         proxy_buffers 4 256k;
 
-        # No caching for authentication flows
         proxy_cache off;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 
-    # Static assets only
-    location ~* \.(css|js|woff|woff2|ttf|eot|svg|ico|png|jpg|gif)$ {
+    # Static assets (for Zitadel console only)
+    location ~* ^/ui/console/.*\.(css|js|woff|woff2|ttf|eot|svg|ico|png|jpg|gif)$ {
         proxy_pass http://zitadel_backend;
         proxy_http_version 1.1;
 
-        # Cache static assets with proxy cache
         proxy_cache static_cache;
         proxy_cache_valid 200 1h;
         proxy_cache_valid 404 5m;
