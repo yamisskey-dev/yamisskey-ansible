@@ -101,23 +101,6 @@
     group: root
     mode: '0644'
 
-- name: Create custom images directory
-  file:
-    path: /usr/share/jitsi-meet/images
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
-
-- name: Copy custom background image
-  ansible.builtin.copy:
-    src: /home/{{ ansible_user }}/misskey-assets/wallpaper.jpg
-    dest: /usr/share/jitsi-meet/images/custom-background.jpg
-    owner: root
-    group: root
-    mode: '0644'
-    remote_src: true
-
 - name: Add custom CSS to plugin.head.html
   ansible.builtin.lineinfile:
     path: /usr/share/jitsi-meet/plugin.head.html
