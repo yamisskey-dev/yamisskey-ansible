@@ -1,7 +1,9 @@
 ---
+# Authentik 2025.10+ - Redis is no longer required
+# https://goauthentik.io/blog/2025-11-13-we-removed-redis/
 services:
   postgresql:
-    image: postgres:{{ authentik_postgresql_version | default('16-alpine') }}
+    image: docker.io/library/postgres:{{ authentik_postgresql_version | default('16-alpine') }}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d {{ postgresql_database }} -U {{ postgresql_user }}"]
@@ -19,7 +21,7 @@ services:
       - authentik
 
   server:
-    image: ghcr.io/goauthentik/server:{{ authentik_version | default('2024.12') }}
+    image: ghcr.io/goauthentik/server:{{ authentik_version | default('2025.10') }}
     restart: unless-stopped
     command: server
     environment:
@@ -41,7 +43,7 @@ services:
       - authentik
 
   worker:
-    image: ghcr.io/goauthentik/server:{{ authentik_version | default('2024.12') }}
+    image: ghcr.io/goauthentik/server:{{ authentik_version | default('2025.10') }}
     restart: unless-stopped
     command: worker
     environment:
