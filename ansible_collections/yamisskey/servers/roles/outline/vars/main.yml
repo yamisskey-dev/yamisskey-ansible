@@ -2,3 +2,7 @@
 # Outline specific variables
 outline_server_name: "wiki.{{ domain }}"
 outline_dir: '/var/www/outline'
+
+# OIDC with Authentik
+outline_oidc_client_id: "{{ hostvars[inventory_hostname].outline.oidc_client_id | default('') }}"
+outline_oidc_client_secret: "{{ hostvars[inventory_hostname].outline.oidc_client_secret | default('') }}"
