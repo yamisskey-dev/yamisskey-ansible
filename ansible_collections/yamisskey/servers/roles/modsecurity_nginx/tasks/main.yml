@@ -110,7 +110,7 @@
     - grafana        # Grafana monitoring
     - minio          # MinIO object storage
     - cryptpad       # CryptPad collaborative editor
-    - zitadel        # Zitadel identity provider
+    - authentik      # Authentik identity provider
     - outline        # Outline wiki
     - uptime         # Uptime Kuma monitoring
     - mcaptcha       # mCaptcha service

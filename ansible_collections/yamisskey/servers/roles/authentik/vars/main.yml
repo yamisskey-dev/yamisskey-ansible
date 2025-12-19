@@ -1,0 +1,15 @@
+---
+# Authentik specific variables
+authentik_version: "2024.12"
+authentik_server_name: auth.{{ domain }}
+authentik_dir: "/var/www/authentik"
+authentik_port: "{{ host_services.balthasar.authentik | default(9003) }}"
+authentik_port_https: 9443
+
+# PostgreSQL設定
+authentik_postgresql_version: "16-alpine"
+authentik_postgresql_database: "authentik"
+authentik_postgresql_user: "authentik"
+
+# その他
+maintenance_redirect_url: "down.yami.ski"

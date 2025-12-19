@@ -1,17 +1,17 @@
-# ModSecurity-Nginx configuration for Zitadel
+# ModSecurity-Nginx configuration for Authentik
 # This file is included in the main ModSecurity-Nginx container
 
 # Upstream definition
-upstream zitadel_backend {
-    server localhost:{{ zitadel_port | default(8993) }};
+upstream authentik_backend {
+    server localhost:{{ authentik_port | default(9000) }};
     keepalive 8;
 }
 
-# Server block for Zitadel
+# Server block for Authentik
 server {
     listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
-    server_name {{ zitadel_server_name }};
+    server_name {{ authentik_server_name }};
 
     # Error page handling - redirect to maintenance page when backend is down
     error_page 502 503 504 @maintenance_redirect;
@@ -21,7 +21,7 @@ server {
         return 302 https://{{ maintenance_redirect_url | default('down.yami.ski') }};
     }
 
-    # Buffer settings for gRPC
+    # Buffer settings
     client_body_buffer_size 16k;
     client_header_buffer_size 4k;
     client_max_body_size 100m;
@@ -54,27 +54,9 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
-    # Login v2 UI (^~ ensures this takes priority over regex locations)
-    location ^~ /ui/v2/login {
-        proxy_pass http://localhost:{{ zitadel_login_port | default(3002) }};
-        proxy_http_version 1.1;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-
-        proxy_cache off;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-
     # Health check endpoint
     location /healthz {
-        proxy_pass http://zitadel_backend;
+        proxy_pass http://authentik_backend/-/health/ready/;
         proxy_http_version 1.1;
 
         access_log off;
@@ -83,36 +65,36 @@ server {
         proxy_send_timeout 5s;
     }
 
-    # gRPC endpoints
-    location /zitadel.admin.v1.AdminService/ {
-        grpc_pass grpc://zitadel_backend;
-        grpc_set_header Host $host;
-        grpc_set_header X-Real-IP $remote_addr;
-        grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        grpc_set_header X-Forwarded-Proto https;
-
-        grpc_connect_timeout 60s;
-        grpc_send_timeout 60s;
-        grpc_read_timeout 60s;
-    }
-
-    # gRPC management endpoints
-    location /zitadel.management.v1.ManagementService/ {
-        grpc_pass grpc://zitadel_backend;
-        grpc_set_header Host $host;
-        grpc_set_header X-Real-IP $remote_addr;
-        grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        grpc_set_header X-Forwarded-Proto https;
-
-        grpc_connect_timeout 60s;
-        grpc_send_timeout 60s;
-        grpc_read_timeout 60s;
-    }
-
-    # Main Zitadel application
-    location / {
-        proxy_pass http://zitadel_backend;
+    # Outpost endpoints (for embedded outpost)
+    location /outpost.goauthentik.io {
+        proxy_pass http://authentik_backend/outpost.goauthentik.io;
         proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Main Authentik application
+    location / {
+        proxy_pass http://authentik_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
 
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
@@ -123,12 +105,11 @@ server {
         proxy_buffers 4 256k;
 
         proxy_cache off;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 
-    # Static assets (for Zitadel console only)
-    location ~* ^/ui/console/.*\.(css|js|woff|woff2|ttf|eot|svg|ico|png|jpg|gif)$ {
-        proxy_pass http://zitadel_backend;
+    # Static assets
+    location ~* \.(css|js|woff|woff2|ttf|eot|svg|ico|png|jpg|gif)$ {
+        proxy_pass http://authentik_backend;
         proxy_http_version 1.1;
 
         proxy_cache static_cache;
