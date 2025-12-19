@@ -1,6 +1,6 @@
 services:
   outline:
-    image: outlinewiki/outline:0.82.0-0
+    image: outlinewiki/outline:{{ outline_version }}
     restart: unless-stopped
     env_file: ./docker.env
     ports:
