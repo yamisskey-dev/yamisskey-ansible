@@ -2,15 +2,15 @@
 creation_rules:
   # Rule for SOPS encrypted files
   - path_regex: .*secrets\.sops\.yml$
-    age: age1d5e2h2mvh3unluf2yx5euxwaqzv6h76grw89w5j6mfhary6gsa3qu27r25
+    age: age1paqwux2ffqspe3ltux45wvn2vzdy24hwj8utgt0en64afeys4vuqxjpcvl
     unencrypted_suffix: _unencrypted
 
   # Rule for other sensitive files
   - path_regex: .*\.(key|pem|crt|p12|pfx)$
-    age: age1d5e2h2mvh3unluf2yx5euxwaqzv6h76grw89w5j6mfhary6gsa3qu27r25
+    age: age1paqwux2ffqspe3ltux45wvn2vzdy24hwj8utgt0en64afeys4vuqxjpcvl
     unencrypted_suffix: _unencrypted
 
   # Rule for environment files
   - path_regex: .*\.env\.(secure|prod|staging)$
-    age: age1d5e2h2mvh3unluf2yx5euxwaqzv6h76grw89w5j6mfhary6gsa3qu27r25
+    age: age1paqwux2ffqspe3ltux45wvn2vzdy24hwj8utgt0en64afeys4vuqxjpcvl
     unencrypted_suffix: _unencrypted
