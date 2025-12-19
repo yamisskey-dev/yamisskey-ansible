@@ -24,7 +24,7 @@ known_services:
   - neo-quesdon
   - outline
   - ctfd
-  - zitadel
+  - authentik
   - mcaptcha
   - uptime
   - minecraft

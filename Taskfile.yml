@@ -18,7 +18,7 @@ env:
   ANSIBLE_FORCE_HANDLERS: 'true'
 
   # SOPS/Age configuration
-  SOPS_AGE_KEY_FILE: '{{.REPO_ROOT}}/age-key.txt'
+  SOPS_AGE_KEY_FILE: '{{.HOME}}/.sops/key.txt'
 
   # UV configuration
   UV_PY: '3.11'

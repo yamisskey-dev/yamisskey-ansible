@@ -90,7 +90,7 @@ host_services:
     ctfd: 8000
     grafana: 3000
     cryptpad: 3000
-    zitadel: 8080
+    authentik: 9003
     outline: 3000
     uptime: 3001
     mcaptcha: 8080
@@ -104,7 +104,7 @@ jitsi_server_name: "jitsi.example.com"
 ctfd_server_name: "ctf.example.com"
 grafana_server_name: "grafana.example.com"
 cryptpad_server_name: "cryptpad.example.com"
-zitadel_server_name: "zitadel.example.com"
+authentik_server_name: "authentik.example.com"
 outline_server_name: "outline.example.com"
 uptime_server_name: "uptime.example.com"
 mcaptcha_server_name: "mcaptcha.example.com"
@@ -143,7 +143,7 @@ modsecurity_services:
   - "grafana"
   - "minio"
   - "cryptpad"
-  - "zitadel"
+  - "authentik"
   - "outline"
   - "uptime"
   - "mcaptcha"

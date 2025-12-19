@@ -23,7 +23,7 @@ host_services:
     cadvisor: 8085             # cAdvisor
     minio_api: 9000            # MinIO API (moved from raspberrypi)
     minio_console: 9001        # MinIO Console (moved from raspberrypi)
-    zitadel: 8993              # Zitadel (security)
+    authentik: 9003            # Authentik (identity provider)
     mcaptcha: 7493             # mCaptcha (shared security service)
     nostream: 8080             # Nostr relay
     # All public services route through modsecurity_nginx:8080
