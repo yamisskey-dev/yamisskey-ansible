@@ -20,11 +20,6 @@ node_exporter:
   service_name: prometheus-node-exporter
   port: "{{ watch_services.node_exporter }}"
 
-# Gentoo-specific package names
-node_exporter_gentoo:
-  package_name: prometheus-node_exporter
-  service_name: prometheus-node_exporter
-
 # ==================================================
 # cAdvisor Configuration
 # ==================================================
