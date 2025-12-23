@@ -14,7 +14,6 @@ platforms:
     pre_build_image: true
     networks:
       - name: minio-migration-network
-        driver: bridge
 provisioner:
   name: ansible
   config_options:
