@@ -31,54 +31,6 @@ url: https://{{ domain }}/
 # The port that your Misskey server should listen on.
 port: {{ misskey_port | default('3001') }}
 
-# Proxy trust settings
-#
-# Specifies the IP addresses that Misskey will use as trusted
-# reverse proxies (e.g., nginx, Cloudflare). This affects how
-# Misskey determines the source IP for each request and is used
-# for important rate limiting and security features. If the value
-# is not set correctly, Misskey may use the IP address of the
-# reverse proxy instead of the actual source IP, which may lead to
-# unintended rate limiting or security vulnerabilities.
-# By default, the loopback network and private network address
-# ranges shown below are trusted.
-# If you are using a single reverse proxy and it is on the same
-# machine or the same private network as Misskey, it is unlikely you
-# need to change this setting, and the default setting is fine.
-# Also, if you are using multiple reverse proxy servers and they are
-# all on the same private network as Misskey, the default setting
-# is fine.
-# However, if you are using a reverse proxy server that accesses
-# Misskey web servers and streaming servers via public IP addresses
-# (for example, Cloudflare), you must set this variable.
-# When changing this setting, you can use one of the following values:
-#
-# - true: Trust all proxies
-# - false: Do not trust any proxies
-# - IP address, IP address range, or array of them: Trust hops that
-#   match the specified criteria.
-# - Integer: Trust the nth hop from the front-facing proxy server as
-#   the client.
-# For more information on how to configure this setting, please refer
-# to the Fastify documentation:
-# https://fastify.dev/docs/latest/Reference/Server/#trustproxy
-#
-# Note that if this variable is set, it overrides the default range,
-# so if you have both an external reverse proxy and a proxy on the
-# local host, you must include both IPs (or IP ranges).
-#
-#trustProxy:
-#  - '10.0.0.0/8'
-#  - '172.16.0.0/12'
-#  - '192.168.0.0/16'
-#  - '127.0.0.1/32'
-#  - '::1/128'
-#  - 'fc00::/7'
-#  # Example: If you are using some external reverse proxies like CDNs,
-#  # you may need to add the CDN IP ranges here.
-#  # If you're using Cloudflare, you can find IP Ranges at:
-#  # https://www.cloudflare.com/ips/
-
 #   ┌──────────────────────────┐
 #───┘ PostgreSQL configuration └────────────────────────────────
 
@@ -129,8 +81,6 @@ redis:
   #pass: example-pass
   #prefix: example-prefix
   #db: 1
-  # You can specify more ioredis options...
-  #username: example-username
 
 #redisForPubsub:
 #  host: redis
@@ -139,8 +89,6 @@ redis:
 #  #pass: example-pass
 #  #prefix: example-prefix
 #  #db: 1
-#  # You can specify more ioredis options...
-#  #username: example-username
 
 #redisForJobQueue:
 #  host: redis
@@ -149,8 +97,6 @@ redis:
 #  #pass: example-pass
 #  #prefix: example-prefix
 #  #db: 1
-#  # You can specify more ioredis options...
-#  #username: example-username
 
 #redisForTimelines:
 #  host: redis
@@ -159,8 +105,6 @@ redis:
 #  #pass: example-pass
 #  #prefix: example-prefix
 #  #db: 1
-#  # You can specify more ioredis options...
-#  #username: example-username
 
 #redisForReactions:
 #  host: redis
@@ -169,8 +113,6 @@ redis:
 #  #pass: example-pass
 #  #prefix: example-prefix
 #  #db: 1
-#  # You can specify more ioredis options...
-#  #username: example-username
 
 #   ┌───────────────────────────────┐
 #───┘ Fulltext search configuration └─────────────────────────────
@@ -249,31 +191,20 @@ id: 'aidx'
 # Whether disable HSTS
 #disableHsts: true
 
-# Enable internal IP-based rate limiting (default: true)
-# To configure them in reverse proxy instead, set this to false.
-#enableIpRateLimit: true
-
 # Number of worker processes
 #clusterLimit: 1
 
 # Job concurrency per worker
-#deliverJobConcurrency: 128
-#inboxJobConcurrency: 16
-#relationshipJobConcurrency: 16
-# What's relationshipJob?:
-#  Follow, unfollow, block and unblock(ings) while following-imports, etc. or account migrations.
+# deliverJobConcurrency: 128
+# inboxJobConcurrency: 16
 
 # Job rate limiter
-#deliverJobPerSec: 128
-#inboxJobPerSec: 32
-#relationshipJobPerSec: 64
+# deliverJobPerSec: 128
+# inboxJobPerSec: 32
 
 # Job attempts
-#deliverJobMaxAttempts: 12
-#inboxJobMaxAttempts: 8
-
-# Local address used for outgoing requests
-#outgoingAddress: 127.0.0.1
+# deliverJobMaxAttempts: 12
+# inboxJobMaxAttempts: 8
 
 # IP address family used for outgoing request (ipv4, ipv6 or dual)
 #outgoingAddressFamily: ipv4
@@ -294,16 +225,7 @@ proxyBypassHosts:
 #proxySmtp: socks5://127.0.0.1:1080 # use SOCKS5
 
 # Media Proxy
-# Reference Implementation: https://github.com/misskey-dev/media-proxy
-# * Deliver a common cache between instances
-# * Perform image compression (on a different server resource than the main process)
 mediaProxy: https://media.{{ domain }}/proxy
-
-# Movie Thumbnail Generation URL
-# There is no reference implementation.
-# For example, Misskey will point to the following URL:
-#   https://example.com/thumbnail.webp?thumbnail=1&url=https%3A%2F%2Fstorage.example.com%2Fpath%2Fto%2Fvideo.mp4
-#videoThumbnailGenerator: https://example.com
 
 # For security reasons, uploading attachments from the intranet is prohibited,
 # but exceptions can be made from the following settings. Default value is "undefined".
@@ -314,9 +236,6 @@ allowedPrivateNetworks: [
 
 # Upload or download file size limits (bytes)
 #maxFileSize: 262144000
-
-# PID File of master process
-#pidFile: /tmp/misskey.pid
 
 # Log settings
 # logging:
