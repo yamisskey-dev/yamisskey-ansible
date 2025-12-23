@@ -103,6 +103,10 @@
     - name: Import MinIO tasks directly (skip dependencies)
       import_tasks: "../../tasks/main.yml"
       vars:
+        # Directory configuration
+        minio_dir: "/opt/minio"
+        minio_data_dir: "/opt/minio/minio-data"
+
         # Test-specific configuration
         minio_alias: "testminio"
         minio_bucket_name_for_misskey: "test-misskey-files"
