@@ -1,9 +1,0 @@
-- name: Prepare
-  hosts: all
-  gather_facts: false
-  tasks:
-    - name: Ensure tmp/ansible exists with sticky bit
-      ansible.builtin.file:
-        path: /tmp/ansible
-        state: directory
-        mode: "1777"

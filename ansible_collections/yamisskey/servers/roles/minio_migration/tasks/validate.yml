@@ -46,6 +46,7 @@
   tags: ['validate', 'parameters']
 
 - name: Connectivity validation
+  when: validate_connectivity | default(true)
   block:
     - name: Get source host IP address from inventory
       set_fact:
@@ -119,6 +120,7 @@
   tags: ['validate', 'connectivity']
 
 - name: Service validation
+  when: validate_services | default(true)
   block:
     - name: Check critical services
       service_facts:
@@ -145,6 +147,7 @@
   tags: ['validate', 'services']
 
 - name: Storage capacity validation
+  when: validate_capacity | default(true)
   block:
     - name: Check available disk space
       command: df -BG {{ migration_temp_dir | dirname }}
@@ -198,6 +201,7 @@
   tags: ['validate', 'capacity']
 
 - name: Migration readiness assessment
+  when: validate_readiness | default(true)
   block:
     - name: Calculate validation score
       set_fact:

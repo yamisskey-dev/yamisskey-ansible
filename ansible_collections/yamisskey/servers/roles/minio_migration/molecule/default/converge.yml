@@ -107,6 +107,10 @@
     - name: Test minio_migration role with minimal configuration
       debug:
         msg: "Testing minio_migration role with basic setup and validation only"
+
+    - name: Include minio_migration role
+      include_role:
+        name: yamisskey.servers.minio_migration
       vars:
         # Test-specific configuration
         source_minio_host: "minio-migration-test-instance"
@@ -153,10 +157,6 @@
         # Test environment settings
         test_environment: true
         debug_mode: true
-
-    - name: Include minio_migration role
-      include_role:
-        name: yamisskey.servers.minio_migration
       tags: ['setup', 'validate', 'cleanup']
 
     - name: Verify role execution completed
