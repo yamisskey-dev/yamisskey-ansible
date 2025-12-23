@@ -52,8 +52,8 @@ host_services:
     playit: 8080               # playit.gg proxy
 
   joseph:
-    # TrueNAS SCALE storage server (MinIO moved to balthasar)
-    node_exporter: 9100        # Node Exporter (monitoring agent)
+    # TrueNAS SCALE backup server (no active services)
+    # Backup storage only - monitoring handled by caspar
 
 # Cloudflared ingress mapping
 cloudflared_ingress:
