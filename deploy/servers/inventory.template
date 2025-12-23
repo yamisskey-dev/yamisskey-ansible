@@ -9,7 +9,7 @@
 social_servers
 monitoring_servers
 proxy_servers
-storage_servers
+backup_servers
 game_servers
 
 # --- Social & Apps (Main Production) ---
@@ -24,10 +24,10 @@ caspar ansible_host=${IP_CASPAR}
 [proxy_servers]
 linode_prox ansible_host=${IP_LINODE}
 
-# --- Storage Servers ---
-[storage_servers]
+# --- Backup Servers ---
+[backup_servers]
 # Note: joseph is managed via appliances inventory
-# リンク用に定義（実際の管理は deploy/appliances/inventory で行う）
+# バックアップ専用サーバー（実際の管理は deploy/appliances/inventory で行う）
 joseph ansible_host=${IP_JOSEPH}
 
 # --- Game & Special Services ---
@@ -82,7 +82,7 @@ squid_proxy_enabled=true
 # service_tags_monitoring="prometheus,grafana,uptime-kuma"
 # service_tags_security="modsecurity"
 # service_tags_proxy="squid,cloudflared,warp"
-# service_tags_storage="minio,backup"
+# service_tags_backup="backup"
 
 # ========================================
 # Host-Specific Network & Role Configuration
