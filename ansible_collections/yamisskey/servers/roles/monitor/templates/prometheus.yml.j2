@@ -85,6 +85,17 @@ scrape_configs:
           role: 'cadvisor'
 {% endif %}
 
+  # --- Cloudflare Tunnel Monitoring ---
+{% if cloudflared_metrics_enabled | default(true) %}
+  - job_name: 'cloudflared'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['host.docker.internal:{{ cloudflared_metrics_port | default("49312") }}']
+        labels:
+          instance: '{{ inventory_hostname }}'
+          role: 'tunnel'
+{% endif %}
+
 {% if domain != 'test.local' and domain != 'localhost.localdomain' %}
   # --- Blackbox HTTP/HTTPS Monitoring ---
   - job_name: 'blackbox-http'

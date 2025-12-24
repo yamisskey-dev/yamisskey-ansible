@@ -23,7 +23,7 @@ originRequest:
   {{ key }}: {{ value }}
 {% endfor %}
 
-metrics: localhost:{{ cloudflared_metrics_port }}
+metrics: {{ cloudflared_metrics_bind | default('0.0.0.0') }}:{{ cloudflared_metrics_port }}
 
 ingress:
 {% if cloudflared_ingress[ansible_hostname] is defined %}

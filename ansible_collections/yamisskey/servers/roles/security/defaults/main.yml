@@ -71,6 +71,7 @@ security_docker_networks:
 security_monitoring_ports:
   - 9100  # Node Exporter
   - 8085  # cAdvisor
+  - 49312 # Cloudflared metrics
 
 # systemd-resolved configuration
 security_systemd_resolved_dns: "127.0.0.1"
