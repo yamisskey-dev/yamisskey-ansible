@@ -1,16 +1,16 @@
 ---
-# システム情報変数
-system_init_os_name: "{{ ansible_distribution | lower }}"
-system_init_codename: "{{ ansible_distribution_release }}"
-system_init_arch: "{{ ansible_architecture }}"
+# システム情報変数（全ロール共通）
+os_name: "{{ ansible_distribution | lower }}"
+codename: "{{ ansible_distribution_release }}"
+arch: "{{ ansible_architecture }}"
 
 # インストール制御フラグ
-system_init_install_docker: true
-system_init_install_tailscale: true
-system_init_install_cloudflare: true
-system_init_install_warp: true
-system_init_install_cloudflared: true
-system_init_install_playit: true
+install_docker: true
+install_tailscale: true
+install_cloudflare: true
+install_warp: true
+install_cloudflared: true
+install_playit: true
 
 # 検証制御フラグ
-system_init_verify_installations: true
+verify_installations: true
