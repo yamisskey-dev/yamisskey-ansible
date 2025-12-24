@@ -39,6 +39,12 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
+  # --- AlertManager Metrics ---
+  - job_name: 'alertmanager'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['alertmanager:9093']
+
   # --- Grafana Health Check ---
   - job_name: 'grafana'
     scrape_interval: 30s

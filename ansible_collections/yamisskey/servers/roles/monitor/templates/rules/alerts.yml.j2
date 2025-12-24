@@ -1,0 +1,161 @@
+# ==================================================
+# Yamisskey Monitoring - Alert Rules
+# ==================================================
+
+groups:
+  # ==================================================
+  # Node/Host Alerts
+  # ==================================================
+  - name: node-alerts
+    rules:
+      - alert: InstanceDown
+        expr: up{job="node-exporters"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "{{ $labels.instance }} has been unreachable for more than 2 minutes."
+
+      - alert: HighCpuUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype=~"ext4|xfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} has less than 20% free space (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes{fstype=~"ext4|xfs"} / node_filesystem_size_bytes{fstype=~"ext4|xfs"}) * 100 < 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critical on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} has less than 10% free space (current: {{ $value | printf \"%.1f\" }}%)"
+
+  # ==================================================
+  # Container Alerts
+  # ==================================================
+  - name: container-alerts
+    rules:
+      - alert: ContainerDown
+        expr: up{job="cadvisor"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "cAdvisor down on {{ $labels.instance }}"
+          description: "cAdvisor on {{ $labels.instance }} is unreachable"
+
+      - alert: ContainerHighCpu
+        expr: sum by(name, instance) (rate(container_cpu_usage_seconds_total{name!=""}[5m])) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU on {{ $labels.instance }}"
+          description: "Container CPU usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory on {{ $labels.instance }}"
+          description: "Container memory usage is above 80% of limit"
+
+      - alert: ContainerRestarted
+        expr: increase(container_restart_count{name!=""}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in the last hour"
+
+  # ==================================================
+  # Service Alerts
+  # ==================================================
+  - name: service-alerts
+    rules:
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus server is unreachable"
+
+      - alert: AlertManagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AlertManager is down"
+          description: "AlertManager is unreachable"
+
+{% if domain != 'test.local' and domain != 'localhost.localdomain' %}
+  # ==================================================
+  # Blackbox/HTTP Alerts
+  # ==================================================
+  - name: blackbox-alerts
+    rules:
+      - alert: EndpointDown
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} is down"
+          description: "HTTP probe failed for {{ $labels.instance }}"
+
+      - alert: SlowResponse
+        expr: probe_duration_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response from {{ $labels.instance }}"
+          description: "Response time is above 5 seconds (current: {{ $value | printf \"%.2f\" }}s)"
+
+      - alert: SSLCertExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon for {{ $labels.instance }}"
+          description: "SSL certificate will expire in less than 14 days"
+
+      - alert: SSLCertExpiryCritical
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL certificate expiring very soon for {{ $labels.instance }}"
+          description: "SSL certificate will expire in less than 7 days"
+{% endif %}

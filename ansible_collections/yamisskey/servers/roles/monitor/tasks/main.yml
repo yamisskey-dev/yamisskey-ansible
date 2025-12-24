@@ -50,6 +50,16 @@
     group: '65534'
   register: alertmanager_config
 
+- name: Deploy Prometheus alert rules
+  template:
+    src: rules/alerts.yml.j2
+    dest: '{{ monitor_compose_dir }}/config/rules/alerts.yml'
+    mode: '0644'
+    owner: '65534'
+    group: '65534'
+  register: alert_rules_config
+  notify: Restart monitoring stack
+
 - name: Deploy Blackbox Exporter configuration
   template:
     src: blackbox.yml.j2
