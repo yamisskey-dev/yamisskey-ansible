@@ -9,7 +9,7 @@ upstream uptime_backend {
 
 # Server block for Uptime Kuma
 server {
-    listen {{ host_services.balthasar.modsecurity_nginx }};
+    listen {{ modsecurity_nginx_port | default(8080) }};
     http2 on;
     server_name {{ uptime_server_name }};
 

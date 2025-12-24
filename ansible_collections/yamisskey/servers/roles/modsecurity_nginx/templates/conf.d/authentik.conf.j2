@@ -9,7 +9,7 @@ upstream authentik_backend {
 
 # Server block for Authentik
 server {
-    listen {{ host_services.balthasar.modsecurity_nginx }};
+    listen {{ modsecurity_nginx_port | default(8080) }};
     http2 on;
     server_name {{ authentik_server_name }};
 

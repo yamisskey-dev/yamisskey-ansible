@@ -1,7 +1,0 @@
----
-# Caspar - Security & monitoring hub + CTF environment
-
-# Service-specific configurations
-modsecurity_nginx_port: "{{ host_services.caspar.modsecurity_nginx }}"
-prometheus_port: "{{ host_services.caspar.prometheus }}"
-grafana_port: "{{ host_services.caspar.grafana }}"

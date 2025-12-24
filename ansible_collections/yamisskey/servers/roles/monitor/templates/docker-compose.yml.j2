@@ -42,9 +42,8 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - {{ monitor_compose_dir }}/config/grafana/provisioning:/etc/grafana/provisioning
-      - {{ monitor_compose_dir }}/config/grafana/dashboards:/etc/grafana/dashboards
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+      - GF_SECURITY_ADMIN_PASSWORD='{{ grafana_admin_password | replace("'", "''") }}'
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=http://localhost:{{ monitor_services.grafana }}
       - GF_SERVER_SERVE_FROM_SUB_PATH=false
@@ -85,6 +84,8 @@ services:
       - "{{ monitor_services.blackbox | default('9115') }}:9115"
     volumes:
       - {{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter
+    command:
+      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
     networks:
       - monitor
     restart: unless-stopped

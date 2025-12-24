@@ -18,7 +18,6 @@
       - rules
       - grafana/provisioning/datasources
       - grafana/provisioning/dashboards
-      - grafana/dashboards
 
 - name: Create monitoring config directories
   file:
@@ -76,28 +75,6 @@
     dest: '{{ monitor_compose_dir }}/config/grafana/provisioning/dashboards/dashboard.yml'
     mode: '0644'
   register: grafana_dashboard_config
-
-- name: Deploy cAdvisor dashboard
-  template:
-    src: grafana/dashboards/cadvisor.json.j2
-    dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/cadvisor.json'
-    mode: '0644'
-  register: grafana_cadvisor_dashboard
-
-- name: Deploy Node Exporter dashboard
-  template:
-    src: grafana/dashboards/node-exporter.json.j2
-    dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/node-exporter.json'
-    mode: '0644'
-  register: grafana_node_dashboard
-
-- name: Deploy Blackbox Exporter dashboard
-  template:
-    src: grafana/dashboards/blackbox.json.j2
-    dest: '{{ monitor_compose_dir }}/config/grafana/dashboards/blackbox.json'
-    mode: '0644'
-  register: grafana_blackbox_dashboard
-  when: domain not in ['test.local', 'localhost.localdomain']
 
 - name: Deploy monitoring Docker Compose
   template:
@@ -163,3 +140,4 @@
       {% for check in service_health_checks.results %}
       - {{ check.item.name }}: {{ 'HEALTHY' if check.status == 200 else 'UNHEALTHY (' + (check.status | string) + ')' }}
       {% endfor %}
+

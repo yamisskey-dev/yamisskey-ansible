@@ -132,9 +132,21 @@ modsecurity_network_name: "modsecurity"
 modsecurity_port_http: 80
 modsecurity_port_https: 443
 
-# Individual service configurations
-modsecurity_services:
-  - "00-shared"
+# Host-specific nginx service configurations
+# Override in host_vars to deploy only needed services per host
+# Example for caspar (monitoring only):
+#   modsecurity_nginx_services:
+#     - "grafana"
+#     - "uptime"
+#
+# Example for balthasar (all services):
+#   modsecurity_nginx_services:
+#     - "misskey"
+#     - "synapse"
+#     - ...
+
+# Default: all services (for backward compatibility)
+modsecurity_nginx_services_default:
   - "misskey"
   - "synapse"
   - "element"
@@ -148,6 +160,8 @@ modsecurity_services:
   - "uptime"
   - "mcaptcha"
   - "neo_quesdon"
+
+# modsecurity_services is computed in tasks/main.yml to ensure host_vars are properly loaded
 
 # Monitoring configuration
 modsecurity_monitoring_enabled: true
