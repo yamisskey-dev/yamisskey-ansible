@@ -59,11 +59,11 @@ scrape_configs:
           environment: '{{ environment | default("production") }}'
 {% endfor %}
 {% else %}
-      # Default localhost target for testing
-      - targets: ['localhost:9100']
+      # Local host via Docker gateway
+      - targets: ['host.docker.internal:9100']
         labels:
-          instance: 'localhost'
-          role: 'test'
+          instance: '{{ inventory_hostname }}'
+          role: 'server'
 {% endif %}
 
   # --- Docker Container Monitoring (cAdvisor) ---
@@ -78,9 +78,10 @@ scrape_configs:
           role: 'cadvisor'
 {% endfor %}
 {% else %}
-      - targets: ['localhost:8085']
+      # Local host via Docker gateway
+      - targets: ['host.docker.internal:8085']
         labels:
-          instance: 'localhost'
+          instance: '{{ inventory_hostname }}'
           role: 'cadvisor'
 {% endif %}
 
