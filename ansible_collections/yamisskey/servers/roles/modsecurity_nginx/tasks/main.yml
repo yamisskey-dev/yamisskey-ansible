@@ -82,6 +82,7 @@
       {% endfor %}
     dest: "/etc/modsecurity-nginx/lists/maintenance_ips.txt"
     mode: '0644'
+  when: modsecurity_maintenance_allowed_ips | length > 0
   notify: restart modsecurity nginx
 
 - name: Create blocked user agents list
