@@ -98,3 +98,20 @@ cloudflared_ingress:
     - hostname: "summaly.{{ domain }}"
       service: "http://localhost:{{ host_services.linode_prox.nginx }}"
   # Test services can be added to the lists above as needed
+
+# =========================================
+# Nginx Server Names (for ModSecurity-Nginx)
+# =========================================
+misskey_server_name: "{{ domain }}"
+synapse_server_name: "matrix.{{ domain }}"
+element_server_name: "chat.{{ domain }}"
+jitsi_server_name: "jitsi.{{ domain }}"
+ctfd_server_name: "ctf.{{ domain }}"
+grafana_server_name: "grafana.{{ domain }}"
+cryptpad_server_name: "pad.{{ domain }}"
+authentik_server_name: "auth.{{ domain }}"
+outline_server_name: "wiki.{{ domain }}"
+uptime_server_name: "uptime.{{ domain }}"
+mcaptcha_server_name: "captcha.{{ domain }}"
+neo_quesdon_server_name: "neo-quesdon.{{ domain }}"
+minio_api_server_name: "drive.{{ domain }}"

@@ -9,7 +9,7 @@ upstream outline_backend {
 
 # Server block for Outline
 server {
-    listen {{ host_services.balthasar.modsecurity_nginx }};
+    listen {{ modsecurity_nginx_port | default(8080) }};
     http2 on;
     server_name {{ outline_server_name }};
 
