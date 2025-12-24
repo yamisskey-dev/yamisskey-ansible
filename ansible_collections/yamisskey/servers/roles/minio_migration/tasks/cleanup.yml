@@ -85,7 +85,7 @@
       debug:
         msg: |
           📄 Reports Cleanup:
-          └─ Old files (7+ days): {{ '✅ Removed ' + (old_migration_files.files | length | string) + ' files' if cleanup_old_reports and old_migration_files.files is defined else '⏭️  Skipped (disabled)' }}
+          └─ Old files (7+ days): {{ '✅ Removed ' + (old_migration_files.files | length | string) + ' files' if (cleanup_old_reports | default(false)) and old_migration_files.files is defined else '⏭️  Skipped (disabled)' }}
   tags: ['cleanup', 'reports']
 
 - name: Reset migration state variables

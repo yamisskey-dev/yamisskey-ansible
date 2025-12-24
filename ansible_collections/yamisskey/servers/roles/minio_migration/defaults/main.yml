@@ -99,6 +99,9 @@ ssh_strict_host_key_checking: false
 minio_console_port: 9001
 minio_default_port: 9000
 
+# ===== Cleanup Configuration =====
+cleanup_old_reports: false  # Remove old migration reports (7+ days)
+
 # ===== Advanced Options =====
 # 並列処理設定
 migration_parallel_transfers: 4
