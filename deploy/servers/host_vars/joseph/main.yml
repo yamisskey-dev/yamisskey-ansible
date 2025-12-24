@@ -1,0 +1,4 @@
+---
+# Joseph - TrueNAS SCALE backup server
+# Main purpose: Backup storage only
+# Note: Monitoring is handled by caspar, MinIO moved to balthasar

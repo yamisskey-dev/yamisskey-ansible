@@ -9,7 +9,7 @@ upstream synapse_backend {
 
 # Server block for Matrix Synapse
 server {
-    listen {{ modsecurity_nginx_port | default(8080) }};
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ synapse_server_name }};
 

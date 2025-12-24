@@ -96,32 +96,26 @@
   when: modsecurity_blocked_user_agents | length > 0
   notify: restart modsecurity nginx
 
-- name: Set modsecurity_services from host-specific config or default
-  set_fact:
-    modsecurity_services: "{{ ['00-shared'] + (modsecurity_nginx_services | default(modsecurity_nginx_services_default)) }}"
-
-- name: Find existing service configurations
-  find:
-    paths: "/etc/modsecurity-nginx/conf.d"
-    patterns: "*.conf"
-  register: existing_configs
-
-- name: Remove configurations not in modsecurity_services
-  file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: "{{ existing_configs.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  when: (item.path | basename | replace('.conf', '')) not in modsecurity_services
-  notify: restart modsecurity nginx
-
 - name: Create individual service nginx configurations
   template:
     src: "conf.d/{{ item }}.conf.j2"
     dest: "/etc/modsecurity-nginx/conf.d/{{ item }}.conf"
     mode: '0644'
-  loop: "{{ modsecurity_services }}"
+  loop:
+    - 00-shared      # Common settings (loaded first)
+    - misskey        # Main Misskey service
+    - synapse        # Matrix Synapse
+    - element        # Element Web client
+    - jitsi          # Jitsi Meet
+    - ctfd           # CTFd platform
+    - grafana        # Grafana monitoring
+    - minio          # MinIO object storage
+    - cryptpad       # CryptPad collaborative editor
+    - authentik      # Authentik identity provider
+    - outline        # Outline wiki
+    - uptime         # Uptime Kuma monitoring
+    - mcaptcha       # mCaptcha service
+    - neo_quesdon    # Neo-Quesdon Q&A
   notify: restart modsecurity nginx
 
 - name: Create security monitoring script

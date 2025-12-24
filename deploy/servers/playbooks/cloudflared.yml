@@ -6,12 +6,16 @@
   hosts: all
   become: false
   gather_facts: true
-  # Cloudflare API credentials are loaded from group_vars/all/secrets.yml
-  # Override default settings if needed:
-  # vars:
-  #   cloudflared_skip_install: false  # Set to false to enable automatic installation
-  #   cloudflared_app_name: "custom-app"  # Override default "yaminio"
-  #   cloudflared_hostname: "custom.yami.ski"  # Override default hostname
+  vars:
+    # Cloudflare API credentials from global secrets
+    cloudflare_api_token: "{{ cloudflare_api_token | default(omit) }}"
+    cloudflare_zone_id: "{{ cloudflare_zone_id | default(omit) }}"
+    cloudflare_account_id: "{{ cloudflare_account_id | default(omit) }}"
+
+    # Override default settings if needed
+    # cloudflared_skip_install: false  # Set to false to enable automatic installation
+    # cloudflared_app_name: "custom-app"  # Override default "yaminio"
+    # cloudflared_hostname: "custom.yami.ski"  # Override default hostname
 
   roles:
     - yamisskey.servers.cloudflared

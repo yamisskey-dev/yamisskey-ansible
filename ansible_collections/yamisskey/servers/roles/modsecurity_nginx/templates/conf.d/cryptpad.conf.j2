@@ -14,7 +14,7 @@ upstream cryptpad_websocket_backend {
 
 # Server block for CryptPad
 server {
-    listen {{ modsecurity_nginx_port | default(8080) }};
+    listen {{ host_services.balthasar.modsecurity_nginx }};
     http2 on;
     server_name {{ cryptpad_server_name }};
 
