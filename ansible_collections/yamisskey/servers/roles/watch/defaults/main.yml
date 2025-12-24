@@ -50,8 +50,10 @@ watch_health_checks:
 # ==================================================
 # Environment Detection
 # ==================================================
-# Skip certain checks in test environments
-skip_system_checks:
-  - "{{ ansible_env.MOLECULE_SCENARIO_NAME is defined }}"
-  - "{{ ansible_virtualization_type | default('') in ['docker', 'container'] }}"
-  - "{{ ansible_service_mgr | default('') != 'systemd' }}"
+# Skip system checks in test/container environments
+skip_system_checks: >-
+  {{
+    (ansible_env.MOLECULE_SCENARIO_NAME is defined) or
+    (ansible_virtualization_type | default('') in ['docker', 'container']) or
+    (ansible_service_mgr | default('') != 'systemd')
+  }}

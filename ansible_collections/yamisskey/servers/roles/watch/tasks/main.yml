@@ -22,6 +22,7 @@
         name: "{{ node_exporter.package_name }}"
         state: present
         update_cache: yes
+        cache_valid_time: 3600
       when:
         - node_exporter.enabled | default(true)
         - ansible_os_family == "Debian"
