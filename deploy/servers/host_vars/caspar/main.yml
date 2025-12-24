@@ -13,6 +13,11 @@ modsecurity_nginx_services:
 
 # Prometheus monitoring targets
 monitor_targets:
+  - name: caspar
+    host: "host.docker.internal"
+    port: 9100
+    cadvisor_port: 8085
+    role: monitoring_server
   - name: balthasar
     host: "{{ hostvars['balthasar']['ansible_host'] }}"
     port: 9100
