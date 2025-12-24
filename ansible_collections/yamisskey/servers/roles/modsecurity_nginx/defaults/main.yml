@@ -132,9 +132,13 @@ modsecurity_network_name: "modsecurity"
 modsecurity_port_http: 80
 modsecurity_port_https: 443
 
-# Individual service configurations
-modsecurity_services:
-  - "00-shared"
+# Default service list (used when modsecurity_nginx_services is not defined in host_vars)
+# Override in host_vars to deploy only needed services per host
+# Example for caspar (monitoring only):
+#   modsecurity_nginx_services:
+#     - "grafana"
+#     - "uptime"
+modsecurity_services_default:
   - "misskey"
   - "synapse"
   - "element"

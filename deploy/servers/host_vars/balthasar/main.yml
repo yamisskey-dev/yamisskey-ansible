@@ -5,3 +5,17 @@
 # Service-specific configurations
 modsecurity_nginx_port: "{{ host_services.balthasar.modsecurity_nginx }}"
 misskey_port: "{{ host_services.balthasar.misskey }}"
+
+# Nginx services to deploy (all app services)
+modsecurity_nginx_services:
+  - "misskey"
+  - "synapse"
+  - "element"
+  - "jitsi"
+  - "ctfd"
+  - "minio"
+  - "cryptpad"
+  - "authentik"
+  - "outline"
+  - "mcaptcha"
+  - "neo_quesdon"
