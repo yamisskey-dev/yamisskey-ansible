@@ -84,6 +84,8 @@ services:
       - "{{ monitor_services.blackbox | default('9115') }}:9115"
     volumes:
       - {{ monitor_compose_dir }}/config/blackbox:/etc/blackbox_exporter
+    command:
+      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
     networks:
       - monitor
     restart: unless-stopped
