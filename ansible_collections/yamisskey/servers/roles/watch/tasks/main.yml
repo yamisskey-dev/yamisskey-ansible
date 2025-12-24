@@ -74,10 +74,19 @@
         volumes:
           - "/:/rootfs:ro"
           - "/var/run:/var/run:ro"
+          - "/var/run/docker.sock:/var/run/docker.sock:ro"
+          - "/run/containerd/containerd.sock:/run/containerd/containerd.sock:ro"
           - "/sys:/sys:ro"
           - "/var/lib/docker/:/var/lib/docker:ro"
+          - "/var/lib/docker/:/rootfs/var/lib/docker:ro"
+          - "/var/lib/containerd/:/var/lib/containerd:ro"
           - "/dev/disk/:/dev/disk:ro"
         privileged: yes
+        command:
+          - "--store_container_labels=true"
+          - "--housekeeping_interval=10s"
+          - "--containerd=/run/containerd/containerd.sock"
+          - "--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl"
         comparisons:
           image: strict
           networks: strict
