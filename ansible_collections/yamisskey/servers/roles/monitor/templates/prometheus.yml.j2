@@ -39,6 +39,12 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
+  # --- AlertManager Metrics ---
+  - job_name: 'alertmanager'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['alertmanager:9093']
+
   # --- Grafana Health Check ---
   - job_name: 'grafana'
     scrape_interval: 30s
@@ -59,11 +65,11 @@ scrape_configs:
           environment: '{{ environment | default("production") }}'
 {% endfor %}
 {% else %}
-      # Default localhost target for testing
-      - targets: ['localhost:9100']
+      # Local host via Docker gateway
+      - targets: ['host.docker.internal:9100']
         labels:
-          instance: 'localhost'
-          role: 'test'
+          instance: '{{ inventory_hostname }}'
+          role: 'server'
 {% endif %}
 
   # --- Docker Container Monitoring (cAdvisor) ---
@@ -78,10 +84,22 @@ scrape_configs:
           role: 'cadvisor'
 {% endfor %}
 {% else %}
-      - targets: ['localhost:8085']
+      # Local host via Docker gateway
+      - targets: ['host.docker.internal:8085']
         labels:
-          instance: 'localhost'
+          instance: '{{ inventory_hostname }}'
           role: 'cadvisor'
+{% endif %}
+
+  # --- Cloudflare Tunnel Monitoring ---
+{% if cloudflared_metrics_enabled | default(true) %}
+  - job_name: 'cloudflared'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['host.docker.internal:{{ cloudflared_metrics_port | default("49312") }}']
+        labels:
+          instance: '{{ inventory_hostname }}'
+          role: 'tunnel'
 {% endif %}
 
 {% if domain != 'test.local' and domain != 'localhost.localdomain' %}

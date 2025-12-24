@@ -22,6 +22,7 @@
         name: "{{ node_exporter.package_name }}"
         state: present
         update_cache: yes
+        cache_valid_time: 3600
       when:
         - node_exporter.enabled | default(true)
         - ansible_os_family == "Debian"
@@ -74,10 +75,19 @@
         volumes:
           - "/:/rootfs:ro"
           - "/var/run:/var/run:ro"
+          - "/var/run/docker.sock:/var/run/docker.sock:ro"
+          - "/run/containerd/containerd.sock:/run/containerd/containerd.sock:ro"
           - "/sys:/sys:ro"
           - "/var/lib/docker/:/var/lib/docker:ro"
+          - "/var/lib/docker/:/rootfs/var/lib/docker:ro"
+          - "/var/lib/containerd/:/var/lib/containerd:ro"
           - "/dev/disk/:/dev/disk:ro"
         privileged: yes
+        command:
+          - "--store_container_labels=true"
+          - "--housekeeping_interval=10s"
+          - "--containerd=/run/containerd/containerd.sock"
+          - "--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl"
         comparisons:
           image: strict
           networks: strict
@@ -114,8 +124,8 @@
 # ==================================================
 - name: Set component status facts
   set_fact:
-    node_exporter_status: "{{ 'ENABLED' if (node_exporter is defined and node_exporter.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + node_exporter.port + ')' if (node_exporter is defined and node_exporter.enabled | default(true) and node_exporter.port is defined) else '' }}"
-    cadvisor_status: "{{ 'ENABLED' if (cadvisor is defined and cadvisor.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + cadvisor.port + ')' if (cadvisor is defined and cadvisor.enabled | default(true) and cadvisor.port is defined) else '' }}"
+    node_exporter_status: "{{ 'ENABLED' if (node_exporter is defined and node_exporter.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + (node_exporter.port | string) + ')' if (node_exporter is defined and node_exporter.enabled | default(true) and node_exporter.port is defined) else '' }}"
+    cadvisor_status: "{{ 'ENABLED' if (cadvisor is defined and cadvisor.enabled | default(true)) else 'DISABLED' }}{{ ' (Port: ' + (cadvisor.port | string) + ')' if (cadvisor is defined and cadvisor.enabled | default(true) and cadvisor.port is defined) else '' }}"
 
 - name: Report watch components status
   debug:

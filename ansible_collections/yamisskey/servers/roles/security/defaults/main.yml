@@ -60,6 +60,18 @@ security_restart_services_on_change: true
 # Service management toggles
 security_manage_clamav: true
 
+# Docker network monitoring access
+# Allow Docker containers to access monitoring ports on host
+security_docker_monitoring_enabled: true
+security_docker_networks:
+  - "172.17.0.0/16"   # Default Docker bridge
+  - "172.18.0.0/16"   # Docker compose networks
+  - "172.20.0.0/16"   # Monitor network
+security_monitoring_ports:
+  - 9100  # Node Exporter
+  - 8085  # cAdvisor
+  - 49312 # Cloudflared metrics
+
 # systemd-resolved configuration
 security_systemd_resolved_dns: "127.0.0.1"
 security_systemd_resolved_fallback_dns: "1.1.1.1"

@@ -10,3 +10,21 @@ grafana_port: "{{ host_services.caspar.grafana }}"
 modsecurity_nginx_services:
   - "grafana"
   - "uptime"
+
+# Prometheus monitoring targets
+monitor_targets:
+  - name: caspar
+    host: "host.docker.internal"
+    port: 9100
+    cadvisor_port: 8085
+    role: monitoring_server
+  - name: balthasar
+    host: "{{ hostvars['balthasar']['ansible_host'] }}"
+    port: 9100
+    cadvisor_port: 8085
+    role: social_server
+  - name: linode_prox
+    host: "{{ hostvars['linode_prox']['ansible_host'] }}"
+    port: 9100
+    cadvisor_port: 8085
+    role: proxy_server
