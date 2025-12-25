@@ -29,7 +29,8 @@ url: https://{{ misskey_host }}/
 #   because tokens may be transferred in GET requests.
 
 # The port that your Misskey server should listen on.
-port: {{ misskey_port | default('3001') }}
+# This is the internal container port (mapped externally via docker-compose)
+port: 3001
 
 #   ┌──────────────────────────┐
 #───┘ PostgreSQL configuration └────────────────────────────────
