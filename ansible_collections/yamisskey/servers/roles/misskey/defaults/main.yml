@@ -27,3 +27,6 @@ misskey_host: "{{ domain }}"
 # Docker configuration
 misskey_tag: 'latest'
 misskey_enable_dev_mode: false
+
+# Backup directory
+backup_dir: '/home/{{ ansible_user }}/backup'
