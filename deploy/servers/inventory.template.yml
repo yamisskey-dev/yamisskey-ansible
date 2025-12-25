@@ -1,0 +1,136 @@
+---
+# ========================================
+# Yamisskey Provision - Servers Inventory (YAML)
+# Generated from template - do not edit directly
+# ========================================
+
+all:
+  vars:
+    # --- Basic Connection Settings ---
+    ansible_user: ${USER}
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_user: root
+
+    # --- Network Configuration ---
+    internal_network: "${NETWORK}"
+    external_interface: eth0
+    internal_interface: eth1
+
+    # --- Domain Configuration ---
+    domain: ${DOMAIN}
+    misskey_domain: ${DOMAIN}
+
+    # --- WARP/Proxy Configuration ---
+    default_egress_route: warp
+    warp_enabled: true
+    squid_proxy_enabled: true
+
+  children:
+    # === Production Servers ===
+    production:
+      vars:
+        deploy_environment: production
+        debug_mode: false
+        security_level: maximum
+        modsecurity_blocking_mode: true
+        backup_enabled: true
+        monitoring_enabled: true
+      children:
+        social_servers:
+          vars:
+            internal_ip: "10.0.1.10"
+            external_ip: "{{ balthasar_external_ip }}"
+            cloudflare_tunnel_id: "{{ balthasar_tunnel_id }}"
+            cloudflare_tunnel_token: "{{ balthasar_tunnel_token }}"
+            egress_route: warp
+            # warp_team_name: "{{ secrets.warp_team_name }}"  # TODO: add to secrets.sops.yml
+            # warp_device_id: "{{ balthasar_warp_device_id }}"  # TODO: add to secrets.sops.yml
+            host_roles:
+              - social_frontend
+              - app_hosting
+              - reverse_proxy
+            service_priority: primary
+            security_level: high
+            modsecurity_enabled: true
+          hosts:
+            balthasar:
+              ansible_host: ${IP_BALTHASAR}
+              # Service-specific configurations are in host_vars/balthasar/main.yml
+
+        monitoring_servers:
+          vars:
+            internal_ip: "10.0.1.20"
+            external_ip: "{{ caspar_external_ip }}"
+            cloudflare_tunnel_id: "{{ caspar_tunnel_id }}"
+            cloudflare_tunnel_token: "{{ caspar_tunnel_token }}"
+            egress_route: warp
+            # warp_team_name: "{{ secrets.warp_team_name }}"  # TODO: add to secrets.sops.yml
+            # warp_device_id: "{{ caspar_warp_device_id }}"  # TODO: add to secrets.sops.yml
+            host_roles:
+              - monitoring_hub
+              - security_center
+              - ctf_environment
+            service_priority: critical
+            security_level: maximum
+            modsecurity_enabled: true
+            additional_monitoring: true
+          hosts:
+            caspar:
+              ansible_host: ${IP_CASPAR}
+              # Service-specific configurations are in host_vars/caspar/main.yml
+
+        proxy_servers:
+          vars:
+            internal_ip: "10.8.0.1"
+            external_ip: "{{ linode_proxy_external_ip }}"
+            egress_route: direct
+            squid_upstream_proxy: "{{ squid_upstream_proxy | default('') }}"
+            host_roles:
+              - external_proxy
+              - media_proxy
+              - summaly_proxy
+            service_priority: high
+            security_level: high
+            modsecurity_enabled: true
+            rate_limiting_enabled: true
+            ansible_ssh_port: 22
+          hosts:
+            linode_prox:
+              ansible_host: ${IP_LINODE}
+
+        storage_servers:
+          hosts:
+            joseph:
+              ansible_host: ${IP_JOSEPH}
+
+        game_servers:
+          vars:
+            internal_ip: "10.0.1.60"
+            egress_route: playit
+            playit_enabled: true
+            playit_secret: "{{ playit_secret }}"
+            host_roles:
+              - game_hosting
+              - minecraft_server
+            service_priority: low
+            security_level: medium
+            basic_security_only: true
+          hosts:
+            raspberrypi:
+              ansible_host: ${IP_RASPBERRY}
+
+    # === Development/Testing ===
+    development:
+      vars:
+        deploy_environment: development
+        debug_mode: true
+        security_level: low
+        modsecurity_audit_only: true
+
+    # === Local Testing ===
+    local:
+      hosts:
+        ${HOSTNAME}:
+          ansible_connection: local
