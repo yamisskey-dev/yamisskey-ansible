@@ -1,0 +1,59 @@
+---
+# ========================================
+# Local Self-Provisioning Inventory Template
+# Generated from template - do not edit directly
+# ========================================
+
+all:
+  vars:
+    # --- Basic Connection Settings ---
+    ansible_user: ${USER}
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_user: root
+
+    # --- Network Configuration ---
+    domain: ${DOMAIN}
+    misskey_domain: ${DOMAIN}
+    internal_network: "${NETWORK}"
+
+    # --- Host-specific settings ---
+    host_roles:
+      - ${HOST_ROLE}_server
+    service_priority: primary
+    security_level: high
+    deploy_environment: production
+
+    # --- Auto-detected system info ---
+    host_hostname: ${HOSTNAME}
+    host_ip: ${HOST_IP}
+    auto_generated: true
+
+  children:
+    # === Local Host ===
+    local:
+      hosts:
+        localhost:
+          ansible_connection: local
+
+    # === Compatibility groups for existing playbooks ===
+    monitoring_servers:
+      hosts:
+        localhost:
+          ansible_connection: local
+
+    social_servers:
+      hosts:
+        localhost:
+          ansible_connection: local
+
+    proxy_servers:
+      hosts:
+        localhost:
+          ansible_connection: local
+
+    game_servers:
+      hosts:
+        localhost:
+          ansible_connection: local
