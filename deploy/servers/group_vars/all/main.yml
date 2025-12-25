@@ -37,7 +37,7 @@ host_services:
     grafana: 3000              # Grafana (monitoring dashboard)
     blackbox_exporter: 9115    # Blackbox Exporter
     alert_manager: 9093        # AlertManager
-    nayamisskey: 3002          # Misskey N/A (test environment)
+    misskey_beta: 3002         # Misskey Beta (test environment for yamisskey-dev)
 
   linode_prox:
     # External proxy services
@@ -82,7 +82,7 @@ cloudflared_ingress:
 
   caspar:
     # Security & monitoring services behind ModSecurity-Nginx
-    - hostname: "na.{{ domain }}"
+    - hostname: "beta.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
     - hostname: "grafana.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"

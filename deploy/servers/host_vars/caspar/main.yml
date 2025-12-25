@@ -1,15 +1,24 @@
 ---
-# Caspar - Security & monitoring hub + CTF environment
+# Caspar - Security & monitoring hub + CTF environment + Beta Misskey
 
 # Service-specific configurations
 modsecurity_nginx_port: "{{ host_services.caspar.modsecurity_nginx }}"
 prometheus_port: "{{ host_services.caspar.prometheus }}"
 grafana_port: "{{ host_services.caspar.grafana }}"
 
-# Nginx services to deploy (monitoring only)
+# Misskey Beta configuration
+misskey_port: "{{ host_services.caspar.misskey_beta }}"
+misskey_host: "beta.{{ domain }}"
+misskey_url: "https://beta.{{ domain }}"
+misskey_server_name: "beta.{{ domain }}"
+misskey_tag: "staging"
+misskey_dir: "/var/www/misskey"
+
+# Nginx services to deploy (monitoring + beta misskey)
 modsecurity_nginx_services:
   - "grafana"
   - "uptime"
+  - "misskey_beta"
 
 # Prometheus monitoring targets
 monitor_targets:
