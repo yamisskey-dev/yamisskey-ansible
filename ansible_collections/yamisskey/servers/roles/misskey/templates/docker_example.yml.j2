@@ -7,7 +7,7 @@
 
 # Final accessible URL seen by a user.
 # You can set url from an environment variable instead.
-url: https://{{ domain }}/
+url: https://{{ misskey_host }}/
 
 # ONCE YOU HAVE STARTED THE INSTANCE, DO NOT CHANGE THE
 # URL SETTINGS AFTER THAT!
@@ -18,11 +18,11 @@ url: https://{{ domain }}/
 #
 # Misskey requires a reverse proxy to support HTTPS connections.
 #
-#                 +----- https://{{ domain }}/ ------------+
+#                 +----- https://{{ misskey_host }}/ ------------+
 #   +------+      |+-------------+      +----------------+|
-#   | User | ---> || Proxy (443) | ---> | Misskey (3000) ||
+#   | User | ---> || Proxy (443) | ---> | Misskey (3001) ||
 #   +------+      |+-------------+      +----------------+|
-#                 +---------------------------------------+
+#                 +------------------------------------------+
 #
 #   You need to set up a reverse proxy. (e.g. nginx)
 #   An encrypted connection with HTTPS is highly recommended
@@ -225,7 +225,7 @@ proxyBypassHosts:
 #proxySmtp: socks5://127.0.0.1:1080 # use SOCKS5
 
 # Media Proxy
-mediaProxy: https://media.{{ domain }}/proxy
+mediaProxy: https://media.{{ domain | default('yami.ski') }}/proxy
 
 # For security reasons, uploading attachments from the intranet is prohibited,
 # but exceptions can be made from the following settings. Default value is "undefined".
