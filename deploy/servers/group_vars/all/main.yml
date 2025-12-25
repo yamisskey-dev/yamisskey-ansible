@@ -88,8 +88,6 @@ cloudflared_ingress:
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
     - hostname: "uptime.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
-    - hostname: "ctf.{{ domain }}"
-      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
 
   linode_prox:
     # Direct service exposure for external proxies

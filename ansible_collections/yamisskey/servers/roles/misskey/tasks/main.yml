@@ -132,7 +132,9 @@
 - name: Change permissions of files directory
   file:
     path: '{{ misskey_dir }}/files'
+    state: directory
     mode: '0777'
+  when: not ansible_check_mode
 
 - name: Ensure backup directory exists
   file:
@@ -141,43 +143,54 @@
     owner: '{{ ansible_user }}'
     group: '{{ ansible_user }}'
     mode: '0755'
+  when: not ansible_check_mode
 
 - name: Check if VAPID keys file exists
   ansible.builtin.stat:
     path: '{{ backup_dir }}/misskey/vapid_keys.yml'
   register: vapid_keys_file
+  when: not ansible_check_mode
 
 - name: Generate VAPID keys
-  when: not vapid_keys_file.stat.exists
   command: docker run node npx web-push generate-vapid-keys --json
   register: vapid_keys
+  when:
+    - not ansible_check_mode
+    - not (vapid_keys_file.stat.exists | default(true))
 
 - name: Save VAPID keys to a file
-  when: not vapid_keys_file.stat.exists
   ansible.builtin.copy:
     content: '{{ vapid_keys.stdout }}'
     dest: '{{ backup_dir }}/misskey/vapid_keys.yml'
+  when:
+    - not ansible_check_mode
+    - not (vapid_keys_file.stat.exists | default(true))
 
 - name: Load VAPID keys from file
   ansible.builtin.slurp:
     src: '{{ backup_dir }}/misskey/vapid_keys.yml'
   register: vapid_keys_content
+  when: not ansible_check_mode
 
 - name: Debug VAPID keys content
   debug:
     var: vapid_keys_content.content
+  when: not ansible_check_mode
 
 - name: Decode VAPID keys data
   set_fact:
     vapid_keys_data: "{{ vapid_keys_content.content | b64decode | from_yaml }}"
+  when: not ansible_check_mode
 
 - name: Set VAPID keys variables
   set_fact:
     vapid_public_key: "{{ vapid_keys_data.publicKey }}"
     vapid_private_key: "{{ vapid_keys_data.privateKey }}"
+  when: not ansible_check_mode
 
 - name: Print VAPID keys
   debug:
     msg:
       - 'Public Key: {{ vapid_public_key }}'
       - 'Private Key: {{ vapid_private_key }}'
+  when: not ansible_check_mode
