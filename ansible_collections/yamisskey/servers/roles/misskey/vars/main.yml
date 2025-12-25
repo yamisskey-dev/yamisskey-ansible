@@ -2,12 +2,7 @@
 # Misskey specific variables
 misskey_repo: 'https://github.com/{{ github_org }}/yamisskey.git'
 misskey_branch: master
-misskey_tag: latest
 misskey_dir: '/var/www/misskey'
 
-# Misskey configuration variables
-misskey_port: '{{ host_services.balthasar.misskey }}'
-misskey_db_name: 'example_misskey_db'
-misskey_db_user: 'example_misskey_user'
-misskey_db_pass: 'example_misskey_pass'
-misskey_proxy: 'http://127.0.0.1:{{ host_services.linode_prox.squid }}'
+# Docker compose command
+docker_compose_cmd: 'docker compose'

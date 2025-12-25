@@ -9,10 +9,7 @@ grafana_port: "{{ host_services.caspar.grafana }}"
 # Misskey Beta configuration
 misskey_port: "{{ host_services.caspar.misskey_beta }}"
 misskey_host: "beta.{{ domain }}"
-misskey_url: "https://beta.{{ domain }}"
-misskey_server_name: "beta.{{ domain }}"
 misskey_tag: "staging"
-misskey_dir: "/var/www/misskey"
 
 # Nginx services to deploy (monitoring + beta misskey)
 modsecurity_nginx_services:
