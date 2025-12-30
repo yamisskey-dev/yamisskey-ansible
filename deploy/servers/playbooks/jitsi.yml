@@ -1,5 +1,0 @@
-- name: Configure Jitsi
-  hosts: all
-  become: true
-  roles:
-    - yamisskey.servers.jitsi

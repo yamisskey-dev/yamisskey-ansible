@@ -15,7 +15,6 @@ modsecurity_nginx_services:
   - "misskey"
   - "synapse"
   - "element"
-  - "jitsi"
   - "ctfd"
   - "minio"
   - "cryptpad"

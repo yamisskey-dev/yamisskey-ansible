@@ -103,7 +103,6 @@ cloudflared_ingress:
 misskey_server_name: "{{ domain }}"
 synapse_server_name: "matrix.{{ domain }}"
 element_server_name: "chat.{{ domain }}"
-jitsi_server_name: "jitsi.{{ domain }}"
 ctfd_server_name: "ctf.{{ domain }}"
 grafana_server_name: "grafana.{{ domain }}"
 cryptpad_server_name: "pad.{{ domain }}"
