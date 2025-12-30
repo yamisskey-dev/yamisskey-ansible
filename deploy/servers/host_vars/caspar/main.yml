@@ -24,7 +24,7 @@ modsecurity_nginx_services:
   - "authentik"
   - "mcaptcha"
   # Nostr services (experimental)
-  - "nostream"
+  - "nostr"
 
 # Prometheus monitoring targets
 monitor_targets:

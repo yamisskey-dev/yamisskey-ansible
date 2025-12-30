@@ -1,0 +1,5 @@
+- name: Configure Nostr relay
+  hosts: all
+  become: true
+  roles:
+    - yamisskey.servers.nostr
