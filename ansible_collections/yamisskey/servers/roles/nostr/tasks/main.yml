@@ -10,6 +10,8 @@
     path: "{{ nostr_dir }}/data"
     state: directory
     mode: '0755'
+    owner: '100'
+    group: '100'
 
 - name: Create Nostr config file
   template:
