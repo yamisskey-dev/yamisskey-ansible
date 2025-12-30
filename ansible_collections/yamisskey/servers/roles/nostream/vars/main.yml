@@ -1,0 +1,12 @@
+---
+# Nostream (Nostr relay) specific variables
+nostream_server_name: "nostr.{{ domain }}"
+nostream_dir: "/var/www/nostream"
+nostream_port: "{{ host_services.caspar.nostream | default(8008) }}"
+
+# PostgreSQL settings
+nostream_postgres_user: nostream
+nostream_postgres_db: nostream
+
+# Redis settings
+nostream_redis_port: 6379

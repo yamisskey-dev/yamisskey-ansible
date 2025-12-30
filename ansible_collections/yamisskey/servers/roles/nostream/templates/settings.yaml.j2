@@ -1,0 +1,71 @@
+# Nostream settings
+# See: https://github.com/yamisskey-dev/nostream/blob/main/CONFIGURATION.md
+
+info:
+  relay_url: wss://{{ nostream_server_name }}
+  name: "Yamisskey Nostr Relay"
+  description: "A Nostr relay for Yamisskey community"
+  pubkey: ""
+  contact: "admin@{{ domain }}"
+
+network:
+  max_payload_size: 524288
+
+limits:
+  connection:
+    rate_limiter:
+      - period: 60000
+        rate: 12
+      - period: 3600000
+        rate: 360
+  event:
+    eventId:
+      minLeadingZeroBits: 0
+    kind:
+      whitelist: []
+      blacklist: []
+    pubkey:
+      minBalance: 0
+      minLeadingZeroBits: 0
+      whitelist: []
+      blacklist: []
+    createdAt:
+      maxPositiveDelta: 900
+      maxNegativeDelta: 0
+    content:
+      - description: "64 KB for JSON stringified event, 8MB for video"
+        kinds:
+          - - 0
+            - 9999
+        maxLength: 65536
+      - description: "128 KB for metadata content"
+        kinds:
+          - - 0
+            - 0
+        maxLength: 131072
+    rateLimiter:
+      - description: "5 events/min for event kinds 0, 3, 40-49, 10000-19999"
+        kinds:
+          - - 0
+            - 0
+          - - 3
+            - 3
+          - - 40
+            - 49
+          - - 10000
+            - 19999
+        period: 60000
+        rate: 5
+      - description: "15 events/min for other kinds"
+        period: 60000
+        rate: 15
+
+payments:
+  enabled: false
+  processor: ""
+
+mirroring:
+  static: []
+
+workers:
+  count: 0
