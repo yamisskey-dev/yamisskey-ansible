@@ -3,7 +3,7 @@
 
 # Upstream definition
 upstream mcaptcha_backend {
-    server localhost:7493;
+    server localhost:{{ host_services.caspar.mcaptcha | default(7493) }};
     keepalive 8;
 }
 

@@ -1,0 +1,60 @@
+# ModSecurity-Nginx configuration for Nostr relay (nostr-rs-relay)
+# This file is included in the main ModSecurity-Nginx container
+
+# Upstream definition
+upstream nostr_backend {
+    server localhost:{{ host_services.caspar.nostr | default(8008) }};
+    keepalive 32;
+}
+
+# Server block for Nostr relay
+server {
+    listen {{ modsecurity_nginx_port | default(8080) }};
+    http2 on;
+    server_name {{ nostr_server_name }};
+
+    # Error page handling - redirect to maintenance page when backend is down
+    error_page 502 503 504 @maintenance_redirect;
+
+    # Maintenance page redirect location
+    location @maintenance_redirect {
+        return 302 https://down.yami.ski;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Proxy settings
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+
+    # WebSocket support (required for Nostr relay)
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    # Main Nostr relay endpoint (WebSocket)
+    location / {
+        proxy_pass http://nostr_backend;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Long timeouts for WebSocket connections
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
+
+        # Disable buffering for real-time communication
+        proxy_buffering off;
+
+        # No caching for WebSocket
+        proxy_cache off;
+    }
+}
