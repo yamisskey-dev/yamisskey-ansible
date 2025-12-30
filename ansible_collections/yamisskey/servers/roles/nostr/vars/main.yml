@@ -5,6 +5,6 @@ nostr_dir: "/var/www/nostr"
 nostr_port: "{{ host_services.caspar.nostr | default(8008) }}"
 
 # Relay info
-nostr_relay_name: "Yamisskey Nostr Relay"
+nostr_relay_name: "Yami Nostr Relay"
 nostr_relay_description: "A safe space relay focused on mental health and privacy. Part of the Yamisskey community."
 nostr_relay_contact: "admin@{{ domain }}"
