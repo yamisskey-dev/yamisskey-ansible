@@ -86,7 +86,6 @@ host_services:
     misskey: 3000
     synapse: 8008
     element: 8080
-    jitsi: 8080
     ctfd: 8000
     grafana: 3000
     cryptpad: 3000
@@ -100,7 +99,6 @@ host_services:
 misskey_server_name: "misskey.example.com"
 synapse_server_name: "matrix.example.com"
 element_server_name: "element.example.com"
-jitsi_server_name: "jitsi.example.com"
 ctfd_server_name: "ctf.example.com"
 grafana_server_name: "grafana.example.com"
 cryptpad_server_name: "cryptpad.example.com"
@@ -142,7 +140,6 @@ modsecurity_services_default:
   - "misskey"
   - "synapse"
   - "element"
-  - "jitsi"
   - "ctfd"
   - "grafana"
   - "minio"
