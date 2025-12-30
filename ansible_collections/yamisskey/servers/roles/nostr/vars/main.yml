@@ -1,0 +1,10 @@
+---
+# Nostr relay (nostr-rs-relay) specific variables
+nostr_server_name: "nostr.{{ domain }}"
+nostr_dir: "/var/www/nostr"
+nostr_port: "{{ host_services.caspar.nostr | default(8008) }}"
+
+# Relay info
+nostr_relay_name: "Yamisskey Nostr Relay"
+nostr_relay_description: "A Nostr relay for Yamisskey community"
+nostr_relay_contact: "admin@{{ domain }}"
