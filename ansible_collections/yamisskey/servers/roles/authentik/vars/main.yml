@@ -4,7 +4,7 @@
 authentik_version: "2025.10"
 authentik_server_name: auth.{{ domain }}
 authentik_dir: "/var/www/authentik"
-authentik_port: "{{ host_services.balthasar.authentik | default(9003) }}"
+authentik_port: "{{ host_services.caspar.authentik | default(9003) }}"
 authentik_port_https: 9443
 
 # PostgreSQL設定

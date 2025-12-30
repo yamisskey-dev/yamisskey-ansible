@@ -1,0 +1,5 @@
+- name: Configure Nostream (Nostr relay)
+  hosts: all
+  become: true
+  roles:
+    - yamisskey.servers.nostream

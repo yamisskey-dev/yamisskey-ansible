@@ -12,7 +12,7 @@ github_org: yamisskey-dev
 # Service distribution by host (based on actual deployment architecture)
 host_services:
   balthasar:
-    # Main production server - Social & Apps
+    # Main production server - Social & Apps (user-facing services only)
     modsecurity_nginx: 8080     # Main reverse proxy
     misskey: 3001              # Yamisskey container port
     neo_quesdon: 3025          # Neo-Quesdon
@@ -23,21 +23,23 @@ host_services:
     cadvisor: 8085             # cAdvisor
     minio_api: 9000            # MinIO API (moved from raspberrypi)
     minio_console: 9001        # MinIO Console (moved from raspberrypi)
-    authentik: 9003            # Authentik (identity provider)
-    mcaptcha: 7493             # mCaptcha (shared security service)
-    nostream: 8080             # Nostr relay
     # All public services route through modsecurity_nginx:8080
 
   caspar:
-    # Security & monitoring hub + CTF environment
+    # Security & monitoring hub + Auth infrastructure
     modsecurity_nginx: 8080
-    ctfd: 8000                 # CTFd
+    # ctfd: 8000               # CTFd - Moved to Proxmox VM
     uptime_kuma: 3009          # Uptime Kuma (monitoring)
     prometheus: 9090           # Prometheus (monitoring)
     grafana: 3000              # Grafana (monitoring dashboard)
     blackbox_exporter: 9115    # Blackbox Exporter
     alert_manager: 9093        # AlertManager
     misskey_beta: 3002         # Misskey Beta (test environment for yamisskey-dev)
+    # Auth & Security services (moved from balthasar)
+    authentik: 9003            # Authentik (identity provider)
+    mcaptcha: 7493             # mCaptcha (CAPTCHA service)
+    # Nostr services (experimental)
+    nostream: 8008             # Nostr relay (yamisskey-dev/nostream)
 
   linode_prox:
     # External proxy services
@@ -58,20 +60,16 @@ host_services:
 # Cloudflared ingress mapping
 cloudflared_ingress:
   balthasar:
-    # All services behind ModSecurity-Nginx
+    # All services behind ModSecurity-Nginx (user-facing services only)
     - hostname: "{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "bypass.{{ domain }}"
-      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
-    - hostname: "captcha.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "neo-quesdon.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "drive.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "wiki.{{ domain }}"
-      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
-    - hostname: "auth.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "matrix.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
@@ -87,6 +85,14 @@ cloudflared_ingress:
     - hostname: "grafana.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
     - hostname: "uptime.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    # Auth & Security services (moved from balthasar)
+    - hostname: "auth.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    - hostname: "captcha.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    # Nostr services
+    - hostname: "nostr.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
 
   linode_prox:
@@ -112,3 +118,4 @@ uptime_server_name: "uptime.{{ domain }}"
 mcaptcha_server_name: "captcha.{{ domain }}"
 neo_quesdon_server_name: "neo-quesdon.{{ domain }}"
 minio_api_server_name: "drive.{{ domain }}"
+nostream_server_name: "nostr.{{ domain }}"

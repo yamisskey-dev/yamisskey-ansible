@@ -1,0 +1,75 @@
+---
+- name: Load Nostream secrets from inventory
+  set_fact:
+    nostream_inventory_secrets: "{{ hostvars[inventory_hostname].nostream | default({}) }}"
+
+- name: Prepare Nostream secret values
+  set_fact:
+    nostream_secret: "{{ nostream_inventory_secrets.secret | default('CHANGE_ME_NOSTREAM_SECRET') }}"
+    nostream_postgres_password: "{{ nostream_inventory_secrets.postgresql.password | default('CHANGE_ME_NOSTREAM_DB_PASSWORD') }}"
+  when: nostream_inventory_secrets | length > 0
+
+- name: Set default secrets when not provided
+  set_fact:
+    nostream_secret: "CHANGE_ME_NOSTREAM_SECRET"
+    nostream_postgres_password: "CHANGE_ME_NOSTREAM_DB_PASSWORD"
+  when: nostream_inventory_secrets | length == 0
+
+- name: Warn about placeholder Nostream secrets
+  debug:
+    msg: >-
+      Nostream secret '{{ item.key }}' is using a placeholder value. Update
+      deploy/servers/host_vars/{{ inventory_hostname }}/secrets.yml -> nostream.{{ item.key }}.
+  loop:
+    - { key: secret, value: "{{ nostream_secret }}" }
+    - { key: postgresql.password, value: "{{ nostream_postgres_password }}" }
+  when: item.value is string and item.value is search('^CHANGE_ME_')
+
+- name: Create Nostream directory
+  file:
+    path: "{{ nostream_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create Nostream data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ nostream_dir }}/postgres-data"
+    - "{{ nostream_dir }}/.nostr"
+
+- name: Create Nostream settings file
+  template:
+    src: settings.yaml.j2
+    dest: "{{ nostream_dir }}/.nostr/settings.yaml"
+    mode: '0644'
+
+- name: Create Docker Compose file
+  template:
+    src: nostream_docker-compose.yml.j2
+    dest: "{{ nostream_dir }}/docker-compose.yml"
+    mode: '0644'
+
+- name: Start Nostream services with Docker Compose v2
+  community.docker.docker_compose_v2:
+    project_src: "{{ nostream_dir }}"
+    pull: "{{ 'never' if (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != '' else 'missing' }}"
+    remove_orphans: true
+  failed_when: false
+  register: nostream_compose_result
+  changed_when: nostream_compose_result.changed | default(false)
+  when:
+    - (ansible_env.MOLECULE_SCENARIO_NAME | default('')) == ''
+    - ansible_virtualization_type | default('') not in ['docker', 'container']
+
+- name: Start Nostream services with Docker Compose v2 (test environment)
+  community.docker.docker_compose_v2:
+    project_src: "{{ nostream_dir }}"
+    pull: never
+    remove_orphans: true
+  failed_when: false
+  register: nostream_compose_test_result
+  changed_when: false
+  when: (ansible_env.MOLECULE_SCENARIO_NAME | default('')) != ''
