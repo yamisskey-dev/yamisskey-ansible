@@ -3,7 +3,7 @@
 
 # Upstream definition
 upstream authentik_backend {
-    server localhost:{{ authentik_port | default(9000) }};
+    server localhost:{{ host_services.caspar.authentik | default(9003) }};
     keepalive 8;
 }
 
