@@ -3,7 +3,7 @@
 
 # Upstream definition
 upstream ctfd_backend {
-    server localhost:8000;
+    server localhost:{{ ctfd_port | default(8000) }};
     keepalive 8;
 }
 
