@@ -25,8 +25,8 @@ env:
 
 vars:
   # Configuration variables
-  COLLECTION_NS: 'yamisskey'
-  COLLECTION_NAME: '{{.COLLECTION_NS}}.servers'
+  COLLECTION_NS: 'yamisskey-dev'
+  COLLECTION_NAME: '{{.COLLECTION_NS}}'
   INV: './inventory'
   PLAY: './playbooks'
   CONFIG: './ansible.cfg'
@@ -400,7 +400,7 @@ tasks:
     desc: "Molecule testing (Usage: task test [ROLE=name] [MODE=syntax|converge|cleanup|test])"
     cmds:
       - |
-        ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/servers/roles"
+        ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
         MODE_EFF="{{.MODE | default "test"}}"
         SUBCMD="test"
         EXTRA=""
@@ -542,7 +542,7 @@ tasks:
           migrate-role)
             echo "🔄 Migrating all secrets in role..."
             if [ -z "{{.ROLE}}" ]; then echo "❌ ROLE parameter required. Use: task secrets OPERATION=migrate-role ROLE=minio"; exit 1; fi
-            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/servers/roles"
+            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
             ROLE_DIR="$ROLES_DIR/{{.ROLE}}"
             if [ ! -d "$ROLE_DIR" ]; then echo "❌ Role directory not found: $ROLE_DIR"; exit 1; fi
             SECRETS_FILES=$(find "$ROLE_DIR" -name "secrets.yml" -type f 2>/dev/null)
@@ -558,7 +558,7 @@ tasks:
             ;;
           migrate-all)
             echo "🔄 Migrating all legacy secrets in project..."
-            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/servers/roles"
+            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
             SECRETS_FILES=$(find "$ROLES_DIR" -name "secrets.yml" -type f 2>/dev/null)
             if [ -z "$SECRETS_FILES" ]; then echo "⚠️ No secrets.yml files found in servers"; exit 0; fi
             echo "📋 Found legacy secrets files:"
@@ -572,7 +572,7 @@ tasks:
             ;;
           validate-migration)
             echo "🔍 Validating migration status..."
-            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/servers/roles"
+            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
             LEGACY_FILES=$(find "$ROLES_DIR" -name "secrets.yml" -type f -exec grep -L "sops:" {} \; 2>/dev/null)
             SOPS_FILES=$(find "$ROLES_DIR" -name "*.sops.yml" -type f 2>/dev/null)
             echo "📊 Migration Status Report:"

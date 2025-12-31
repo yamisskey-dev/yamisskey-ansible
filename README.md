@@ -1,13 +1,13 @@
 # yamisskey-provision
 
-Ubuntu server infrastructure management with Ansible and SOPS secrets management.
+Linux server infrastructure management with Ansible and SOPS secrets management.
 
 ## Managed Servers
 
 - **balthasar** - Production services (Misskey, Matrix, Outline, CryptPad)
 - **caspar** - Monitoring & Auth (Prometheus, Grafana, Authentik, mCaptcha)
 - **linode_prox** - External proxy (Squid, MediaProxy, Summaly)
-- **raspberrypi** - Game server (Minecraft)
+- **raspberrypi** - Game server (Minecraft) - Raspberry Pi OS
 
 ## System Requirements
 
@@ -77,8 +77,7 @@ yamisskey-provision/
 ├── group_vars/         # Group variables
 ├── host_vars/          # Host-specific variables
 ├── ansible_collections/
-│   └── yamisskey/
-│       └── servers/    # Custom roles and modules
+│   └── yamisskey-dev/  # Custom roles and modules
 ├── inventory           # Server inventory (gitignored)
 ├── ansible.cfg         # Ansible configuration
 └── Taskfile.yml        # Task runner configuration
