@@ -65,7 +65,7 @@
       tags: ['always']
 
   roles:
-    - role: yamisskey.servers.minio_migration
+    - role: yamihost.servers.minio_migration
       vars:
         # Pass through migration configuration
         source_minio_host: "{{ minio_source_host }}"

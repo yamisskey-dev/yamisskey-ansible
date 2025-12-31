@@ -7,22 +7,22 @@
   tasks:
     - name: Test common role
       ansible.builtin.include_role:
-        name: yamisskey.servers.common
+        name: yamihost.servers.common
       tags: common
 
     - name: Test security role
       ansible.builtin.include_role:
-        name: yamisskey.servers.security
+        name: yamihost.servers.security
       tags: security
 
     - name: Test minio role
       ansible.builtin.include_role:
-        name: yamisskey.servers.minio
+        name: yamihost.servers.minio
       tags: minio
 
     - name: Test misskey role
       ansible.builtin.include_role:
-        name: yamisskey.servers.misskey
+        name: yamihost.servers.misskey
       tags: misskey
 
   post_tasks:

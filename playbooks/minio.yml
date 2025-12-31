@@ -2,5 +2,5 @@
   hosts: all
   become: true
   roles:
-    - role: yamisskey.servers.minio
+    - role: yamihost.servers.minio
       tags: ['minio']

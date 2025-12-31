@@ -18,19 +18,24 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install "ansible-core>=2.15" ansible-lint
+      - name: Prepare collection structure for ansible-test
+        run: |
+          # ansible-test expects ansible_collections/{namespace}/{name}/
+          mkdir -p ansible_collections/yamihost
+          ln -s ../yamisskey-dev ansible_collections/yamihost/servers
       - name: Sanity test
-        working-directory: ansible_collections/yamisskey-dev
+        working-directory: ansible_collections/yamihost/servers
         run: ansible-test sanity --python 3.11
       - name: Build
         working-directory: ansible_collections/yamisskey-dev
         run: |
           ansible-galaxy collection build --force
           mkdir -p ../../dist/
-          mv yamisskey_dev-*.tar.gz ../../dist/
+          mv yamihost-servers-*.tar.gz ../../dist/
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: yamisskey-dev-tarball
+          name: yamihost-servers-tarball
           path: dist/*.tar.gz
 
   publish:
@@ -49,6 +54,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          f=$(ls dist/yamisskey-dev-tarball/*.tar.gz | tail -n1)
+          f=$(ls dist/yamihost-servers-tarball/*.tar.gz | tail -n1)
           test -n "${GALAXY_API_KEY}"
           ansible-galaxy collection publish "$f" --token "${GALAXY_API_KEY}"

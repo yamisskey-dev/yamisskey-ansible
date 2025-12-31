@@ -8,13 +8,13 @@
     ansible_python_interpreter: /usr/bin/python3
 
   roles:
-    - role: yamisskey.servers.common
+    - role: yamihost.servers.common
       tags: [common, base]
 
-    - role: yamisskey.servers.security
+    - role: yamihost.servers.security
       tags: [security, hardening]
 
-    - role: yamisskey.servers.minio
+    - role: yamihost.servers.minio
       tags: [minio, storage]
       when: "'storage' in group_names or inventory_hostname in groups.get('minio', [])"
 

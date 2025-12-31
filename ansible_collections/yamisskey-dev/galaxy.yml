@@ -1,6 +1,6 @@
 ---
-# yamisskey.servers Ansible Collection
-namespace: yamisskey
+# yamihost.servers Ansible Collection
+namespace: yamihost
 name: servers
 version: 1.0.0
 readme: README.md
