@@ -71,13 +71,13 @@ jobs:
           ansible-galaxy collection install -r requirements-ci.yml
           echo "✅ External Collections installed"
 
-      - name: Run ansible-lint for yamisskey-dev Collection
+      - name: Run ansible-lint for yamisskey Collection
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
           ANSIBLE_CONFIG: ansible.cfg
         run: |
-          echo "🔍 Linting yamisskey-dev Collection..."
-          ansible-lint --offline -v ansible_collections/yamisskey-dev
+          echo "🔍 Linting yamisskey Collection..."
+          ansible-lint --offline -v ansible_collections/yamisskey
 
   ansible-test-sanity:
     name: Ansible Sanity Tests
@@ -103,16 +103,16 @@ jobs:
       - name: Prepare collection structure for ansible-test
         run: |
           # ansible-test expects ansible_collections/{namespace}/{name}/
-          mkdir -p ansible_collections/yamihost
-          ln -s ../yamisskey-dev ansible_collections/yamihost/servers
+          mkdir -p ansible_collections/yamisskey
+          ln -s ../yamisskey ansible_collections/yamisskey/servers
 
-      - name: Run ansible-test sanity for yamihost.servers
+      - name: Run ansible-test sanity for yamisskey.servers
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           set -euo pipefail
-          echo "🧪 ansible-test sanity for yamihost.servers"
-          pushd ansible_collections/yamihost/servers
+          echo "🧪 ansible-test sanity for yamisskey.servers"
+          pushd ansible_collections/yamisskey/servers
           ansible-test sanity --python 3.11 -v
           popd
 
@@ -127,6 +127,6 @@ jobs:
         run: |
           echo "🔍 Verifying Collections structure..."
           ls -la ansible_collections/
-          echo "✅ yamisskey-dev collection:"
-          find ansible_collections/yamisskey-dev -name "*.yml" | wc -l
+          echo "✅ yamisskey collection:"
+          find ansible_collections/yamisskey -name "*.yml" | wc -l
           echo "✅ Collections verification complete"

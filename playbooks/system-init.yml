@@ -5,4 +5,4 @@
   gather_facts: true
 
   roles:
-    - yamihost.servers.system_init
+    - yamisskey.servers.system_init

@@ -83,9 +83,9 @@ jobs:
         id: scan
         shell: bash
         run: |
-          # yamisskey-dev/roles/<role>/molecule/*
-          MAP_LINES=$(find ansible_collections/yamisskey-dev/roles -type d -name 'molecule' \
-            | awk -F/ '{print "yamisskey-dev\t" $(NF-1)}')
+          # yamisskey/roles/<role>/molecule/*
+          MAP_LINES=$(find ansible_collections/yamisskey/roles -type d -name 'molecule' \
+            | awk -F/ '{print "yamisskey\t" $(NF-1)}')
 
           if [ -z "$MAP_LINES" ]; then
             echo "pairs=[]" >> "$GITHUB_OUTPUT"
@@ -221,7 +221,7 @@ jobs:
 
       - name: Run Molecule test (capture status)
         id: run
-        working-directory: ansible_collections/yamisskey-dev/roles/${{ matrix.role }}
+        working-directory: ansible_collections/yamisskey/roles/${{ matrix.role }}
         shell: bash
         env:
           ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local

@@ -11,5 +11,5 @@
       - region2.v2.argotunnel.com
       - "{{ minio_api_server_name }}"
   roles:
-    - role: yamihost.servers.cloudflare_warp
+    - role: yamisskey.servers.cloudflare_warp
       tags: [cloudflare, warp]

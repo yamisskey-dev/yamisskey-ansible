@@ -35,7 +35,7 @@
       tags: ['info', 'plan']
 
   roles:
-    - role: yamihost.servers.integration_test
+    - role: yamisskey.servers.integration_test
       tags: ['test', 'integration']
 
   post_tasks:

@@ -77,7 +77,7 @@ yamisskey-provision/
 ├── group_vars/         # Group variables
 ├── host_vars/          # Host-specific variables
 ├── ansible_collections/
-│   └── yamisskey-dev/  # Custom roles and modules
+│   └── yamisskey/      # Custom roles and modules (yamisskey.servers)
 ├── inventory           # Server inventory (gitignored)
 ├── ansible.cfg         # Ansible configuration
 └── Taskfile.yml        # Task runner configuration
