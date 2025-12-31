@@ -34,15 +34,11 @@ jobs:
 
       - name: Run yamllint (Collections-aware)
         run: |
-          yamllint .github ansible_collections deploy requirements.yml || echo "⚠️ Some YAML validation warnings (non-blocking)"
+          yamllint .github ansible_collections playbooks group_vars host_vars requirements.yml || echo "⚠️ Some YAML validation warnings (non-blocking)"
 
   ansible-lint:
     name: Ansible Lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        collection: [servers, appliances]
-      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,21 +71,17 @@ jobs:
           ansible-galaxy collection install -r requirements-ci.yml
           echo "✅ External Collections installed"
 
-      - name: Run ansible-lint for ${{ matrix.collection }} Collection
+      - name: Run ansible-lint for yamisskey-dev Collection
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
-          ANSIBLE_CONFIG: ${{ matrix.collection == 'servers' && 'deploy/servers/ansible.cfg' || '' }}
+          ANSIBLE_CONFIG: ansible.cfg
         run: |
-          echo "🔍 Linting yamisskey.${{ matrix.collection }} Collection..."
-          ansible-lint --offline -v ansible_collections/yamisskey/${{ matrix.collection }}
+          echo "🔍 Linting yamisskey-dev Collection..."
+          ansible-lint --offline -v ansible_collections/yamisskey-dev
 
   ansible-test-sanity:
     name: Ansible Sanity Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        collection: [servers, appliances]
-      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,13 +100,13 @@ jobs:
         run: |
           ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
-      - name: Run ansible-test sanity for ${{ matrix.collection }}
+      - name: Run ansible-test sanity for yamisskey-dev
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           set -euo pipefail
-          echo "🧪 ansible-test sanity for yamisskey.${{ matrix.collection }}"
-          pushd ansible_collections/yamisskey/${{ matrix.collection }}
+          echo "🧪 ansible-test sanity for yamisskey-dev"
+          pushd ansible_collections/yamisskey-dev
           ansible-test sanity --python 3.11 -v
           popd
 
@@ -128,9 +120,7 @@ jobs:
       - name: Verify Collections Structure
         run: |
           echo "🔍 Verifying Collections structure..."
-          ls -la ansible_collections/yamisskey/
-          echo "✅ yamisskey.servers files:"
-          find ansible_collections/yamisskey/servers -name "*.yml" | wc -l
-          echo "✅ yamisskey.appliances files:"
-          find ansible_collections/yamisskey/appliances -name "*.yml" | wc -l
+          ls -la ansible_collections/
+          echo "✅ yamisskey-dev collection:"
+          find ansible_collections/yamisskey-dev -name "*.yml" | wc -l
           echo "✅ Collections verification complete"

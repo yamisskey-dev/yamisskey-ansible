@@ -3,16 +3,12 @@ name: "📦 Build & Publish Ansible Collections"
 on:
   push:
     tags:
-      - "servers-v*"
-      - "appliances-v*"
+      - "v*"
   workflow_dispatch: {}
 
 jobs:
   sanity-and-build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        coll: [servers, appliances]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,19 +19,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install "ansible-core>=2.15" ansible-lint
       - name: Sanity test
-        working-directory: ansible_collections/yamisskey/${{ matrix.coll }}
+        working-directory: ansible_collections/yamisskey-dev
         run: ansible-test sanity --python 3.11
       - name: Build
-        working-directory: ansible_collections/yamisskey/${{ matrix.coll }}
+        working-directory: ansible_collections/yamisskey-dev
         run: |
           ansible-galaxy collection build --force
-          mkdir -p ../../../dist/${{ matrix.coll }}
-          mv yamisskey-${{ matrix.coll }}-*.tar.gz ../../../dist/${{ matrix.coll }}/
+          mkdir -p ../../dist/
+          mv yamisskey_dev-*.tar.gz ../../dist/
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.coll }}-tarball
-          path: dist/${{ matrix.coll }}/*.tar.gz
+          name: yamisskey-dev-tarball
+          path: dist/*.tar.gz
 
   publish:
     needs: sanity-and-build
@@ -49,12 +45,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist/
-      - name: Publish to Galaxy (matched tag only)
+      - name: Publish to Galaxy
         shell: bash
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
-          if [[ "$tag" == servers-v* ]]; then coll="servers"; else coll="appliances"; fi
-          f=$(ls dist/${coll}/*yamisskey-${coll}-*.tar.gz | tail -n1)
+          f=$(ls dist/yamisskey-dev-tarball/*.tar.gz | tail -n1)
           test -n "${GALAXY_API_KEY}"
           ansible-galaxy collection publish "$f" --token "${GALAXY_API_KEY}"
