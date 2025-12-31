@@ -16,7 +16,7 @@ misskey_host: "beta.{{ domain }}"
 misskey_tag: "staging"
 
 # CTFd configuration
-ctfd_dir: "{{ set_dir }}/CTFd"
+ctfd_dir: "/opt/ctfd"
 ctfd_port: "{{ host_services.caspar.ctfd }}"
 
 # Nginx services to deploy (monitoring + auth + nostr + beta misskey + ctf)
