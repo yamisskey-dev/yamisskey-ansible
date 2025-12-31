@@ -10,14 +10,14 @@
   tasks:
     - name: Include compat role from collection
       ansible.builtin.include_role:
-        name: yamisskey.servers.compat
+        name: yamihost.servers.compat
       tags:
         - compat
         - test
 
     - name: Include misskey role from collection
       ansible.builtin.include_role:
-        name: yamisskey.servers.misskey
+        name: yamihost.servers.misskey
       tags:
         - misskey
         - test

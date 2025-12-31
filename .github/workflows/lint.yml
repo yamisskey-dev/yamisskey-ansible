@@ -100,13 +100,19 @@ jobs:
         run: |
           ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
-      - name: Run ansible-test sanity for yamisskey-dev
+      - name: Prepare collection structure for ansible-test
+        run: |
+          # ansible-test expects ansible_collections/{namespace}/{name}/
+          mkdir -p ansible_collections/yamihost
+          ln -s ../yamisskey-dev ansible_collections/yamihost/servers
+
+      - name: Run ansible-test sanity for yamihost.servers
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
         run: |
           set -euo pipefail
-          echo "🧪 ansible-test sanity for yamisskey-dev"
-          pushd ansible_collections/yamisskey-dev
+          echo "🧪 ansible-test sanity for yamihost.servers"
+          pushd ansible_collections/yamihost/servers
           ansible-test sanity --python 3.11 -v
           popd
 

@@ -9,16 +9,16 @@
     docker_compose_cmd: 'docker compose'
 
   roles:
-    - role: yamisskey.servers.common
+    - role: yamihost.servers.common
       tags: [common, base]
 
-    - role: yamisskey.servers.security
+    - role: yamihost.servers.security
       tags: [security, hardening]
 
-    - role: yamisskey.servers.misskey_proxy
+    - role: yamihost.servers.misskey_proxy
       tags: [proxy, nginx]
 
-    - role: yamisskey.servers.monitor
+    - role: yamihost.servers.monitor
       tags: [monitoring, observability]
       when: "enable_monitoring | default(false) | bool"
 
