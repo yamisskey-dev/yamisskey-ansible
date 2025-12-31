@@ -1,6 +1,13 @@
 # yamisskey-provision
 
-Modern Ansible infrastructure management with SOPS secrets management.
+Ubuntu server infrastructure management with Ansible and SOPS secrets management.
+
+## Managed Servers
+
+- **balthasar** - Production services (Misskey, Matrix, Outline, CryptPad)
+- **caspar** - Monitoring & Auth (Prometheus, Grafana, Authentik, mCaptcha)
+- **linode_prox** - External proxy (Squid, MediaProxy, Summaly)
+- **raspberrypi** - Game server (Minecraft)
 
 ## System Requirements
 
@@ -46,8 +53,33 @@ task inventory
 
 `ansible`, `sops`, and `age` will be installed.
 
-## Help
+## Usage
 
 ```bash
+# Run a playbook
+task run PLAYBOOK=misskey
+
+# Check mode (dry-run)
+task check PLAYBOOK=common
+
+# List available playbooks
+task list
+
+# View help
 task help
+```
+
+## Project Structure
+
+```
+yamisskey-provision/
+├── playbooks/          # Ansible playbooks
+├── group_vars/         # Group variables
+├── host_vars/          # Host-specific variables
+├── ansible_collections/
+│   └── yamisskey/
+│       └── servers/    # Custom roles and modules
+├── inventory           # Server inventory (gitignored)
+├── ansible.cfg         # Ansible configuration
+└── Taskfile.yml        # Task runner configuration
 ```

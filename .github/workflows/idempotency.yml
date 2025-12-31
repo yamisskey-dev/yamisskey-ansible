@@ -85,13 +85,13 @@ jobs:
       - name: Test ${{ matrix.playbook }}.yml with --check --diff
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
-          ANSIBLE_CONFIG: deploy/servers/ansible.cfg
+          ANSIBLE_CONFIG: ansible.cfg
         run: |
           set -euo pipefail
           echo "🔄 Testing ${{ matrix.playbook }}.yml with --check --diff"
-          if [ -f "deploy/servers/playbooks/${{ matrix.playbook }}.yml" ]; then
+          if [ -f "playbooks/${{ matrix.playbook }}.yml" ]; then
             ansible-playbook -i ci-test/servers/inventory \
-              "deploy/servers/playbooks/${{ matrix.playbook }}.yml" \
+              "playbooks/${{ matrix.playbook }}.yml" \
               --check --diff \
               --skip-tags "reboot,restart" \
               -e "ansible_become=false" \
@@ -135,13 +135,13 @@ jobs:
       - name: Test ${{ matrix.playbook }}.yml with --check --diff
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
-          ANSIBLE_CONFIG: deploy/servers/ansible.cfg
+          ANSIBLE_CONFIG: ansible.cfg
         run: |
           set -euo pipefail
           echo "🔄 Testing ${{ matrix.playbook }}.yml with --check --diff"
-          if [ -f "deploy/servers/playbooks/${{ matrix.playbook }}.yml" ]; then
+          if [ -f "playbooks/${{ matrix.playbook }}.yml" ]; then
             ansible-playbook -i ci-test/servers/inventory \
-              "deploy/servers/playbooks/${{ matrix.playbook }}.yml" \
+              "playbooks/${{ matrix.playbook }}.yml" \
               --check --diff \
               --skip-tags "docker_restart,service_restart" \
               -e "ansible_become=false" \
