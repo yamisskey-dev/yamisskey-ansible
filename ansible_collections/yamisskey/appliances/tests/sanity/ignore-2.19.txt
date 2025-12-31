@@ -1,1 +1,0 @@
-files/midclt-mock.py shebang # Molecule copies this script as an executable midclt mock

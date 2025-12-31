@@ -25,16 +25,12 @@ env:
 
 vars:
   # Configuration variables
-  COLLECTION_NS: 'yamisskey'
-  TARGET: '{{.TARGET | default "servers"}}'
-  DEPLOY_DIR: 'deploy/{{.TARGET}}'
-  INV: '{{.DEPLOY_DIR}}/inventory'
-  PLAY: '{{.DEPLOY_DIR}}/playbooks'
-  CONFIG: '{{.DEPLOY_DIR}}/ansible.cfg'
-  COLLECTION_NAME_servers: '{{.COLLECTION_NS}}.servers'
-  COLLECTION_NAME_appliances: '{{.COLLECTION_NS}}.appliances'
-  SOPS_GROUP_FILE_servers: 'deploy/servers/group_vars/all/secrets.yml'
-  SOPS_GROUP_FILE_appliances: 'deploy/appliances/group_vars/all/secrets.yml'
+  COLLECTION_NS: 'yamisskey-dev'
+  COLLECTION_NAME: '{{.COLLECTION_NS}}'
+  INV: './inventory'
+  PLAY: './playbooks'
+  CONFIG: './ansible.cfg'
+  SOPS_GROUP_FILE: './group_vars/all/secrets.yml'
   TIMESTAMP: '{{now | date "20060102T150405"}}'
   ANSIBLE_CORE_SPEC: '{{.ANSIBLE_CORE_VERSION | default "ansible-core"}}'
 
@@ -164,14 +160,14 @@ tasks:
     cmds:
       - |
         if [ -z "{{.PLAYBOOK}}" ]; then
-          echo "❌ Usage: task run PLAYBOOK=<name> [TARGET={{.TARGET}}] [LIMIT=<hosts>] [TAGS=<tags>]"
+          echo "❌ Usage: task run PLAYBOOK=<name> [TARGET=servers] [LIMIT=<hosts>] [TAGS=<tags>]"
           exit 1
         fi
         if [ ! -f "{{.PLAY}}/{{.PLAYBOOK}}.yml" ]; then
           echo "❌ Playbook {{.PLAYBOOK}}.yml not found in {{.PLAY}}/"
           exit 1
         fi
-        echo "🚀 Running {{.COLLECTION_NS}}.{{.TARGET}}: {{.PLAYBOOK}}"
+        echo "🚀 Running {{.COLLECTION_NS}}.servers: {{.PLAYBOOK}}"
         export ANSIBLE_COLLECTIONS_PATH="{{.ANSIBLE_COLLECTIONS_PATH}}"
         if [ -f "{{.CONFIG}}" ]; then export ANSIBLE_CONFIG="$(realpath {{.CONFIG}})"; fi
         export SOPS_AGE_KEY_FILE="{{.SOPS_AGE_KEY_FILE}}"
@@ -185,14 +181,14 @@ tasks:
     cmds:
       - |
         if [ -z "{{.PLAYBOOK}}" ]; then
-          echo "❌ Usage: task check PLAYBOOK=<name> [TARGET={{.TARGET}}] [LIMIT=<hosts>]"
+          echo "❌ Usage: task check PLAYBOOK=<name> [TARGET=servers] [LIMIT=<hosts>]"
           exit 1
         fi
         if [ ! -f "{{.PLAY}}/{{.PLAYBOOK}}.yml" ]; then
           echo "❌ Playbook {{.PLAYBOOK}}.yml not found in {{.PLAY}}/"
           exit 1
         fi
-        echo "🔍 Checking {{.COLLECTION_NS}}.{{.TARGET}}: {{.PLAYBOOK}}"
+        echo "🔍 Checking {{.COLLECTION_NS}}.servers: {{.PLAYBOOK}}"
         export ANSIBLE_COLLECTIONS_PATH="{{.ANSIBLE_COLLECTIONS_PATH}}"
         if [ -f "{{.CONFIG}}" ]; then export ANSIBLE_CONFIG="$(realpath {{.CONFIG}})"; fi
         "{{.SHIM_DIR}}/ansible-playbook" -i "{{.INV}}" "{{.PLAY}}/{{.PLAYBOOK}}.yml" \
@@ -204,14 +200,14 @@ tasks:
     cmds:
       - |
         if [ -z "{{.PLAYBOOK}}" ]; then
-          echo "❌ Usage: task secure PLAYBOOK=<name> [TARGET={{.TARGET}}] [LIMIT=<hosts>]"
+          echo "❌ Usage: task secure PLAYBOOK=<name> [TARGET=servers] [LIMIT=<hosts>]"
           exit 1
         fi
         if [ ! -f "{{.PLAY}}/{{.PLAYBOOK}}.yml" ]; then
           echo "❌ Playbook {{.PLAYBOOK}}.yml not found in {{.PLAY}}/"
           exit 1
         fi
-        echo "🔒 Secure execution: {{.COLLECTION_NS}}.{{.TARGET}}: {{.PLAYBOOK}}"
+        echo "🔒 Secure execution: {{.COLLECTION_NS}}.servers: {{.PLAYBOOK}}"
         ulimit -c 0
         export ANSIBLE_COLLECTIONS_PATH="{{.ANSIBLE_COLLECTIONS_PATH}}"
         export ANSIBLE_CONFIG="$(realpath {{.CONFIG}})"
@@ -227,12 +223,12 @@ tasks:
     cmds:
       - |
         if [ -z "{{.PLAYBOOKS}}" ]; then
-          echo "❌ Usage: task deploy PLAYBOOKS='<p1> <p2>' [TARGET={{.TARGET}}] [LIMIT=<hosts>]"
+          echo "❌ Usage: task deploy PLAYBOOKS='<p1> <p2>' [TARGET=servers] [LIMIT=<hosts>]"
           exit 1
         fi
-        echo "🚀 Deploying {{.TARGET}}: {{.PLAYBOOKS}}"
+        echo "🚀 Deploying servers: {{.PLAYBOOKS}}"
         for pb in {{.PLAYBOOKS}}; do
-          task run PLAYBOOK=$pb TARGET={{.TARGET}} $([ -n "{{.LIMIT}}" ] && echo "LIMIT={{.LIMIT}}") $([ -n "{{.TAGS}}" ] && echo "TAGS={{.TAGS}}") || exit 1
+          task run PLAYBOOK=$pb TARGET=servers $([ -n "{{.LIMIT}}" ] && echo "LIMIT={{.LIMIT}}") $([ -n "{{.TAGS}}" ] && echo "TAGS={{.TAGS}}") || exit 1
         done
 
   # === Inventory Management ===
@@ -249,7 +245,7 @@ tasks:
           mkdir -p "$INV_DIR"
           if [ -f "$INV_PATH" ]; then
             echo "⚠️ Inventory already exists. Creating backup..."
-            cp "$INV_PATH" "{{.BACKUP_DIR}}/{{.TARGET}}-inventory-local-{{.TIMESTAMP}}.bak"
+            cp "$INV_PATH" "{{.BACKUP_DIR}}/servers-inventory-local-{{.TIMESTAMP}}.bak"
           fi
           CURRENT_HOST=$(hostname)
           CURRENT_USER=$(whoami)
@@ -277,7 +273,7 @@ tasks:
           [ ! -e "$INV_DIR/group_vars" ] && ln -s ../group_vars "$INV_DIR/group_vars" 2>/dev/null || true
           echo "✅ Local inventory created at $INV_PATH"
         else
-          echo "📋 Creating {{.TARGET}} inventory from template..."
+          echo "📋 Creating servers inventory from template..."
           INV_DIR="{{.INV}}"
           INV_PATH="$INV_DIR/hosts.yml"
           TEMPLATE_PATH="{{.DEPLOY_DIR}}/inventory.template.yml"
@@ -285,7 +281,7 @@ tasks:
           mkdir -p "$INV_DIR"
           if [ -f "$INV_PATH" ]; then
             echo "⚠️ Inventory already exists. Creating backup..."
-            cp "$INV_PATH" "{{.BACKUP_DIR}}/{{.TARGET}}-inventory-{{.TIMESTAMP}}.bak"
+            cp "$INV_PATH" "{{.BACKUP_DIR}}/servers-inventory-{{.TIMESTAMP}}.bak"
           fi
           echo "📄 Processing template with Tailscale IPs..."
           CURRENT_HOST=$(hostname)
@@ -301,11 +297,11 @@ tasks:
             echo "❌ Failed to resolve required Tailscale IPs. Check 'tailscale status'"
             exit 1
           fi
-          if [ "{{.TARGET}}" = "servers" ] && [ -z "$IP_RASPBERRY" ]; then
+          if [ "servers" = "servers" ] && [ -z "$IP_RASPBERRY" ]; then
             echo "❌ raspberrypi not found in Tailscale"
             exit 1
           fi
-          if [ "{{.TARGET}}" = "appliances" ] && [ -z "$IP_JOSEPH" ]; then
+          if [ "servers" = "appliances" ] && [ -z "$IP_JOSEPH" ]; then
             echo "❌ joseph not found in Tailscale"
             exit 1
           fi
@@ -323,7 +319,7 @@ tasks:
           # Create symlinks for host_vars and group_vars if they don't exist
           [ ! -e "$INV_DIR/host_vars" ] && ln -s ../host_vars "$INV_DIR/host_vars" 2>/dev/null || true
           [ ! -e "$INV_DIR/group_vars" ] && ln -s ../group_vars "$INV_DIR/group_vars" 2>/dev/null || true
-          echo "✅ {{.TARGET}} inventory created from template at $INV_PATH"
+          echo "✅ servers inventory created from template at $INV_PATH"
         fi
 
   # === Discovery & Status ===
@@ -331,7 +327,7 @@ tasks:
     desc: "List available playbooks"
     cmds:
       - |
-        echo "📋 Available {{.TARGET}} playbooks:"
+        echo "📋 Available servers playbooks:"
         ls "{{.PLAY}}"/*.yml 2>/dev/null | sed 's|.*/||; s|\.yml$$||' | sort | sed 's/^/  /'
 
   status:
@@ -395,8 +391,8 @@ tasks:
     desc: "Backup current inventory"
     cmds:
       - |
-        echo "💾 Backing up {{.TARGET}} inventory..."
-        test -f "{{.INV}}/hosts.yml" && cp "{{.INV}}/hosts.yml" "{{.BACKUP_DIR}}/{{.TARGET}}-inventory-{{.TIMESTAMP}}.bak" || true
+        echo "💾 Backing up servers inventory..."
+        test -f "{{.INV}}/hosts.yml" && cp "{{.INV}}/hosts.yml" "{{.BACKUP_DIR}}/servers-inventory-{{.TIMESTAMP}}.bak" || true
         echo "✅ Backup created"
 
   # === Testing (Molecule via uvx) ===
@@ -404,7 +400,7 @@ tasks:
     desc: "Molecule testing (Usage: task test [ROLE=name] [MODE=syntax|converge|cleanup|test])"
     cmds:
       - |
-        ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/{{.TARGET}}/roles"
+        ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
         MODE_EFF="{{.MODE | default "test"}}"
         SUBCMD="test"
         EXTRA=""
@@ -428,14 +424,14 @@ tasks:
           ROLE_DIR="$ROLES_DIR/$ROLE_EFF"
           if [ ! -d "$ROLE_DIR" ]; then echo "❌ Role not found: {{.ROLE}} in $ROLES_DIR"; exit 1; fi
           if [ ! -f "$ROLE_DIR/molecule/default/molecule.yml" ]; then echo "❌ Molecule scenario missing for role: {{.ROLE}}"; exit 1; fi
-          echo "🧪 {{.COLLECTION_NS}}.{{.TARGET}} • {{.ROLE}} • molecule $SUBCMD (uvx runtime py{{.UV_PY}})"
+          echo "🧪 {{.COLLECTION_NS}}.servers • {{.ROLE}} • molecule $SUBCMD (uvx runtime py{{.UV_PY}})"
           (cd "$ROLE_DIR" && uvx --python {{.UV_PY}} --from molecule --with "molecule-plugins[docker]" molecule $SUBCMD)
           if [ -n "$EXTRA" ]; then (cd "$ROLE_DIR" && uvx --python {{.UV_PY}} --from molecule --with "molecule-plugins[docker]" molecule $EXTRA); fi
         else
           ROLES=$(find "$ROLES_DIR" -mindepth 1 -maxdepth 1 -type d -exec test -f {}/molecule/default/molecule.yml \; -print 2>/dev/null | sort)
           if [ -z "$ROLES" ]; then echo "⚠️ No roles with Molecule found under $ROLES_DIR"; exit 0; fi
           COUNT=$(echo "$ROLES" | wc -w | tr -d ' ')
-          echo "🧪 {{.COLLECTION_NS}}.{{.TARGET}} • $COUNT roles • molecule $SUBCMD (uvx runtime py{{.UV_PY}})"
+          echo "🧪 {{.COLLECTION_NS}}.servers • $COUNT roles • molecule $SUBCMD (uvx runtime py{{.UV_PY}})"
           for r in $ROLES; do
             role_name=$(basename "$r")
             echo "📋 Testing $role_name..."
@@ -450,12 +446,12 @@ tasks:
     cmds:
       - |
         if [ -z "{{.OPERATION}}" ]; then
-          echo "❌ Usage: task secrets OPERATION=<install|edit|view|status|updatekeys|migrate|migrate-role|migrate-all|validate-migration> [TARGET={{.TARGET}}] [HOST=hostname] [FILE=path/to/file.yml]"
+          echo "❌ Usage: task secrets OPERATION=<install|edit|view|status|updatekeys|migrate|migrate-role|migrate-all|validate-migration> [TARGET=servers] [HOST=hostname] [FILE=path/to/file.yml]"
           exit 1
         fi
 
         OPERATION_EFF="{{.OPERATION}}"
-        TARGET_EFF="{{.TARGET}}"
+        TARGET_EFF="servers"
         FILE_EFF="{{.FILE}}"
         HOST_EFF="{{.HOST}}"
         HOST_PATH="$HOST_EFF"
@@ -475,13 +471,9 @@ tasks:
             echo "✏️ Editing secrets..."
             if [ -n "$FILE_EFF" ]; then SOPS_FILE_PATH="$FILE_EFF"
             elif [ -n "$HOST_EFF" ]; then
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/host_vars/$HOST_PATH/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/host_vars/$HOST_PATH/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./host_vars/$HOST_PATH/secrets.yml"
             else
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/group_vars/all/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/group_vars/all/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./group_vars/all/secrets.yml"
             fi
             if [ ! -f "$SOPS_FILE_PATH" ]; then
               echo "ℹ️ Initializing new SOPS file at $SOPS_FILE_PATH"
@@ -496,13 +488,9 @@ tasks:
             echo "👁️ Viewing secrets..."
             if [ -n "$FILE_EFF" ]; then SOPS_FILE_PATH="$FILE_EFF"
             elif [ -n "$HOST_EFF" ]; then
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/host_vars/$HOST_PATH/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/host_vars/$HOST_PATH/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./host_vars/$HOST_PATH/secrets.yml"
             else
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/group_vars/all/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/group_vars/all/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./group_vars/all/secrets.yml"
             fi
             if [ ! -f "$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $SOPS_FILE_PATH"; exit 1; fi
             export SOPS_AGE_KEY_FILE="{{.SOPS_AGE_KEY_FILE}}"
@@ -512,13 +500,9 @@ tasks:
             echo "🔍 Validating secrets..."
             if [ -n "$FILE_EFF" ]; then SOPS_FILE_PATH="$FILE_EFF"
             elif [ -n "$HOST_EFF" ]; then
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/host_vars/$HOST_PATH/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/host_vars/$HOST_PATH/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./host_vars/$HOST_PATH/secrets.yml"
             else
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/group_vars/all/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/group_vars/all/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./group_vars/all/secrets.yml"
             fi
             if [ ! -f "$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $SOPS_FILE_PATH"; exit 1; fi
             echo "📄 File: $SOPS_FILE_PATH"
@@ -532,13 +516,9 @@ tasks:
             echo "🔄 Updating encryption keys..."
             if [ -n "$FILE_EFF" ]; then SOPS_FILE_PATH="$FILE_EFF"
             elif [ -n "$HOST_EFF" ]; then
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/host_vars/$HOST_PATH/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/host_vars/$HOST_PATH/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./host_vars/$HOST_PATH/secrets.yml"
             else
-              if [ "$TARGET_EFF" = "servers" ]; then SOPS_FILE_PATH="deploy/servers/group_vars/all/secrets.yml"
-              elif [ "$TARGET_EFF" = "appliances" ]; then SOPS_FILE_PATH="deploy/appliances/group_vars/all/secrets.yml"
-              else echo "❌ Invalid TARGET. Use servers or appliances, or specify FILE=path/to/file.yml"; exit 1; fi
+              SOPS_FILE_PATH="./group_vars/all/secrets.yml"
             fi
             if [ ! -f "$SOPS_FILE_PATH" ]; then echo "❌ Secrets file not found: $SOPS_FILE_PATH"; exit 1; fi
             export SOPS_AGE_KEY_FILE="{{.SOPS_AGE_KEY_FILE}}"
@@ -562,7 +542,7 @@ tasks:
           migrate-role)
             echo "🔄 Migrating all secrets in role..."
             if [ -z "{{.ROLE}}" ]; then echo "❌ ROLE parameter required. Use: task secrets OPERATION=migrate-role ROLE=minio"; exit 1; fi
-            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/{{.TARGET}}/roles"
+            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
             ROLE_DIR="$ROLES_DIR/{{.ROLE}}"
             if [ ! -d "$ROLE_DIR" ]; then echo "❌ Role directory not found: $ROLE_DIR"; exit 1; fi
             SECRETS_FILES=$(find "$ROLE_DIR" -name "secrets.yml" -type f 2>/dev/null)
@@ -572,27 +552,27 @@ tasks:
             for file in $SECRETS_FILES; do
               if ! grep -q "sops:" "$file"; then
                 echo "🔄 Migrating: $file"
-                task secrets OPERATION=migrate FILE="$file" TARGET={{.TARGET}}
+                task secrets OPERATION=migrate FILE="$file" TARGET=servers
               else echo "⏭️ Skipping already encrypted: $file"; fi
             done
             ;;
           migrate-all)
             echo "🔄 Migrating all legacy secrets in project..."
-            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/{{.TARGET}}/roles"
+            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
             SECRETS_FILES=$(find "$ROLES_DIR" -name "secrets.yml" -type f 2>/dev/null)
-            if [ -z "$SECRETS_FILES" ]; then echo "⚠️ No secrets.yml files found in {{.TARGET}}"; exit 0; fi
+            if [ -z "$SECRETS_FILES" ]; then echo "⚠️ No secrets.yml files found in servers"; exit 0; fi
             echo "📋 Found legacy secrets files:"
             echo "$SECRETS_FILES" | sed 's/^/  - /'
             for file in $SECRETS_FILES; do
               if ! grep -q "sops:" "$file"; then
                 echo "🔄 Migrating: $file"
-                task secrets OPERATION=migrate FILE="$file" TARGET={{.TARGET}}
+                task secrets OPERATION=migrate FILE="$file" TARGET=servers
               else echo "⏭️ Skipping already encrypted: $file"; fi
             done
             ;;
           validate-migration)
             echo "🔍 Validating migration status..."
-            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/{{.TARGET}}/roles"
+            ROLES_DIR="ansible_collections/{{.COLLECTION_NS}}/roles"
             LEGACY_FILES=$(find "$ROLES_DIR" -name "secrets.yml" -type f -exec grep -L "sops:" {} \; 2>/dev/null)
             SOPS_FILES=$(find "$ROLES_DIR" -name "*.sops.yml" -type f 2>/dev/null)
             echo "📊 Migration Status Report:"
