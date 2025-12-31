@@ -18,10 +18,6 @@ jobs:
   syntax-check:
     name: Ansible Syntax Check
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [servers, appliances]
-      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,15 +50,15 @@ jobs:
           ansible-galaxy collection install -r requirements-ci.yml
           echo "✅ External Collections installed"
 
-      - name: Ansible syntax-check for ${{ matrix.target }} playbooks
+      - name: Ansible syntax-check for playbooks
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
-          ANSIBLE_CONFIG: ${{ matrix.target == 'servers' && 'deploy/servers/ansible.cfg' || 'deploy/appliances/ansible.cfg' }}
+          ANSIBLE_CONFIG: ansible.cfg
         run: |
           set -euo pipefail
           shopt -s nullglob
-          echo "📋 Syntax checking deploy ${{ matrix.target }} playbooks..."
-          for f in deploy/${{ matrix.target }}/playbooks/*.yml; do
+          echo "📋 Syntax checking playbooks..."
+          for f in playbooks/*.yml; do
             echo "-- syntax-check: $f"
             ansible-playbook -i 'localhost,' -c local "$f" --syntax-check
           done
