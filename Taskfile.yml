@@ -25,7 +25,7 @@ env:
 
 vars:
   # Configuration variables
-  COLLECTION_NS: 'yamisskey-dev'
+  COLLECTION_NS: 'yamisskey'
   COLLECTION_NAME: '{{.COLLECTION_NS}}'
   INV: './inventory'
   PLAY: './playbooks'

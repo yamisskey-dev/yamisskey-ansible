@@ -9,20 +9,20 @@
     docker_compose_cmd: 'docker compose'
 
   roles:
-    - role: yamihost.servers.common
+    - role: yamisskey.servers.common
       tags: [common, base]
 
-    - role: yamihost.servers.security
+    - role: yamisskey.servers.security
       tags: [security, hardening]
 
-    - role: yamihost.servers.minio
+    - role: yamisskey.servers.minio
       tags: [minio, storage]
       when: "'storage' in group_names or inventory_hostname in groups.get('minio', [])"
 
-    - role: yamihost.servers.misskey
+    - role: yamisskey.servers.misskey
       tags: [misskey, social]
 
-    - role: yamihost.servers.monitor
+    - role: yamisskey.servers.monitor
       tags: [monitoring, observability]
       when: "'monitoring' in group_names or enable_monitoring | default(true) | bool"
 

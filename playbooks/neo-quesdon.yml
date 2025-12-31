@@ -2,4 +2,4 @@
   hosts: all
   become: true
   roles:
-    - yamihost.servers.neo_quesdon
+    - yamisskey.servers.neo_quesdon

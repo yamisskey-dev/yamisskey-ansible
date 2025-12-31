@@ -14,7 +14,7 @@
   #   cloudflared_hostname: "custom.yami.ski"  # Override default hostname
 
   roles:
-    - yamihost.servers.cloudflared
+    - yamisskey.servers.cloudflared
 
   tags:
     - cloudflared

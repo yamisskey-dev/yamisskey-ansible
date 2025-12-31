@@ -7,8 +7,8 @@
     docker_compose_cmd: 'docker compose'
 
   roles:
-    - yamihost.servers.common
-    - yamihost.servers.misskey_proxy
+    - yamisskey.servers.common
+    - yamisskey.servers.misskey_proxy
 
   post_tasks:
     - name: Show deployment summary
