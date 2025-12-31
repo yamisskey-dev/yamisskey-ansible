@@ -1,0 +1,5 @@
+---
+- name: Restart CTFd
+  community.docker.docker_compose_v2:
+    project_src: '{{ ctfd_dir }}'
+    state: restarted

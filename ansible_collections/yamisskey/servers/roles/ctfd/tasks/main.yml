@@ -1,41 +1,31 @@
-- name: Check if yami branch exists
-  command: git branch --list yami
-  args:
-    chdir: '{{ ctfd_dir }}'
-  register: yami_branch_exists
-  ignore_errors: true
+---
+- name: Create CTFd directory
+  file:
+    path: '{{ ctfd_dir }}'
+    state: directory
+    mode: '0755'
 
-- name: Create yami branch if it doesn't exist
-  command: git checkout -b yami origin/yami
-  args:
-    chdir: '{{ ctfd_dir }}'
-  when: yami_branch_exists.stdout == ""
+- name: Create CTFd .data subdirectories
+  file:
+    path: '{{ ctfd_dir }}/{{ item }}'
+    state: directory
+    mode: '0755'
+  loop:
+    - .data
+    - .data/CTFd
+    - .data/CTFd/logs
+    - .data/CTFd/uploads
+    - .data/mysql
 
-- name: Checkout to yami branch
-  command: git checkout yami
-  args:
-    chdir: '{{ ctfd_dir }}'
+- name: Deploy CTFd docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: '{{ ctfd_dir }}/docker-compose.yml'
+    mode: '0644'
+  notify: Restart CTFd
 
-- name: Pull latest changes from yami branch
-  command: git pull origin yami
-  args:
-    chdir: '{{ ctfd_dir }}'
-
-- name: Check if CTFd Docker container is running
-  shell: docker ps --filter "name=ctfd_ctfd_1" --format "{{ '{{' }}.Names{{ '}}' }}"
-  register: ctfd_container_status
-  ignore_errors: true
-
-- name: Start or restart CTFd Docker container
-  block:
-    - name: Restart existing CTFd Docker container
-      community.docker.docker_compose_v2:
-        project_src: '{{ ctfd_dir }}'
-        state: restarted
-      when: ctfd_container_status.stdout is defined and ctfd_container_status.stdout != ""
-
-    - name: Start new CTFd Docker container
-      community.docker.docker_compose_v2:
-        project_src: '{{ ctfd_dir }}'
-        state: restarted
-      when: ctfd_container_status.stdout is not defined or ctfd_container_status.stdout == ""
+- name: Start CTFd with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: '{{ ctfd_dir }}'
+    state: present
+    pull: always

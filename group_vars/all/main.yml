@@ -28,7 +28,7 @@ host_services:
   caspar:
     # Security & monitoring hub + Auth infrastructure
     modsecurity_nginx: 8080
-    # ctfd: 8000               # CTFd - Moved to Proxmox VM
+    ctfd: 8000                 # CTFd
     uptime_kuma: 3009          # Uptime Kuma (monitoring)
     prometheus: 9090           # Prometheus (monitoring)
     grafana: 3000              # Grafana (monitoring dashboard)
@@ -89,6 +89,9 @@ cloudflared_ingress:
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
     # Nostr services
     - hostname: "nostr.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    # CTF platform
+    - hostname: "ctf.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
 
   linode_prox:

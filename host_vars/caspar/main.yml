@@ -15,7 +15,11 @@ misskey_port: "{{ host_services.caspar.misskey_beta }}"
 misskey_host: "beta.{{ domain }}"
 misskey_tag: "staging"
 
-# Nginx services to deploy (monitoring + auth + nostr + beta misskey)
+# CTFd configuration
+ctfd_dir: "{{ set_dir }}/CTFd"
+ctfd_port: "{{ host_services.caspar.ctfd }}"
+
+# Nginx services to deploy (monitoring + auth + nostr + beta misskey + ctf)
 modsecurity_nginx_services:
   - "grafana"
   - "uptime"
@@ -25,6 +29,8 @@ modsecurity_nginx_services:
   - "mcaptcha"
   # Nostr services (experimental)
   - "nostr"
+  # CTF platform
+  - "ctfd"
 
 # Prometheus monitoring targets
 monitor_targets:

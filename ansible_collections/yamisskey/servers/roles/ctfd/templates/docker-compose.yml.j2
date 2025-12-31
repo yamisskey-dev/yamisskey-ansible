@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  ctfd:
+    image: {{ ctfd_docker_image }}
+    container_name: ctfd
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ ctfd_port }}:8000"
+    environment:
+      - UPLOAD_FOLDER=/var/uploads
+      - DATABASE_URL=mysql+pymysql://{{ ctfd_mysql_user }}:{{ ctfd_mysql_password }}@db/{{ ctfd_mysql_database }}
+      - REDIS_URL=redis://cache:6379
+      - WORKERS={{ ctfd_workers }}
+      - LOG_FOLDER=/var/log/CTFd
+      - ACCESS_LOG=-
+      - ERROR_LOG=-
+      - REVERSE_PROXY=true
+{% if ctfd_secret_key is defined and ctfd_secret_key != '' %}
+      - SECRET_KEY={{ ctfd_secret_key }}
+{% endif %}
+    volumes:
+      - ./.data/CTFd/logs:/var/log/CTFd:rw
+      - ./.data/CTFd/uploads:/var/uploads:rw
+    depends_on:
+      - db
+      - cache
+    networks:
+      default:
+      internal:
+
+  db:
+    image: mariadb:10.11
+    container_name: ctfd_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD={{ ctfd_mysql_root_password }}
+      - MYSQL_USER={{ ctfd_mysql_user }}
+      - MYSQL_PASSWORD={{ ctfd_mysql_password }}
+      - MYSQL_DATABASE={{ ctfd_mysql_database }}
+      - MARIADB_AUTO_UPGRADE=1
+      - MARIADB_DISABLE_UPGRADE_BACKUP=1
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --wait_timeout=28800
+      - --log-warnings=0
+    volumes:
+      - ./.data/mysql:/var/lib/mysql:rw
+    networks:
+      internal:
+
+  cache:
+    image: redis:4
+    container_name: ctfd_cache
+    restart: unless-stopped
+    networks:
+      internal:
+
+networks:
+  default:
+  internal:
+    internal: true
