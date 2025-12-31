@@ -53,10 +53,6 @@ host_services:
     minecraft: 25565           # Minecraft Java server
     playit: 8080               # playit.gg proxy
 
-  joseph:
-    # TrueNAS SCALE backup server (no active services)
-    # Backup storage only - monitoring handled by caspar
-
 # Cloudflared ingress mapping
 cloudflared_ingress:
   balthasar:

@@ -100,11 +100,6 @@ all:
             linode_prox:
               ansible_host: ${IP_LINODE}
 
-        storage_servers:
-          hosts:
-            joseph:
-              ansible_host: ${IP_JOSEPH}
-
         game_servers:
           vars:
             internal_ip: "10.0.1.60"

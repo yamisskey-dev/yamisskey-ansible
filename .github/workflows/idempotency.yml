@@ -24,7 +24,7 @@ jobs:
 
       - name: Create dummy inventories for testing
         run: |
-          mkdir -p ci-test/servers ci-test/appliances
+          mkdir -p ci-test/servers
 
           # Create dummy servers inventory
           cat > ci-test/servers/inventory <<'EOF'
@@ -42,19 +42,6 @@ jobs:
           cloudflare_api_token=dummy_token
           cloudflare_zone_id=dummy_zone
           cloudflare_account_id=dummy_account
-          EOF
-
-          # Create dummy appliances inventory
-          cat > ci-test/appliances/inventory <<'EOF'
-          [truenas]
-          localhost ansible_connection=local
-
-          [all:vars]
-          ansible_python_interpreter=/usr/bin/python3
-          ansible_become=false
-          truenas_api_key=dummy_key
-          truenas_pool_name=test_pool
-          domain=test.local
           EOF
 
       - name: Upload inventory artifacts
@@ -157,56 +144,6 @@ jobs:
               "deploy/servers/playbooks/${{ matrix.playbook }}.yml" \
               --check --diff \
               --skip-tags "docker_restart,service_restart" \
-              -e "ansible_become=false" \
-              -e "skip_handlers=true" || echo "⚠️ ${{ matrix.playbook }} check completed with warnings"
-          else
-            echo "⚠️ Playbook ${{ matrix.playbook }}.yml not found, skipping"
-          fi
-
-  appliances-truenas:
-    name: Appliances TrueNAS Setup
-    needs: prepare-inventory
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        playbook: [setup, migrate-minio-truenas]
-      fail-fast: false
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install ansible-core
-        run: |
-          python -m pip install --upgrade pip
-          pip install ansible-core
-
-      - name: Install external Collections
-        run: |
-          ansible-galaxy collection install community.docker ansible.posix community.sops community.general
-
-      - name: Download inventory artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-inventories
-          path: ci-test/
-
-      - name: Test ${{ matrix.playbook }}.yml with --check --diff
-        env:
-          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
-          ANSIBLE_CONFIG: deploy/appliances/ansible.cfg
-        run: |
-          set -euo pipefail
-          echo "🔄 Testing ${{ matrix.playbook }}.yml with --check --diff"
-          if [ -f "deploy/appliances/playbooks/${{ matrix.playbook }}.yml" ]; then
-            ansible-playbook -i ci-test/appliances/inventory \
-              "deploy/appliances/playbooks/${{ matrix.playbook }}.yml" \
-              --check --diff \
-              --skip-tags "api_calls,truenas_restart" \
               -e "ansible_become=false" \
               -e "skip_handlers=true" || echo "⚠️ ${{ matrix.playbook }} check completed with warnings"
           else
