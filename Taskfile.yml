@@ -240,7 +240,7 @@ tasks:
           echo "📋 Creating self-provisioning inventory for current host..."
           INV_DIR="{{.INV}}"
           INV_PATH="$INV_DIR/hosts.yml"
-          TEMPLATE_PATH="{{.DEPLOY_DIR}}/inventory.local.template.yml"
+          TEMPLATE_PATH="{{.REPO_ROOT}}/inventory.local.template.yml"
           if [ ! -f "$TEMPLATE_PATH" ]; then echo "❌ Local template not found: $TEMPLATE_PATH"; exit 1; fi
           mkdir -p "$INV_DIR"
           if [ -f "$INV_PATH" ]; then
@@ -276,7 +276,7 @@ tasks:
           echo "📋 Creating servers inventory from template..."
           INV_DIR="{{.INV}}"
           INV_PATH="$INV_DIR/hosts.yml"
-          TEMPLATE_PATH="{{.DEPLOY_DIR}}/inventory.template.yml"
+          TEMPLATE_PATH="{{.REPO_ROOT}}/inventory.template.yml"
           if [ ! -f "$TEMPLATE_PATH" ]; then echo "❌ Template not found: $TEMPLATE_PATH"; exit 1; fi
           mkdir -p "$INV_DIR"
           if [ -f "$INV_PATH" ]; then
