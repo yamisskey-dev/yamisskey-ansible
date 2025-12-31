@@ -1,0 +1,12 @@
+---
+# CTFd default variables
+ctfd_docker_image: "ctfd/ctfd:latest"
+ctfd_workers: 1
+
+# These values will be loaded from SOPS-encrypted secrets.sops.yml
+# See host_vars/caspar/secrets.sops.yml for actual values
+ctfd_secret_key: "{{ ctfd.secret_key | default('') }}"
+ctfd_mysql_user: "{{ ctfd.mysql.user | default('ctfd') }}"
+ctfd_mysql_password: "{{ ctfd.mysql.password | default('changeme') }}"
+ctfd_mysql_root_password: "{{ ctfd.mysql.root_password | default('changeme') }}"
+ctfd_mysql_database: "{{ ctfd.mysql.database | default('ctfd') }}"
