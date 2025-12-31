@@ -77,7 +77,7 @@ jobs:
           ANSIBLE_CONFIG: ansible.cfg
         run: |
           echo "🔍 Linting yamisskey Collection..."
-          ansible-lint --offline -v ansible_collections/yamisskey
+          ansible-lint --offline -v ansible_collections/yamisskey/servers
 
   ansible-test-sanity:
     name: Ansible Sanity Tests
@@ -100,12 +100,6 @@ jobs:
         run: |
           ansible-galaxy collection install community.docker ansible.posix community.sops community.general
 
-      - name: Prepare collection structure for ansible-test
-        run: |
-          # ansible-test expects ansible_collections/{namespace}/{name}/
-          mkdir -p ansible_collections/yamisskey
-          ln -s ../yamisskey ansible_collections/yamisskey/servers
-
       - name: Run ansible-test sanity for yamisskey.servers
         env:
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}:$HOME/.ansible/collections:/usr/share/ansible/collections
@@ -127,6 +121,6 @@ jobs:
         run: |
           echo "🔍 Verifying Collections structure..."
           ls -la ansible_collections/
-          echo "✅ yamisskey collection:"
-          find ansible_collections/yamisskey -name "*.yml" | wc -l
+          echo "✅ yamisskey.servers collection:"
+          find ansible_collections/yamisskey/servers -name "*.yml" | wc -l
           echo "✅ Collections verification complete"
