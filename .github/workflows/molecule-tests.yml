@@ -83,8 +83,8 @@ jobs:
         id: scan
         shell: bash
         run: |
-          # yamisskey/roles/<role>/molecule/*
-          MAP_LINES=$(find ansible_collections/yamisskey/roles -type d -name 'molecule' \
+          # yamisskey/servers/roles/<role>/molecule/*
+          MAP_LINES=$(find ansible_collections/yamisskey/servers/roles -type d -name 'molecule' \
             | awk -F/ '{print "yamisskey\t" $(NF-1)}')
 
           if [ -z "$MAP_LINES" ]; then
@@ -221,7 +221,7 @@ jobs:
 
       - name: Run Molecule test (capture status)
         id: run
-        working-directory: ansible_collections/yamisskey/roles/${{ matrix.role }}
+        working-directory: ansible_collections/yamisskey/servers/roles/${{ matrix.role }}
         shell: bash
         env:
           ANSIBLE_LOCAL_TEMP: ${{ runner.temp }}/ansible-local
