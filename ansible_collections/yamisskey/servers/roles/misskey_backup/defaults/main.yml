@@ -24,3 +24,19 @@ backup_mode: "0755"
 # Docker compose settings
 backup_compose_pull: true
 backup_compose_build: true
+
+# PostgreSQL configuration (defaults, override in host_vars)
+misskey_backup_postgres_host: "postgres"
+misskey_backup_postgres_db: "mk1"
+
+# Cloudflare R2 configuration (defaults)
+misskey_backup_r2_bucket_acl: "private"
+misskey_backup_r2_prefix: "backups"
+
+# Backblaze B2 configuration (defaults)
+misskey_backup_b2_type: "b2"
+misskey_backup_b2_bucket: "yamisskey-backup"
+misskey_backup_b2_prefix: "backups"
+
+# Discord notification (defaults)
+misskey_backup_notification: "true"

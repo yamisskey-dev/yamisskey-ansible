@@ -21,16 +21,16 @@
   register: git_clone
   failed_when: false
 
-- name: Create rclone config file
+- name: Create backup environment file
   template:
-    src: rclone.conf.j2
-    dest: /opt/misskey-backup/config/rclone.conf
-    mode: '0644'
+    src: env.j2
+    dest: /opt/misskey-backup/config/.env
+    mode: '0600'
   notify: Restart backup container
   when:
-    - RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID is defined
+    - misskey_backup_r2_access_key_id is defined
+    - misskey_backup_b2_account is defined
     - ansible_env.MOLECULE_SCENARIO_NAME is not defined
-  failed_when: false
 
 - name: Check if Docker Compose file exists
   ansible.builtin.stat:
@@ -131,19 +131,11 @@
     - backup_scripts is defined
 
 - name: Run manual backup script
-  command: docker exec misskey-backup /backup.sh
+  command: docker exec misskey-backup /usr/local/bin/misskey-backup
   when:
     - backup_container_check.stdout == 'misskey-backup'
     - backup_scripts is defined
-    - "'/backup.sh' in (backup_scripts.stdout_lines | default([]))"
-  failed_when: false
-
-- name: Run alternative backup script
-  command: docker exec misskey-backup /usr/local/bin/backup.sh
-  when:
-    - backup_container_check.stdout == 'misskey-backup'
-    - backup_scripts is defined
-    - "'/usr/local/bin/backup.sh' in (backup_scripts.stdout_lines | default([]))"
+    - "'/usr/local/bin/misskey-backup' in (backup_scripts.stdout_lines | default([]))"
   failed_when: false
 
 - name: Skip backup if no script found
@@ -152,8 +144,7 @@
   when:
     - backup_container_check.stdout == 'misskey-backup'
     - backup_scripts is defined
-    - "'/backup.sh' not in (backup_scripts.stdout_lines | default([]))"
-    - "'/usr/local/bin/backup.sh' not in (backup_scripts.stdout_lines | default([]))"
+    - "'/usr/local/bin/misskey-backup' not in (backup_scripts.stdout_lines | default([]))"
 
 - name: Skip backup if container not running
   debug:
