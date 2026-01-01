@@ -1,3 +1,4 @@
+#jinja2:variable_start_string:'[%', variable_end_string:'%]', block_start_string:'[#', block_end_string:'#]'
 # ==================================================
 # Yamisskey Monitoring - Alert Rules
 # ==================================================
@@ -77,13 +78,14 @@ groups:
           description: "Container CPU usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
 
       - alert: ContainerHighMemory
-        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 80
+        # Only alert for containers with explicit memory limits (not 0 and less than 32GB)
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 80 and container_spec_memory_limit_bytes{name!=""} > 0 and container_spec_memory_limit_bytes{name!=""} < 34359738368
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "Container {{ $labels.name }} high memory on {{ $labels.instance }}"
-          description: "Container memory usage is above 80% of limit"
+          description: "Container memory usage is above 80% of limit ({{ $value | printf \"%.1f\" }}%)"
 
       - alert: ContainerRestarted
         expr: increase(container_restart_count{name!=""}[1h]) > 3
@@ -117,7 +119,7 @@ groups:
           summary: "AlertManager is down"
           description: "AlertManager is unreachable"
 
-{% if domain != 'test.local' and domain != 'localhost.localdomain' %}
+[# if domain != 'test.local' and domain != 'localhost.localdomain' #]
   # ==================================================
   # Blackbox/HTTP Alerts
   # ==================================================
@@ -158,4 +160,4 @@ groups:
         annotations:
           summary: "SSL certificate expiring very soon for {{ $labels.instance }}"
           description: "SSL certificate will expire in less than 7 days"
-{% endif %}
+[# endif #]

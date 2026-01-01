@@ -7,7 +7,7 @@ global:
   scrape_interval: {{ monitor_scrape_interval | default('15s') }}
   evaluation_interval: {{ monitor_evaluation_interval | default('15s') }}
   external_labels:
-    environment: '{{ environment | default("production") }}'
+    environment: '{{ deploy_environment | default("production") }}'
     cluster: 'yamisskey'
     region: '{{ monitor_region | default("ap-northeast-1") }}'
 
@@ -62,7 +62,7 @@ scrape_configs:
         labels:
           instance: '{{ target.name }}'
           role: '{{ target.role | default("server") }}'
-          environment: '{{ environment | default("production") }}'
+          environment: '{{ deploy_environment | default("production") }}'
 {% endfor %}
 {% else %}
       # Local host via Docker gateway
