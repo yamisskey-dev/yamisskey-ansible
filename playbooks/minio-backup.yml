@@ -1,0 +1,6 @@
+---
+- name: Setup MinIO backup to TrueNAS
+  hosts: balthasar
+  become: true
+  roles:
+    - yamisskey.servers.minio_backup
