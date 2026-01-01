@@ -1,7 +1,23 @@
 - name: Backup Misskey server
   hosts: all
   become: true
-  vars_files:
-    - /opt/misskey-backup/config/env.yml
+  vars:
+    # PostgreSQL settings (from secrets.sops.yml)
+    misskey_backup_postgres_host: "{{ misskey_backup.postgres.host }}"
+    misskey_backup_postgres_user: "{{ misskey_backup.postgres.user }}"
+    misskey_backup_postgres_password: "{{ misskey_backup.postgres.password }}"
+    misskey_backup_postgres_db: "{{ misskey_backup.postgres.database }}"
+    # Cloudflare R2 settings
+    misskey_backup_r2_endpoint: "{{ misskey_backup.r2.endpoint }}"
+    misskey_backup_r2_access_key_id: "{{ misskey_backup.r2.access_key_id }}"
+    misskey_backup_r2_secret_access_key: "{{ misskey_backup.r2.secret_access_key }}"
+    misskey_backup_r2_prefix: "{{ misskey_backup.r2.prefix }}"
+    # Backblaze B2 settings
+    misskey_backup_b2_account: "{{ misskey_backup.b2.account }}"
+    misskey_backup_b2_key: "{{ misskey_backup.b2.key }}"
+    misskey_backup_b2_bucket: "{{ misskey_backup.b2.bucket }}"
+    misskey_backup_b2_prefix: "{{ misskey_backup.b2.prefix }}"
+    # Discord notification
+    misskey_backup_discord_webhook_url: "{{ misskey_backup.discord_webhook_url }}"
   roles:
     - yamisskey.servers.misskey_backup
