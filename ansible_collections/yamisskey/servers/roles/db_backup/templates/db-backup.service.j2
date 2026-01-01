@@ -1,0 +1,21 @@
+[Unit]
+Description=Database Backup to TrueNAS
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart={{ db_backup_dir }}/db-backup.sh
+User={{ ansible_user }}
+Group={{ ansible_user }}
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={{ db_backup_dir }} {{ db_backup_log_dir }}
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

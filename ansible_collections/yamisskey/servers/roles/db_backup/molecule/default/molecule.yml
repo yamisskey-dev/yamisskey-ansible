@@ -1,0 +1,29 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: db-backup-test
+    image: debian:bookworm
+    pre_build_image: true
+    privileged: true
+    command: /lib/systemd/systemd
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    tmpfs:
+      - /run
+      - /tmp
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      db-backup-test:
+        ansible_user: root
+        db_backup_databases:
+          - name: testdb
+            container: test-db
+            database: testdb
+verifier:
+  name: ansible

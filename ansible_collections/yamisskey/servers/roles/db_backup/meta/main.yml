@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: yamisskey-dev
+  description: Database backup to TrueNAS with pg_dump and rsync
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+
+dependencies: []
