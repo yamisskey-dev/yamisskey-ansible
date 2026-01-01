@@ -1,0 +1,51 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check backup script exists
+      ansible.builtin.stat:
+        path: /opt/db-backup/db-backup.sh
+      register: backup_script
+
+    - name: Assert backup script exists
+      ansible.builtin.assert:
+        that:
+          - backup_script.stat.exists
+          - backup_script.stat.mode == '0755'
+
+    - name: Check systemd service exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/db-backup.service
+      register: service_file
+
+    - name: Assert service file exists
+      ansible.builtin.assert:
+        that:
+          - service_file.stat.exists
+
+    - name: Check systemd timer exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/db-backup.timer
+      register: timer_file
+
+    - name: Assert timer file exists
+      ansible.builtin.assert:
+        that:
+          - timer_file.stat.exists
+
+    - name: Check backup directories exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: dirs
+      loop:
+        - /opt/db-backup
+        - /opt/db-backup/dumps
+        - /var/log/db-backup
+
+    - name: Assert directories exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+      loop: "{{ dirs.results }}"

@@ -1,0 +1,9 @@
+---
+- name: Setup database backup to TrueNAS
+  hosts: balthasar
+  become: true
+  vars:
+    db_backup_discord_webhook_url: "{{ db_backup.discord_webhook_url }}"
+    db_backup_databases: "{{ db_backup.databases }}"
+  roles:
+    - yamisskey.servers.db_backup

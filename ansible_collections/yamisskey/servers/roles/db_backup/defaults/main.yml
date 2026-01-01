@@ -1,0 +1,45 @@
+---
+# Database Backup to TrueNAS configuration
+
+# List of databases to backup
+# Each entry should have:
+#   - name: identifier for the backup (used in filenames)
+#   - container: Docker container name running PostgreSQL
+#   - database: database name to backup
+#   - user: database user (optional, defaults to postgres)
+# db_backup_databases should be defined in host_vars with SOPS encryption
+# Example:
+#   - name: mydb
+#     container: mydb-container
+#     database: mydb_production
+#     user: mydb_user
+db_backup_databases: []
+
+# Default database user
+db_backup_default_user: "postgres"
+
+# Destination (TrueNAS)
+db_backup_truenas_host: "192.168.1.7"
+db_backup_truenas_user: "truenas_admin"
+db_backup_truenas_dest: "/mnt/tank/db_backup"
+db_backup_ssh_key: "~/.ssh/id_ed25519_truenas"
+
+# Backup settings
+db_backup_dir: "/opt/db-backup"
+db_backup_log_dir: "/var/log/db-backup"
+
+# Local retention (days) - how long to keep local dumps before cleanup
+db_backup_local_retention_days: 3
+
+# pg_dump options
+db_backup_pg_dump_opts: "--format=custom --compress=9"
+
+# rsync options
+db_backup_rsync_opts: "-avz --progress"
+
+# Schedule (systemd timer)
+db_backup_schedule: "*-*-* 02:00:00"  # Daily at 2 AM (before MinIO at 3 AM)
+db_backup_schedule_randomized_delay: "30m"
+
+# Discord notification (optional)
+db_backup_discord_webhook_url: ""

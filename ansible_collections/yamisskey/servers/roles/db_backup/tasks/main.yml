@@ -1,0 +1,49 @@
+---
+- name: Create backup directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+  loop:
+    - "{{ db_backup_dir }}"
+    - "{{ db_backup_dir }}/dumps"
+    - "{{ db_backup_log_dir }}"
+
+- name: Deploy backup script
+  ansible.builtin.template:
+    src: db-backup.sh.j2
+    dest: "{{ db_backup_dir }}/db-backup.sh"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: db-backup.service.j2
+    dest: /etc/systemd/system/db-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Reload systemd
+
+- name: Deploy systemd timer
+  ansible.builtin.template:
+    src: db-backup.timer.j2
+    dest: /etc/systemd/system/db-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify:
+    - Reload systemd
+    - Enable db-backup timer
+
+- name: Ensure TrueNAS host key is known
+  ansible.builtin.known_hosts:
+    name: "{{ db_backup_truenas_host }}"
+    key: "{{ lookup('pipe', 'ssh-keyscan -t ed25519 ' + db_backup_truenas_host + ' 2>/dev/null') }}"
+    state: present
+  when: ansible_env.MOLECULE_SCENARIO_NAME is not defined

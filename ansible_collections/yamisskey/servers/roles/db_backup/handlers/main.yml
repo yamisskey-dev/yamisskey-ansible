@@ -1,0 +1,12 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Enable db-backup timer
+  ansible.builtin.systemd:
+    name: db-backup.timer
+    enabled: true
+    state: started
+  become: true
