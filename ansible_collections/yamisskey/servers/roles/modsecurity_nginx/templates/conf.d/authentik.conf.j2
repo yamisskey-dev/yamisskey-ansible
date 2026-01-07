@@ -32,14 +32,12 @@ server {
     client_header_timeout 60s;
     send_timeout 60s;
 
-    # Security headers
+    # Security headers (included from shared config to ensure inheritance in all locations)
+    include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
+    # Authentik-specific additional headers
     add_header Strict-Transport-Security "max-age=63072000" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
     add_header X-Download-Options "noopen" always;
     add_header X-Permitted-Cross-Domain-Policies "none" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     # Remove potentially revealing headers
     proxy_hide_header X-Powered-By;
@@ -118,6 +116,8 @@ server {
         proxy_cache_use_stale error timeout updating;
 
         expires 1h;
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
         add_header Cache-Control "public";
         add_header X-Cache-Status $upstream_cache_status;
     }

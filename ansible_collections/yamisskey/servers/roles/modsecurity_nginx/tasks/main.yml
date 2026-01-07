@@ -117,6 +117,18 @@
   when: (item.path | basename | replace('.conf', '')) not in modsecurity_services_effective
   notify: restart modsecurity nginx
 
+- name: Create security headers configuration files
+  template:
+    src: "conf.d/{{ item }}"
+    dest: "/etc/modsecurity-nginx/conf.d/{{ item | replace('.j2', '') }}"
+    mode: '0644'
+  loop:
+    - "00-security-headers.conf.j2"
+    - "00-security-headers-misskey.conf.j2"
+    - "00-security-headers-sameorigin.conf.j2"
+    - "00-security-headers-deny.conf.j2"
+  notify: restart modsecurity nginx
+
 - name: Create individual service nginx configurations
   template:
     src: "conf.d/{{ item }}.conf.j2"

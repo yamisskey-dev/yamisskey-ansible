@@ -1,0 +1,8 @@
+# Security headers configuration for services allowing same-origin framing
+# Use this for: Grafana, CryptPad, Element, CTFd, Uptime, Outline, Neo-Quesdon, mCaptcha
+
+# Include common security headers (HSTS, X-Content-Type-Options, etc.)
+include /etc/nginx/conf.d/00-security-headers.conf;
+
+# X-Frame-Options (SAMEORIGIN to allow embedding in same domain)
+add_header X-Frame-Options "SAMEORIGIN" always;
