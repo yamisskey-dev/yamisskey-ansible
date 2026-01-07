@@ -21,11 +21,8 @@ server {
         return 302 https://down.yami.ski;
     }
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # Security headers (included from shared config to ensure inheritance in all locations)
+    include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
 
     # Large file uploads for CTF challenges
     client_max_body_size 50M;
@@ -63,6 +60,8 @@ server {
         proxy_cache_use_stale error timeout updating;
         proxy_cache_key "$scheme$request_method$host$request_uri";
 
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
         add_header X-Cache-Status $upstream_cache_status;
     }
 
@@ -79,6 +78,8 @@ server {
 
         # Cache static assets
         expires 1d;
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
         add_header Cache-Control "public, immutable";
         add_header X-Cache-Status $upstream_cache_status;
     }

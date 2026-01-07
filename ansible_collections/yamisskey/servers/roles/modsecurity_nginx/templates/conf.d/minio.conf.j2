@@ -39,9 +39,9 @@ server {
     client_max_body_size 1G;
     client_body_timeout 300s;
 
-    # Basic security headers
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
+    # Security headers (included from shared config to ensure inheritance in all locations)
+    include /etc/nginx/conf.d/00-security-headers-deny.conf;
+    # MinIO-specific additional header
     add_header X-Robots-Tag "noindex, nofollow" always;
 
     # Proxy settings for S3 API
@@ -114,6 +114,8 @@ server {
 
         # Maximum browser caching
         expires 60d;
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-deny.conf;
         add_header Cache-Control "public, immutable, max-age=5184000";
         add_header X-Cache-Status $upstream_cache_status;
 
@@ -198,6 +200,8 @@ server {
 
         # Extreme browser caching
         expires 30d;
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-deny.conf;
         add_header Cache-Control "public, immutable, max-age=2592000";
         add_header X-Cache-Status $upstream_cache_status;
 

@@ -1,0 +1,18 @@
+# Security headers configuration
+# Include this file in location blocks to ensure headers are always applied
+# Usage: include /etc/nginx/conf.d/00-security-headers.conf;
+
+# Prevent MIME type sniffing
+add_header X-Content-Type-Options "nosniff" always;
+
+# XSS Protection (legacy browsers)
+add_header X-XSS-Protection "1; mode=block" always;
+
+# Referrer Policy
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# HSTS is managed by Cloudflare (SSL/TLS > Edge Certificates > HTTP Strict Transport Security)
+# No need to set here as Cloudflare handles all incoming traffic
+
+# Permissions Policy (formerly Feature-Policy)
+add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" always;

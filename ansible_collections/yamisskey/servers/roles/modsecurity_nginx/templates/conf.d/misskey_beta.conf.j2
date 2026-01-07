@@ -29,11 +29,8 @@ server {
         return 302 https://down.yami.ski;
     }
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # Security headers (included from shared config to ensure inheritance in all locations)
+    include /etc/nginx/conf.d/00-security-headers-misskey.conf;
 
     # Rate limiting
     limit_req zone=misskey_limit burst=100 nodelay;
@@ -79,6 +76,9 @@ server {
         # Reduce buffering for WebSocket
         proxy_buffering off;
 
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-misskey.conf;
+
         # Header to indicate cache status
         add_header X-Cache-Status $upstream_cache_status;
     }
@@ -98,6 +98,9 @@ server {
         proxy_cache_revalidate on;
         proxy_cache_background_update on;
         proxy_cache_lock on;
+
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-misskey.conf;
 
         add_header X-Cache-Status $upstream_cache_status;
         expires 30d;
@@ -126,6 +129,9 @@ server {
         proxy_buffer_size 64k;
         proxy_buffers 8 128k;
         proxy_busy_buffers_size 256k;
+
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-misskey.conf;
 
         add_header X-Cache-Status $upstream_cache_status;
         add_header Access-Control-Allow-Origin * always;

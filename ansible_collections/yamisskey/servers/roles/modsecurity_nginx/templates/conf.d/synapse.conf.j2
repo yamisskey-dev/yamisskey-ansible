@@ -21,10 +21,8 @@ server {
         return 302 https://down.yami.ski;
     }
 
-    # Security headers
-    add_header X-Frame-Options "DENY" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # Security headers (included from shared config to ensure inheritance in all locations)
+    include /etc/nginx/conf.d/00-security-headers-deny.conf;
 
     # CORS headers for Matrix federation
     add_header 'Access-Control-Allow-Origin' '*' always;
@@ -46,13 +44,17 @@ server {
     location /.well-known/matrix/server {
         alias /var/www/synapse/.well-known/matrix/server;
         default_type application/json;
-        add_header Access-Control-Allow-Origin *;
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-deny.conf;
+        # CORS is already included in server-level headers
     }
 
     location /.well-known/matrix/client {
         alias /var/www/synapse/.well-known/matrix/client;
         default_type application/json;
-        add_header Access-Control-Allow-Origin *;
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-deny.conf;
+        # CORS is already included in server-level headers
     }
 
     # Main Matrix endpoints
@@ -77,6 +79,8 @@ server {
         proxy_cache_use_stale error timeout updating;
         proxy_cache_key "$scheme$request_method$host$request_uri";
 
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-deny.conf;
         add_header X-Cache-Status $upstream_cache_status;
     }
 
@@ -100,6 +104,8 @@ server {
         proxy_cache_use_stale error timeout updating;
         proxy_cache_key "$scheme$request_method$host$request_uri";
 
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-deny.conf;
         add_header X-Cache-Status $upstream_cache_status;
     }
 }

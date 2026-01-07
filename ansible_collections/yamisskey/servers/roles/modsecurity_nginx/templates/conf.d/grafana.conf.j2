@@ -21,11 +21,8 @@ server {
         return 302 https://down.yami.ski;
     }
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # Security headers (included from shared config to ensure inheritance in all locations)
+    include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
 
     # Proxy settings
     proxy_set_header Host $host;
@@ -60,6 +57,8 @@ server {
         proxy_cache_use_stale error timeout updating;
         proxy_cache_key "$scheme$request_method$host$request_uri";
 
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
         add_header X-Cache-Status $upstream_cache_status;
     }
 
@@ -72,6 +71,8 @@ server {
         proxy_cache_valid 404 1h;
         proxy_cache_use_stale error timeout updating;
 
+        # Security headers (must be included in location blocks that use add_header)
+        include /etc/nginx/conf.d/00-security-headers-sameorigin.conf;
         expires 1d;
         add_header Cache-Control "public";
         add_header X-Cache-Status $upstream_cache_status;
