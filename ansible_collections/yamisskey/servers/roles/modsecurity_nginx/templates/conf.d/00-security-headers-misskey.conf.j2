@@ -14,10 +14,10 @@ add_header X-Frame-Options "SAMEORIGIN" always;
 # - img-src: Allow images from anywhere (federation), data URIs, blobs
 # - media-src: Allow media from anywhere (federation)
 # - connect-src: Allow WebSocket and API connections
-# - font-src: Allow fonts from self and Google Fonts
+# - font-src: Allow fonts from any HTTPS source (custom fonts feature)
 # - frame-src: Allow frames from same origin and YouTube embeds
 # - frame-ancestors: Allow embedding from same origin only
 # - object-src: Block plugins
 # - base-uri: Restrict base URL
 # - form-action: Allow forms to self
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://platform.twitter.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' wss: https:; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' https://www.youtube.com https://player.vimeo.com https://platform.twitter.com; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https:;" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://platform.twitter.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' wss: https:; font-src 'self' https://fonts.gstatic.com https: data:; frame-src 'self' https://www.youtube.com https://player.vimeo.com https://platform.twitter.com; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https:;" always;
