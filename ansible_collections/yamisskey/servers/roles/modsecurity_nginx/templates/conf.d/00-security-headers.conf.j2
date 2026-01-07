@@ -11,8 +11,8 @@ add_header X-XSS-Protection "1; mode=block" always;
 # Referrer Policy
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-# HSTS with includeSubDomains and preload
-add_header Strict-Transport-Security "max-age={{ modsecurity_hsts_max_age | default(31536000) }}{% if modsecurity_hsts_include_subdomains | default(true) %}; includeSubDomains{% endif %}{% if modsecurity_hsts_preload | default(true) %}; preload{% endif %}" always;
+# HSTS is managed by Cloudflare (SSL/TLS > Edge Certificates > HTTP Strict Transport Security)
+# No need to set here as Cloudflare handles all incoming traffic
 
 # Permissions Policy (formerly Feature-Policy)
 add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" always;
