@@ -59,8 +59,6 @@ cloudflared_ingress:
     # All services behind ModSecurity-Nginx (user-facing services only)
     - hostname: "{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
-    - hostname: "bypass.{{ domain }}"
-      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "neo-quesdon.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "drive.{{ domain }}"
