@@ -1,5 +1,5 @@
 ---
-# Caspar - Security & monitoring hub + CTF environment + Beta Misskey
+# Caspar - Security & monitoring hub + Beta Misskey
 
 # Cloudflared tunnel configuration
 cloudflared_tunnel_uuid: "636a9974-0dd6-4a89-97a4-e2268493d5f4"
@@ -15,11 +15,7 @@ misskey_port: "{{ host_services.caspar.misskey_beta }}"
 misskey_host: "beta.{{ domain }}"
 misskey_tag: "staging"
 
-# CTFd configuration
-ctfd_dir: "/opt/ctfd"
-ctfd_port: "{{ host_services.caspar.ctfd }}"
-
-# Nginx services to deploy (monitoring + auth + nostr + beta misskey + ctf)
+# Nginx services to deploy (monitoring + auth + nostr + beta misskey)
 modsecurity_nginx_services:
   - "grafana"
   - "uptime"
@@ -29,8 +25,6 @@ modsecurity_nginx_services:
   - "mcaptcha"
   # Nostr services (experimental)
   - "nostr"
-  # CTF platform
-  - "ctfd"
 
 # Prometheus monitoring targets
 monitor_targets:

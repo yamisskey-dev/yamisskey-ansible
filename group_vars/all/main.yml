@@ -28,7 +28,6 @@ host_services:
   caspar:
     # Security & monitoring hub + Auth infrastructure
     modsecurity_nginx: 8080
-    ctfd: 8000                 # CTFd
     uptime_kuma: 3009          # Uptime Kuma (monitoring)
     prometheus: 9090           # Prometheus (monitoring)
     grafana: 3000              # Grafana (monitoring dashboard)
@@ -52,6 +51,11 @@ host_services:
     # Minecraft dedicated server
     minecraft: 25565           # Minecraft Java server
     playit: 8080               # playit.gg proxy
+
+  ctfd:
+    # CTF Platform Server (Proxmox VM on mary)
+    modsecurity_nginx: 8080    # Main reverse proxy
+    ctfd: 8000                 # CTFd platform
 
 # Cloudflared ingress mapping
 cloudflared_ingress:
@@ -88,9 +92,11 @@ cloudflared_ingress:
     # Nostr services
     - hostname: "nostr.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
-    # CTF platform
+
+  ctfd:
+    # CTF platform (dedicated VM on mary)
     - hostname: "ctf.{{ domain }}"
-      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+      service: "http://localhost:{{ host_services.ctfd.modsecurity_nginx }}"
 
   linode_prox:
     # Direct service exposure for external proxies
