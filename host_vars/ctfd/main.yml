@@ -1,0 +1,17 @@
+---
+# CTFd - CTF Platform Server (Proxmox VM on mary)
+
+# Cloudflared tunnel configuration
+cloudflared_tunnel_uuid: "e10b62a7-844d-4aec-9b30-c8a730da24fb"
+cloudflared_config_dir: "/root/.cloudflared"
+
+# Service-specific configurations
+modsecurity_nginx_port: "{{ host_services.ctfd.modsecurity_nginx }}"
+
+# CTFd configuration
+ctfd_dir: "/opt/ctfd"
+ctfd_port: "{{ host_services.ctfd.ctfd }}"
+
+# Nginx services to deploy
+modsecurity_nginx_services:
+  - "ctfd"
