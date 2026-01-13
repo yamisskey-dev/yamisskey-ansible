@@ -9,6 +9,28 @@ Linux server infrastructure management with Ansible and SOPS secrets management.
 - **linode_prox** - External proxy (Squid, MediaProxy, Summaly)
 - **raspberrypi** - Game server (Minecraft) - Raspberry Pi OS
 
+## Infrastructure as Code
+
+```mermaid
+graph LR
+    classDef ansible fill:#ee0000,stroke:#cc0000,color:#fff
+    classDef target fill:#e2e8f0,stroke:#334155
+
+    subgraph iac[IaC Hub]
+        ansible[Ansible]:::ansible
+    end
+
+    subgraph ansible_targets[Ansible管理]
+        balthasar:::target
+        caspar:::target
+        linode_prox[linode-proxy]:::target
+        rpi[Raspberry Pi]:::target
+        ctfd[Proxmox mary/ctfd]:::target
+    end
+
+    ansible -->|SSH/Tailscale| balthasar & caspar & linode_prox & rpi & ctfd
+```
+
 ## System Requirements
 
 - Linux distribution providing a writable `systemd`
