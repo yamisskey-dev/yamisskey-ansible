@@ -1,0 +1,11 @@
+# Security headers configuration for mCaptcha
+# mCaptcha needs to be embeddable in iframes from other domains (e.g., Misskey)
+# Therefore, X-Frame-Options is NOT set here, and frame-ancestors allows specific domains
+
+# Include common security headers (HSTS, X-Content-Type-Options, etc.)
+include /etc/nginx/conf.d/00-security-headers.conf;
+
+# Content-Security-Policy with frame-ancestors to allow embedding from Misskey
+# Note: X-Frame-Options is intentionally omitted as it conflicts with frame-ancestors
+# and does not support multiple domains
+add_header Content-Security-Policy "frame-ancestors 'self' https://yami.ski https://*.yami.ski;" always;
