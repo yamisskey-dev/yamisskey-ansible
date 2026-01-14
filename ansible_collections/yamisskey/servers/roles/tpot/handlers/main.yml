@@ -1,2 +1,5 @@
 ---
-# No handlers - T-Pot requires manual installation
+- name: Restart Docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted

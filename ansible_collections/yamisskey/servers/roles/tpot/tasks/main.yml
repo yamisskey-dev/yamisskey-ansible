@@ -22,6 +22,7 @@
       - curl
       - git
       - locales
+      - apache2-utils
     state: present
     update_cache: true
   when: not tpot_config.stat.exists and ansible_os_family == "Debian"
@@ -32,6 +33,26 @@
     locale-gen
   args:
     creates: /usr/lib/locale/locale-archive
+  when: not tpot_config.stat.exists
+
+- name: Configure Docker address pools for T-Pot
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "default-address-pools": [
+          {
+            "base": "172.17.0.0/12",
+            "size": 24
+          },
+          {
+            "base": "192.168.0.0/16",
+            "size": 24
+          }
+        ]
+      }
+    mode: '0644'
+  notify: Restart Docker
   when: not tpot_config.stat.exists
 
 - name: Create T-Pot directory
@@ -61,6 +82,6 @@
       ssh -t {{ ansible_user }}@{{ ansible_host }} "cd {{ tpot_dir }} && ./install.sh -s -t {{ tpot_type_flag }} -u '{{ tpot_web_user }}' -p '{{ tpot_web_password }}'"
 
       After installation, reboot and access:
-      - Web UI: https://{{ ansible_host }}:64297
+      - Web UI: https://{{ ansible_host }}:64297 (user: {{ tpot_web_user }})
       - SSH: ssh -p 64295 {{ ansible_user }}@{{ ansible_host }}
   when: not tpot_config.stat.exists
