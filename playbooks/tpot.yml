@@ -1,0 +1,9 @@
+---
+# T-Pot deployment playbook
+# Prepares system and clones repo, then shows manual install command
+
+- name: T-Pot - Deploy
+  hosts: all
+  gather_facts: true
+  roles:
+    - yamisskey.servers.tpot

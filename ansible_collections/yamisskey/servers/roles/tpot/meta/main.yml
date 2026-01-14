@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: yamisskey-dev
+  description: Deploy T-Pot honeypot platform
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - "13"
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - "24.04"
+
+dependencies: []

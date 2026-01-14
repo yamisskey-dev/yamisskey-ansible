@@ -1,0 +1,66 @@
+---
+# T-Pot Deployment
+# https://github.com/telekom-security/tpotce
+
+- name: Check if T-Pot is installed
+  ansible.builtin.stat:
+    path: /etc/tpot.yml
+  register: tpot_config
+
+- name: Show access information (already installed)
+  ansible.builtin.debug:
+    msg: |
+      T-Pot is already installed.
+      - Web UI: https://{{ ansible_host }}:64297
+      - SSH: ssh -p 64295 {{ ansible_user }}@{{ ansible_host }}
+      - Cockpit: https://{{ ansible_host }}:64294
+  when: tpot_config.stat.exists
+
+- name: Install prerequisites
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+      - locales
+    state: present
+    update_cache: true
+  when: not tpot_config.stat.exists and ansible_os_family == "Debian"
+
+- name: Configure locale
+  ansible.builtin.shell: |
+    sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+    locale-gen
+  args:
+    creates: /usr/lib/locale/locale-archive
+  when: not tpot_config.stat.exists
+
+- name: Create T-Pot directory
+  ansible.builtin.file:
+    path: "{{ tpot_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  when: not tpot_config.stat.exists
+
+- name: Clone T-Pot repository
+  ansible.builtin.git:
+    repo: "https://github.com/telekom-security/tpotce.git"
+    dest: "{{ tpot_dir }}"
+    version: master
+    force: false
+  become: true
+  become_user: "{{ ansible_user }}"
+  when: not tpot_config.stat.exists
+
+- name: Show manual install command
+  ansible.builtin.debug:
+    msg: |
+      T-Pot is ready to install. Run manually:
+
+      ssh -t {{ ansible_user }}@{{ ansible_host }} "cd {{ tpot_dir }} && ./install.sh -s -t {{ tpot_type_flag }} -u '{{ tpot_web_user }}' -p '{{ tpot_web_password }}'"
+
+      After installation, reboot and access:
+      - Web UI: https://{{ ansible_host }}:64297
+      - SSH: ssh -p 64295 {{ ansible_user }}@{{ ansible_host }}
+  when: not tpot_config.stat.exists
