@@ -99,8 +99,50 @@ security_sysctl_settings:
   - { name: 'kernel.unprivileged_userns_clone', value: '0' }
   - { name: 'kernel.yama.ptrace_scope', value: '1' }
 
-  # BPFとトレース保護
+  # BPF/eBPFとトレース保護 (grsecurity/PaX相当)
   - { name: 'net.core.bpf_jit_harden', value: '2' }
+
+  # 追加のカーネルハードニング (Hardened Kernel相当)
+  # モジュールロード制限 (カーネルモジュールの動的ロードを無効化)
+  # 注意: 必要なモジュールは起動時にロードしておく必要あり
+  # - { name: 'kernel.modules_disabled', value: '1' }  # 本番環境で有効化を検討
+
+  # io_uring制限 (権限昇格攻撃の軽減)
+  - { name: 'kernel.io_uring_disabled', value: '2' }
+
+  # userfaultfd制限 (TOCTOU攻撃の軽減)
+  - { name: 'vm.unprivileged_userfaultfd', value: '0' }
+
+  # コアダンプからのメモリアドレス漏洩防止
+  - { name: 'kernel.core_pattern', value: '|/bin/false' }
+
+  # ftrace/kprobeの無効化 (カーネルトレース制限)
+  # - { name: 'kernel.ftrace_enabled', value: '0' }  # デバッグ時に問題となる可能性
+
+  # NMI watchdog無効化 (サイドチャネル攻撃軽減)
+  - { name: 'kernel.nmi_watchdog', value: '0' }
+
+  # printk制限 (情報漏洩防止)
+  - { name: 'kernel.printk', value: '3 3 3 3' }
+
+  # SysRq完全無効化
+  - { name: 'kernel.sysrq', value: '0' }
+
+  # タイマー精度の低減 (タイミング攻撃軽減)
+  - { name: 'kernel.timer_migration', value: '0' }
+
+  # ウォッチドッグ無効化
+  - { name: 'kernel.watchdog', value: '0' }
+
+  # ハードウェア乱数生成器の信頼度設定
+  # 注意: kernel 5.19+でのみ利用可能、古いカーネルではスキップ
+  # - { name: 'kernel.random.trust_cpu', value: '0' }
+  # - { name: 'kernel.random.trust_bootloader', value: '0' }
+
+  # ユーザー名前空間の制限
+  # 注意: 0にするとDocker rootlessモードが動作不可
+  # 通常のDocker (root) モードでは影響なし
+  # - { name: 'user.max_user_namespaces', value: '0' }  # Docker rootless非対応環境のみ
 
   # ネットワークパフォーマンスとバッファ
   - { name: 'net.core.netdev_max_backlog', value: '16384' }
@@ -112,7 +154,8 @@ security_sysctl_settings:
   - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
   - { name: 'net.ipv4.conf.all.accept_source_route', value: '0' }
   - { name: 'net.ipv4.conf.all.arp_ignore', value: '1' }
-  - { name: 'net.ipv4.conf.all.forwarding', value: '0' }
+  # Docker使用時はforwardingが必要 (Dockerが自動設定するため明示的に1)
+  - { name: 'net.ipv4.conf.all.forwarding', value: '1' }
   - { name: 'net.ipv4.conf.all.log_martians', value: '1' }
   - { name: 'net.ipv4.conf.all.proxy_arp', value: '0' }
   - { name: 'net.ipv4.conf.all.rp_filter', value: '1' }
@@ -122,7 +165,8 @@ security_sysctl_settings:
   - { name: 'net.ipv4.conf.default.accept_source_route', value: '0' }
   - { name: 'net.ipv4.conf.default.log_martians', value: '1' }
   - { name: 'net.ipv4.conf.default.secure_redirects', value: '0' }
-  - { name: 'net.ipv4.icmp_echo_ignore_all', value: '1' }
+  # ping応答を許可（監視で必要）
+  # - { name: 'net.ipv4.icmp_echo_ignore_all', value: '1' }
   - { name: 'net.ipv4.icmp_ignore_bogus_error_responses', value: '1' }
   - { name: 'net.ipv4.ping_group_range', value: '0 2147483647' }
 
@@ -152,7 +196,8 @@ security_sysctl_settings:
   - { name: 'net.ipv6.conf.all.accept_ra', value: '0' }
   - { name: 'net.ipv6.conf.all.accept_redirects', value: '0' }
   - { name: 'net.ipv6.conf.all.accept_source_route', value: '0' }
-  - { name: 'net.ipv6.conf.all.forwarding', value: '0' }
+  # Docker IPv6使用時はforwardingが必要
+  - { name: 'net.ipv6.conf.all.forwarding', value: '1' }
   - { name: 'net.ipv6.conf.default.accept_ra', value: '0' }
   - { name: 'net.ipv6.conf.default.accept_redirects', value: '0' }
 

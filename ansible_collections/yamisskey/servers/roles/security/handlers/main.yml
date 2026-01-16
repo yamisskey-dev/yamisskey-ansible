@@ -49,3 +49,9 @@
     state: restarted
     enabled: true
   become: true
+
+- name: Update GRUB
+  ansible.builtin.command: update-grub
+  become: true
+  when:
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
