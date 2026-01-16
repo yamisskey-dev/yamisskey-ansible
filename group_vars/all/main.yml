@@ -57,6 +57,13 @@ host_services:
     modsecurity_nginx: 8080    # Main reverse proxy
     ctfd: 8000                 # CTFd platform
 
+  tpot:
+    # T-Pot Honeypot Server (Proxmox VM on mary)
+    # Note: T-Pot manages its own ports internally
+    web_ui: 64297              # T-Pot Web UI (Kibana, Attack Map, etc.)
+    ssh: 64295                 # T-Pot SSH (management)
+    cockpit: 64294             # Cockpit (system management)
+
 # Cloudflared ingress mapping
 cloudflared_ingress:
   balthasar:

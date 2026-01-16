@@ -116,6 +116,36 @@ all:
             raspberrypi:
               ansible_host: ${IP_RASPBERRY}
 
+        ctf_servers:
+          vars:
+            internal_ip: "10.0.1.30"
+            cloudflare_tunnel_id: "{{ ctfd_tunnel_id }}"
+            cloudflare_tunnel_token: "{{ ctfd_tunnel_token }}"
+            egress_route: direct
+            host_roles:
+              - ctf_platform
+              - app_hosting
+            service_priority: medium
+            security_level: high
+            modsecurity_enabled: true
+          hosts:
+            ctfd:
+              ansible_host: ${IP_CTFD}  # Tailscale IP (Proxmox host: mary)
+
+        honeypot_servers:
+          vars:
+            internal_ip: "10.0.1.40"
+            egress_route: direct
+            host_roles:
+              - honeypot
+              - security_research
+            service_priority: low
+            security_level: high
+            modsecurity_enabled: false
+          hosts:
+            tpot:
+              ansible_host: ${IP_TPOT}  # Tailscale IP (Proxmox host: mary)
+
     # === Development/Testing ===
     development:
       vars:

@@ -248,6 +248,110 @@
   become: true
   when: ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
 
+# =============================================================================
+# カーネルハードニング (eBPF/grsecurity/PaX相当)
+# =============================================================================
+
+- name: Configure kernel hardening (GRUB and module blacklist)
+  block:
+    - name: Backup original GRUB configuration
+      ansible.builtin.copy:
+        src: /etc/default/grub
+        dest: /etc/default/grub.bak
+        remote_src: true
+        force: false
+      become: true
+
+    - name: Read current GRUB configuration
+      ansible.builtin.slurp:
+        src: /etc/default/grub
+      register: grub_config
+      become: true
+
+    - name: Build kernel hardening parameters string
+      ansible.builtin.set_fact:
+        kernel_hardening_params: "{{ security_grub_cmdline_extra | join(' ') }}"
+
+    - name: Update GRUB_CMDLINE_LINUX_DEFAULT with hardening parameters
+      ansible.builtin.lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash {{ kernel_hardening_params }}"'
+        backrefs: false
+      become: true
+      register: grub_updated
+      notify: Update GRUB
+
+    - name: Ensure modprobe.d directory exists
+      ansible.builtin.file:
+        path: /etc/modprobe.d
+        state: directory
+        mode: '0755'
+      become: true
+
+    - name: Create kernel module blacklist for security
+      ansible.builtin.template:
+        src: modprobe-blacklist.conf.j2
+        dest: /etc/modprobe.d/security-blacklist.conf
+        owner: root
+        group: root
+        mode: '0644'
+      become: true
+
+    - name: Create module loading prevention rules
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/security-prevent.conf
+        content: |
+          # Prevent loading of blacklisted modules by returning false
+          {% for module in security_kernel_module_blacklist %}
+          install {{ module }} /bin/false
+          {% endfor %}
+        owner: root
+        group: root
+        mode: '0644'
+      become: true
+
+    - name: Unload currently loaded blacklisted modules
+      ansible.builtin.shell: |
+        for mod in {{ security_kernel_module_blacklist | join(' ') }}; do
+          if lsmod | grep -q "^${mod}"; then
+            modprobe -r "$mod" 2>/dev/null || true
+          fi
+        done
+      become: true
+      changed_when: false
+      failed_when: false
+
+  when:
+    - security_kernel_hardening_enabled | default(true)
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
+
+- name: Configure kernel lockdown mode
+  block:
+    - name: Check if lockdown is available
+      ansible.builtin.stat:
+        path: /sys/kernel/security/lockdown
+      register: lockdown_file
+
+    - name: Display lockdown availability
+      ansible.builtin.debug:
+        msg: "Kernel lockdown is {{ 'available' if lockdown_file.stat.exists else 'not available (kernel too old or not configured)' }}"
+
+    - name: Read current lockdown mode
+      ansible.builtin.slurp:
+        src: /sys/kernel/security/lockdown
+      register: current_lockdown
+      when: lockdown_file.stat.exists
+
+    - name: Display current lockdown mode
+      ansible.builtin.debug:
+        msg: "Current lockdown mode: {{ current_lockdown.content | b64decode | trim }}"
+      when: lockdown_file.stat.exists
+  become: true
+  when:
+    - security_kernel_hardening_enabled | default(true)
+    - ansible_virtualization_type is not defined or ansible_virtualization_type not in ['docker', 'container']
+
 - name: Setup dnscrypt-proxy (System Install)
   block:
     - name: Install dnscrypt-proxy

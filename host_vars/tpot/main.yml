@@ -1,0 +1,8 @@
+---
+# T-Pot Honeypot Server (Proxmox VM on mary)
+# https://github.com/telekom-security/tpotce
+
+# T-Pot ports (reference only - managed by T-Pot itself)
+# Web UI: 64297
+# SSH: 64295
+# Cockpit: 64294

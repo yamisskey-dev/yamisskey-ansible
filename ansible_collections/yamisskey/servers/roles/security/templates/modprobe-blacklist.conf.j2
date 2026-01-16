@@ -1,0 +1,15 @@
+# Security module blacklist - managed by Ansible
+# This file prevents loading of potentially dangerous kernel modules
+# Generated from security_kernel_module_blacklist variable
+
+{% for module in security_kernel_module_blacklist %}
+blacklist {{ module }}
+{% endfor %}
+
+# Additional security notes:
+# - cramfs, freevxfs, hfs, hfsplus, jffs2, squashfs, udf: Legacy filesystems rarely needed
+# - dccp, sctp, rds, tipc: Uncommon network protocols with history of vulnerabilities
+# - firewire-*: DMA attack vector
+# - thunderbolt: DMA attack vector
+# - bluetooth, btusb: Attack surface reduction (enable if needed)
+# - vivid: CAP_NET_ADMIN privilege escalation vulnerability

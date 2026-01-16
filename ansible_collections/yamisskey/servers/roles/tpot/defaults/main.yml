@@ -1,0 +1,8 @@
+---
+# T-Pot default variables
+# https://github.com/telekom-security/tpotce
+
+tpot_dir: "/opt/tpot"
+tpot_type_flag: "h"  # h=hive, s=sensor, l=llm, i=mini, m=mobile, t=tarpit
+tpot_web_user: "{{ tpot.web_user | default('admin') }}"
+tpot_web_password: "{{ tpot.web_password | default('changeme') }}"

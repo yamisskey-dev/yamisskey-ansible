@@ -75,3 +75,83 @@ security_monitoring_ports:
 # systemd-resolved configuration
 security_systemd_resolved_dns: "127.0.0.1"
 security_systemd_resolved_fallback_dns: "1.1.1.1"
+
+# =============================================================================
+# カーネルハードニング設定 (eBPF/grsecurity/PaX相当)
+# =============================================================================
+
+# GRUBカーネルパラメータ (ブート時のセキュリティ強化)
+security_kernel_hardening_enabled: true
+security_grub_cmdline_extra:
+  # Spectre/Meltdown緩和
+  - "spectre_v2=on"
+  - "spec_store_bypass_disable=on"
+  - "l1tf=full,force"
+  - "mds=full,nosmt"
+  # IOMMU保護
+  - "iommu=force"
+  - "intel_iommu=on"
+  - "amd_iommu=on"
+  # メモリ保護
+  - "init_on_alloc=1"
+  - "init_on_free=1"
+  - "page_alloc.shuffle=1"
+  - "slab_nomerge"
+  - "pti=on"
+  # デバッグ/情報漏洩防止
+  - "debugfs=off"
+  - "lockdown=confidentiality"
+  # ランダム化強化
+  - "randomize_kstack_offset=on"
+  # vsyscall無効化 (ROPガジェット削減)
+  - "vsyscall=none"
+  # モジュール署名強制 (オプション)
+  # - "module.sig_enforce=1"
+
+# カーネルモジュールブラックリスト
+# 不要な/危険なモジュールをロード禁止
+security_kernel_module_blacklist:
+  # 不要なファイルシステム
+  - cramfs
+  - freevxfs
+  - hfs
+  - hfsplus
+  - jffs2
+  # - squashfs  # Snapパッケージで必要なため除外
+  - udf
+  # 不要なネットワークプロトコル
+  - dccp
+  - sctp
+  - rds
+  - tipc
+  # Firewire (DMA攻撃)
+  - firewire-core
+  - firewire-ohci
+  - firewire-sbp2
+  # Thunderbolt (DMA攻撃)
+  - thunderbolt
+  # Bluetooth (攻撃ベクトル削減)
+  - bluetooth
+  - btusb
+  # USB storage (オプション - 必要に応じてコメントアウト)
+  # - usb-storage
+  # - uas
+  # その他危険なモジュール
+  - cramfs
+  - vivid  # CAP_NET_ADMIN権限昇格
+
+# lockdownモード設定 (integrity または confidentiality)
+# integrity: カーネル整合性保護
+# confidentiality: integrity + カーネルメモリ読み取り禁止
+security_lockdown_mode: "confidentiality"
+
+# io_uring制限レベル
+# 0: 全ユーザー許可
+# 1: CAP_SYS_ADMIN必要
+# 2: 完全無効
+security_io_uring_disabled: 2
+
+# ユーザー名前空間の最大数
+# 注意: 0はDocker rootlessモードと非互換
+# 通常のDocker (root) では影響なし
+# security_user_max_namespaces: 0  # 必要な場合のみ有効化
