@@ -39,6 +39,8 @@ host_services:
     mcaptcha: 7493             # mCaptcha (CAPTCHA service)
     # Nostr services (experimental)
     nostr: 8008                # Nostr relay (nostr-rs-relay)
+    # AI Life Counseling service
+    yamix: 3026                # Yamix (AI counseling)
 
   linode_prox:
     # External proxy services
@@ -99,6 +101,9 @@ cloudflared_ingress:
     # Nostr services
     - hostname: "nostr.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
+    # Yamix service
+    - hostname: "mix.{{ domain }}"
+      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
 
   ctfd:
     # CTF platform (dedicated VM on mary)
@@ -129,3 +134,4 @@ mcaptcha_server_name: "captcha.{{ domain }}"
 neo_quesdon_server_name: "neo-quesdon.{{ domain }}"
 minio_api_server_name: "drive.{{ domain }}"
 nostr_server_name: "nostr.{{ domain }}"
+yamix_server_name: "mix.{{ domain }}"

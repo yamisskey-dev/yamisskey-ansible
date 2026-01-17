@@ -1,0 +1,11 @@
+- name: Setup yamix
+  hosts: caspar
+  become: true
+  vars:
+    yamix_postgres_user: "{{ yamix.postgresql.user }}"
+    yamix_postgres_password: "{{ yamix.postgresql.password }}"
+    yamix_postgres_db: "{{ yamix.postgresql.database }}"
+    yamix_openai_api_key: "{{ yamix.openai_api_key }}"
+    yamix_jwt_secret: "{{ yamix.jwt_secret }}"
+  roles:
+    - yamix
