@@ -1,7 +1,7 @@
 FROM {{ openclaw_image }}
 
-# bundled skill の依存 CLI を追加する（skill 側の requires.bins に対応）
-#   jq, ripgrep: session-logs
+# エージェントのシェル実行で使う汎用 CLI を追加する
+#   jq, ripgrep（2026.9.3 で bundled skill の session-logs は廃止された）
 # 実行時は read_only rootfs のため、ここ（ビルド時）でしか入れられない
 USER root
 RUN apt-get update \

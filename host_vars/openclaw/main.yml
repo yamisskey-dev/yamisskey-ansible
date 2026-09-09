@@ -5,7 +5,7 @@
 # meta.lastTouchedVersion は openclaw が自身の package.json version で書き戻す
 # auto-managed フィールド。イメージタグ(-2 等の hotfix suffix)ではなくアプリの
 # 申告バージョンに合わせないと、毎回 template が差分扱いになり再作成が走る。
-openclaw_version: '2026.7.1'
+openclaw_version: '2026.9.3'
 
 # Telegram DM: ペアリング承認を不要にするため allowlist 方式で事前許可する
 openclaw_telegram_dm_policy: allowlist
@@ -31,7 +31,6 @@ openclaw_agent_models:
 # bundled skill は依存 CLI・API キーが揃うものだけ有効化し、残りは無効化している。
 # 有効化の判断基準: SKILL.md の requires.bins がコンテナ内に存在し、requires.env が
 # .env-docker-compose で供給されていること（依存 CLI は openclaw.Dockerfile.j2 で追加）。
-#   - session-logs: jq/ripgrep を Dockerfile で追加（heartbeat のエラー確認と連携）
 # openclaw が disable 状態を config へ書き戻すため、テンプレート側も同じ
 # entries を持たないと毎回 template が差分扱いになる（openclaw_version と同じ理由）。
 # イメージ更新で bundled skill が増えたら doctor の指摘に合わせてここへ追記する。
@@ -50,6 +49,7 @@ openclaw_skills_disabled:
   - goplaces
   - himalaya
   - mcporter
+  - model-usage
   - nano-pdf
   - obsidian
   - openai-whisper
