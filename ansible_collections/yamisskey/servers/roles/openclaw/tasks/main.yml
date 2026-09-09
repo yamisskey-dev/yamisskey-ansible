@@ -36,6 +36,8 @@
   command: getent group docker
   register: docker_group_result
   changed_when: false
+  # read-only なので check モードでも実行する（skip すると後続の GID 抽出が落ちる）
+  check_mode: false
 
 - name: Set Docker GID fact
   set_fact:
