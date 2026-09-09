@@ -20,6 +20,10 @@ services:
       # read_only ルートFSでは $HOME/.npm を作れないため、起動時プラグイン
       # 導入(tavily 等)の npm cache を書き込み可能な永続ボリューム配下に逃がす
       NPM_CONFIG_CACHE: {{ openclaw_home }}/.npm-cache
+      # 2026.9.3 は起動時に $XDG_CACHE_HOME (既定 $HOME/.cache) 配下へ temp dir を
+      # 作るため、read_only ルートFSのままだと起動できない。npm cache と同じく
+      # 書き込み可能な永続ボリューム配下へ逃がす
+      XDG_CACHE_HOME: {{ openclaw_home }}/.cache
     env_file:
       - .env-docker-compose
     tmpfs:
