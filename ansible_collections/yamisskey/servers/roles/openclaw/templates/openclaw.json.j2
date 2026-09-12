@@ -4,11 +4,16 @@
   openclaw_version と同じ理由）。以下は意図的なので「修正」しないこと:
     - skills.entries: bundled skill の disable 状態の書き戻し（リストは host_vars）
     - plugins.entries.memory-core: {"config": {}} の形のまま
+    - meta.migrations.modelPolicyAllowlist / agents.defaults.modelPolicy.allow:
+      2026.9.4 の一度きり migration が書き戻す（allow は agents.defaults.models のキー）
     - ファイル末尾に改行を付けない
 -#}
 {
   "meta": {
-    "lastTouchedVersion": "{{ openclaw_version | default('2026.6.6') }}"
+    "lastTouchedVersion": "{{ openclaw_version | default('2026.6.6') }}",
+    "migrations": {
+      "modelPolicyAllowlist": true
+    }
   },
   "models": {
     "providers": {
@@ -75,6 +80,9 @@
           "end": "{{ openclaw_heartbeat_active_end | default('01:00') }}",
           "timezone": "{{ openclaw_heartbeat_timezone | default('Asia/Tokyo') }}"
         }
+      },
+      "modelPolicy": {
+        "allow": {{ (openclaw_agent_models | default({'opencode-go/kimi-k3': {'alias': 'kimi'}})).keys() | list | to_json }}
       }
     }
   },

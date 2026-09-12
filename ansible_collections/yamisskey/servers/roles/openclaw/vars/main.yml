@@ -4,7 +4,7 @@ openclaw_dir: '/opt/openclaw'
 # Must match container-internal path for DooD sandbox path resolution
 openclaw_home: '/home/node/.openclaw'
 # latest タグは過去に stable へ追随していなかった実績があるため常に明示ピンする
-openclaw_image: 'ghcr.io/openclaw/openclaw:2026.9.3'
+openclaw_image: 'ghcr.io/openclaw/openclaw:2026.9.4'
 openclaw_gateway_port: "{{ host_services[inventory_hostname].openclaw_gateway | default(18789) }}"
 openclaw_bridge_port: "{{ host_services[inventory_hostname].openclaw_bridge | default(18790) }}"
 openclaw_gateway_bind: 'loopback'
