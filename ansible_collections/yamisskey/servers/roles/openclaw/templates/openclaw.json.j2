@@ -15,18 +15,6 @@
       "modelPolicyAllowlist": true
     }
   },
-  "models": {
-    "providers": {
-      "opencode-go": {
-        "api": "openai-completions",
-        "baseUrl": "https://opencode.ai/zen/go/v1",
-        "apiKey": "${OPENCODE_API_KEY}",
-        "models": [
-          { "id": "kimi-k3", "name": "kimi-k3" }
-        ]
-      }
-    }
-  },
   "agents": {
     "entries": {
       "main": {
@@ -52,13 +40,13 @@
       "maxConcurrent": {{ openclaw_max_concurrent | default(8) }},
       "subagents": {
         "maxConcurrent": {{ openclaw_subagents_max_concurrent | default(16) }},
-        "model": "{{ openclaw_subagents_model | default('opencode-go/kimi-k3') }}"
+        "model": "{{ openclaw_subagents_model | default('openai/gpt-5.6-luna') }}"
       },
       "model": {
-        "primary": "{{ openclaw_default_model | default('opencode-go/kimi-k3') }}",
+        "primary": "{{ openclaw_default_model | default('openai/gpt-5.6-terra') }}",
         "fallbacks": {{ openclaw_model_fallbacks | default('[]') }}
       },
-      "models": {{ openclaw_agent_models | default({'opencode-go/kimi-k3': {'alias': 'kimi'}}) | to_json }},
+      "models": {{ openclaw_agent_models | default({'openai/gpt-5.6-terra': {}}) | to_json }},
       "contextPruning": {
         "mode": "{{ openclaw_context_pruning_mode | default('cache-ttl') }}",
         "ttl": "{{ openclaw_context_pruning_ttl | default('12h') }}"
@@ -72,7 +60,7 @@
       },
       "heartbeat": {
         "every": "{{ openclaw_heartbeat_every | default('55m') }}",
-        "model": "{{ openclaw_heartbeat_model | default('opencode-go/kimi-k3') }}",
+        "model": "{{ openclaw_heartbeat_model | default('openai/gpt-5.6-luna') }}",
         "target": "{{ openclaw_heartbeat_target | default('telegram') }}",
         "prompt": "{{ openclaw_heartbeat_prompt | default('Read HEARTBEAT.md if it exists. Then: (1) Review .learnings/ for recurring patterns (recurrence >= 3) and promote to project memory. (2) Check for unresolved errors and attempt safe fixes. (3) If a conversation was left mid-task, summarize status. (4) If nothing needs attention, reply HEARTBEAT_OK. If HEARTBEAT.md does not exist, create it with your own improvement checklist, then reply HEARTBEAT_OK.') }}",
         "activeHours": {
@@ -82,7 +70,7 @@
         }
       },
       "modelPolicy": {
-        "allow": {{ (openclaw_agent_models | default({'opencode-go/kimi-k3': {'alias': 'kimi'}})).keys() | list | to_json }}
+        "allow": {{ (openclaw_agent_models | default({'openai/gpt-5.6-terra': {}})).keys() | list | to_json }}
       }
     }
   },
@@ -159,7 +147,7 @@
     }
   },
   "plugins": {
-    "allow": ["telegram", "tavily", "openai", "codex", "opencode-go", "memory-core"],
+    "allow": ["telegram", "tavily", "openai", "codex", "memory-core"],
     "entries": {
       "telegram": {
         "enabled": true
@@ -180,9 +168,6 @@
       },
       "memory-core": {
         "config": {}
-      },
-      "opencode-go": {
-        "enabled": true
       }
     }
   },

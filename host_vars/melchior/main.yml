@@ -20,6 +20,8 @@ vaultwarden_domain: vault.hital.in
 vaultwarden_port: "{{ host_services.melchior.vaultwarden }}"
 
 # Hermes Agent (git install under ~/.hermes, user systemd + linger)
+# 2026-10-08 コスト削減のため停止（OpenCode Go 解約）。~/.hermes は残しているので true で再開できる
+hermes_enabled: false
 # コードは upstream main をこの commit にピン留め。更新は sha を書き換えて再実行するか
 # melchior 上で `hermes update` を実行する（実行後はここも合わせて更新する）
 hermes_commit: dbb6acd333aa4b01be551fa4edb51edc721846dd

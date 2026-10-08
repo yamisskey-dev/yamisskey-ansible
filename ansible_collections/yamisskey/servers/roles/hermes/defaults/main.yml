@@ -1,6 +1,8 @@
 ---
 # Hermes Agent (https://github.com/NousResearch/hermes-agent) default variables
 # The agent runs as the login user (not root): code, venv, node, data all live under hermes_home.
+# false にすると user systemd ユニットを stop/disable し Tailscale Serve を外すだけ（~/.hermes は残す）
+hermes_enabled: true
 hermes_user: "{{ ansible_user }}"
 hermes_home: "/home/{{ hermes_user }}/.hermes"
 hermes_install_dir: "{{ hermes_home }}/hermes-agent"

@@ -37,7 +37,6 @@ provisioner:
         openclaw:
           gateway_token: "test-gateway-token"
           kimi_api_key: "test-kimi-key"
-          opencode_api_key: "test-opencode-key"
           openai_api_key: "test-openai-key"
           discord_webhook_url: "https://discord.com/api/webhooks/test"
           discord_bot_token: "test-discord-token"
