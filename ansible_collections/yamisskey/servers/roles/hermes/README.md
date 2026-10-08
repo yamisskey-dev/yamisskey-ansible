@@ -4,6 +4,7 @@ Hermes Agent（NousResearch）をログインユーザーの `~/.hermes` に導�
 
 - 呼び出し例: `task run PLAYBOOK=hermes`
 - 管理対象: 上流インストーラの実行（初回のみ。`hermes_commit` でピン留め）、`.env`、`config.yaml`、user systemd ユニット（gateway / dashboard）、linger
+- 停止: host_vars で `hermes_enabled: false` にして再実行すると gateway / dashboard を stop・disable し Tailscale Serve を外す。`~/.hermes`（コード・`.env`・`state.db`）は残るので `true` に戻せば再開できる
 - 管理対象外（hermes 側の所有物）: `SOUL.md`、`state.db`、`sessions/`、`memories/`、`skills/`
 - シークレット: `host_vars/<host>/secrets.sops.yml` の `hermes.*`。キー名を大文字化して `.env` に書き出す（`hermes.telegram_bot_token` → `TELEGRAM_BOT_TOKEN`）
 - 非シークレットの `.env` 設定（timeout / debug フラグ等）は `defaults/main.yml` の `hermes_env_settings`。同名キーは SOPS 側が優先
