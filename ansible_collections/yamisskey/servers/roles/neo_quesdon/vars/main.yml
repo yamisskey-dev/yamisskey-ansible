@@ -1,4 +1,0 @@
----
-# Neo-Quesdon specific variables
-neo_quesdon_dir: '/var/www/neo-quesdon'
-neo_quesdon_server_name: neo-quesdon.{{ domain }}

@@ -12,7 +12,6 @@ host_services:
     # Main production server - Social & Apps (user-facing services only)
     modsecurity_nginx: 8080     # Main reverse proxy
     misskey: 3001              # Yamisskey container port
-    neo_quesdon: 3025          # Neo-Quesdon
     element: 8081              # Element Matrix client
     synapse: 8008              # Matrix Synapse
     cryptpad: 3003             # CryptPad (main) 3333 (websocket)
@@ -31,8 +30,6 @@ host_services:
     blackbox_exporter: 9115    # Blackbox Exporter
     alert_manager: 9093        # AlertManager
     misskey_beta: 3002         # Misskey Beta (test environment for yamisskey-dev)
-    # AI Life Counseling service
-    yamix: 3026                # Yamix (AI counseling)
 
   linode_prox:
     # External proxy services
@@ -77,8 +74,6 @@ cloudflared_ingress:
     # All services behind ModSecurity-Nginx (user-facing services only)
     - hostname: "{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
-    - hostname: "neo-quesdon.{{ domain }}"
-      service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "drive.{{ domain }}"
       service: "http://localhost:{{ host_services.balthasar.modsecurity_nginx }}"
     - hostname: "matrix.{{ domain }}"
@@ -95,9 +90,6 @@ cloudflared_ingress:
     - hostname: "grafana.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
     - hostname: "uptime.{{ domain }}"
-      service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
-    # Yamix service
-    - hostname: "mix.{{ domain }}"
       service: "http://localhost:{{ host_services.caspar.modsecurity_nginx }}"
 
   ctfd:
@@ -133,9 +125,7 @@ ctfd_server_name: "ctf.{{ domain }}"
 grafana_server_name: "grafana.{{ domain }}"
 cryptpad_server_name: "pad.{{ domain }}"
 uptime_server_name: "uptime.{{ domain }}"
-neo_quesdon_server_name: "neo-quesdon.{{ domain }}"
 garage_api_server_name: "drive.{{ domain }}"
-yamix_server_name: "mix.{{ domain }}"
 # Matrix RTC (turn.* is DNS-only A record to linode_prox; media cannot go through the tunnel)
 turn_server_name: "turn.{{ domain }}"
 livekit_server_name: "livekit.{{ domain }}"

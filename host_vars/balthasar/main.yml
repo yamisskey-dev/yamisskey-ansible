@@ -21,4 +21,3 @@ modsecurity_nginx_services:
   - "element"
   - "garage"
   - "cryptpad"
-  - "neo_quesdon"

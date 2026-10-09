@@ -90,7 +90,6 @@ host_services:
     grafana: 3000
     cryptpad: 3000
     uptime: 3001
-    neo_quesdon: 3025
 
 # Server names configuration
 misskey_server_name: "misskey.example.com"
@@ -100,7 +99,6 @@ ctfd_server_name: "ctf.example.com"
 grafana_server_name: "grafana.example.com"
 cryptpad_server_name: "cryptpad.example.com"
 uptime_server_name: "uptime.example.com"
-neo_quesdon_server_name: "neo-quesdon.example.com"
 garage_api_server_name: "garage.example.com"
 livekit_jwt_server_name: "livekit-jwt.example.com"
 
@@ -140,7 +138,6 @@ modsecurity_services_default:
   - "garage"
   - "cryptpad"
   - "uptime"
-  - "neo_quesdon"
 
 # Monitoring configuration
 modsecurity_monitoring_enabled: true
