@@ -47,9 +47,9 @@
 - name: Build ai instance
   become: true
   shell: |
-    IMAGE_TAG="ai_app:{{ ansible_date_time.iso8601_basic }}"
-    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker-compose build --build-arg TAG=$IMAGE_TAG
-    docker tag ai_app:latest $IMAGE_TAG
+    IMAGE_TAG="ai-app:{{ ansible_date_time.iso8601_basic }}"
+    COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose build --build-arg TAG=$IMAGE_TAG
+    docker tag ai-app:latest $IMAGE_TAG
   args:
     chdir: '{{ ai_dir }}'
     executable: /bin/bash
@@ -61,7 +61,7 @@
 
 - name: Start ai instance
   become: true
-  shell: docker-compose up -d
+  shell: docker compose up -d
   args:
     chdir: '{{ ai_dir }}'
     executable: /bin/bash
