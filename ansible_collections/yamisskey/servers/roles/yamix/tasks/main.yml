@@ -1,0 +1,78 @@
+# tasks/main.yml
+
+# プロジェクトのクローン（submodule含む）
+- name: Clone yamix repository with submodules
+  ansible.builtin.git:
+    repo: "https://github.com/yamisskey-dev/yamix.git"
+    dest: "{{ yamix_dir }}"
+    version: "{{ yamix_version | default('main') }}"
+    force: true
+    recursive: true
+
+# 設定ファイルの生成
+- name: Generate .env from template
+  template:
+    src: yamix.env.j2
+    dest: "{{ yamix_dir }}/.env"
+    mode: '0600'
+  when:
+    - domain is defined
+    - ansible_env.MOLECULE_SCENARIO_NAME is not defined
+  failed_when: false
+
+# 設定ファイルの存在確認
+- name: Verify docker-compose.yml exists
+  ansible.builtin.stat:
+    path: "{{ yamix_dir }}/docker-compose.yml"
+  register: compose_file
+
+- name: Verify .env exists
+  ansible.builtin.stat:
+    path: "{{ yamix_dir }}/.env"
+  register: env_file
+
+- name: Fail if required files are missing
+  fail:
+    msg: "Required configuration files are missing"
+  when:
+    - not ansible_check_mode
+    - not compose_file.stat.exists or not env_file.stat.exists
+
+# Docker Composeファイルの構文検証
+- name: Validate docker-compose.yml syntax
+  command: docker compose config
+  args:
+    chdir: "{{ yamix_dir }}"
+  register: compose_validation
+  failed_when: compose_validation.rc != 0
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - compose_file.stat.exists
+    - env_file.stat.exists
+
+# 古いコンテナの削除
+- name: Stop and remove orphan containers
+  community.docker.docker_compose_v2:
+    project_src: "{{ yamix_dir }}"
+    state: absent
+    remove_orphans: true
+  when:
+    - not ansible_check_mode
+    - compose_file.stat.exists
+    - env_file.stat.exists
+  failed_when: false
+
+# コンテナのビルドと起動
+- name: Build and start Yamix containers
+  community.docker.docker_compose_v2:
+    project_src: "{{ yamix_dir }}"
+    state: present
+    build: always
+    recreate: always
+    remove_orphans: true
+  when:
+    - not ansible_check_mode
+    - compose_file.stat.exists
+    - env_file.stat.exists
+    - compose_validation.rc == 0

@@ -21,6 +21,7 @@ known_services:
   - ai
   - cryptpad
   - matrix
+  - neo-quesdon
   - ctfd
   - uptime
   - minecraft
