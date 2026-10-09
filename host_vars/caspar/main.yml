@@ -18,11 +18,13 @@ misskey_port: "{{ host_services.caspar.misskey_beta }}"
 misskey_host: "beta.{{ domain }}"
 misskey_tag: "staging"
 
-# Nginx services to deploy (monitoring + beta misskey)
+# Nginx services to deploy (monitoring + beta misskey + yamix)
 modsecurity_nginx_services:
   - "grafana"
   - "uptime"
   - "misskey_beta"
+  # AI Life Counseling service
+  - "yamix"
 
 # Prometheus monitoring targets
 monitor_targets:

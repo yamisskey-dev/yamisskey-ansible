@@ -83,6 +83,7 @@ ansible-playbook -i inventory playbooks/operations.yml -e op=logs -e service=gar
 - `ai` - AI サービス
 - `cryptpad` - CryptPad
 - `matrix` - Matrix
+- `neo-quesdon` - Neo-Quesdon
 - `ctfd` - CTFd
 - `uptime` - Uptime Kuma
 - `minecraft` - Minecraft
