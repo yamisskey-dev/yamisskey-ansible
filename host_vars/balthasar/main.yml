@@ -8,6 +8,7 @@ cloudflared_tunnel_uuid: "{{ balthasar_cloudflared_tunnel_uuid }}"
 # Service-specific configurations
 modsecurity_nginx_port: "{{ host_services.balthasar.modsecurity_nginx }}"
 misskey_port: "{{ host_services.balthasar.misskey }}"
+neo_quesdon_port: "{{ host_services.balthasar.neo_quesdon }}"
 
 # Misskey configuration (production)
 misskey_host: "{{ domain }}"
