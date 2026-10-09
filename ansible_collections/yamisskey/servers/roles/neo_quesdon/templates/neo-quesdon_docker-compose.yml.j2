@@ -1,6 +1,6 @@
 services:
   app:
-    image: neoquesdon/neoquesdon:latest
+    image: "ghcr.io/yamisskey-dev/neo-quesdon:{{ neo_quesdon_version }}"
     depends_on:
       - db
       - redis
