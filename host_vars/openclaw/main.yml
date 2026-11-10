@@ -17,6 +17,10 @@ openclaw_telegram_allow_from:
 openclaw_default_model: 'openai/gpt-5.6-terra'
 openclaw_subagents_model: 'openai/gpt-5.6-luna'
 openclaw_heartbeat_model: 'openai/gpt-5.6-luna'
+# heartbeat は1回あたり tool 実行 40回弱の full agent turn（2026-11 実測）。
+# 55m は main セッションの prompt cache を温める間隔だったが、isolatedSession 化で
+# 意味が無くなったので、メンション監視の遅延とサブスク枠消費の釣り合いで 2h にする
+openclaw_heartbeat_every: '2h'
 openclaw_model_fallbacks: '[]'
 
 # codex プラグインが起動時に自身のカタログモデルを config へ書き戻すため、
