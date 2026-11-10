@@ -6,13 +6,28 @@
     - plugins.entries.memory-core: {"config": {}} の形のまま
     - meta.migrations.modelPolicyAllowlist / agents.defaults.modelPolicy.allow:
       2026.9.4 の一度きり migration が書き戻す（allow は agents.defaults.models のキー）
+    - meta.migrations.webhookListeners / utilityModelSeparation:
+      2026.11.2 への更新時に doctor が書き戻す一度きり migration の完了フラグ
+    - heartbeat.isolatedSession: 既定では heartbeat が main セッションで走り、
+      55分ごとの tool 実行ログが会話 transcript に積もって agent DB が肥大する
+      （2026-11 時点で約 3.5MB/日）。毎回新しいセッションで実行させる
+      前回の続きは会話履歴ではなくファイル（TODO.md / memory/）で引き継がせる
+    - session.maintenance.coldStorage: 30日動きの無い transcript を SQLite から
+      圧縮 JSONL へ退避する（履歴は消えない。開けば自動で復元される）
     - ファイル末尾に改行を付けない
 -#}
 {
   "meta": {
     "lastTouchedVersion": "{{ openclaw_version | default('2026.6.6') }}",
     "migrations": {
-      "modelPolicyAllowlist": true
+      "modelPolicyAllowlist": true,
+      "webhookListeners": {
+        "telegram": [],
+        "feishu": [],
+        "msteams": [],
+        "nextcloud-talk": []
+      },
+      "utilityModelSeparation": true
     }
   },
   "agents": {
@@ -62,7 +77,9 @@
         "every": "{{ openclaw_heartbeat_every | default('55m') }}",
         "model": "{{ openclaw_heartbeat_model | default('openai/gpt-5.6-luna') }}",
         "target": "{{ openclaw_heartbeat_target | default('telegram') }}",
-        "prompt": "{{ openclaw_heartbeat_prompt | default('Read HEARTBEAT.md if it exists. Then: (1) Review .learnings/ for recurring patterns (recurrence >= 3) and promote to project memory. (2) Check for unresolved errors and attempt safe fixes. (3) If a conversation was left mid-task, summarize status. (4) If nothing needs attention, reply HEARTBEAT_OK. If HEARTBEAT.md does not exist, create it with your own improvement checklist, then reply HEARTBEAT_OK.') }}",
+        "directPolicy": "allow",
+        "prompt": "{{ openclaw_heartbeat_prompt | default('Read HEARTBEAT.md if it exists. Then: (1) Review .learnings/ for recurring patterns (recurrence >= 3) and promote to project memory. (2) Check for unresolved errors and attempt safe fixes. (3) Earlier heartbeat runs are not in this session history: continue unfinished work from TODO.md and memory/ notes, and record progress there before finishing. (4) If nothing needs attention, reply HEARTBEAT_OK. If HEARTBEAT.md does not exist, create it with your own improvement checklist, then reply HEARTBEAT_OK.') }}",
+        "isolatedSession": true,
         "activeHours": {
           "start": "{{ openclaw_heartbeat_active_start | default('07:00') }}",
           "end": "{{ openclaw_heartbeat_active_end | default('01:00') }}",
@@ -119,6 +136,12 @@
     "reset": {
       "mode": "{{ openclaw_session_reset_mode | default('idle') }}",
       "idleMinutes": {{ openclaw_session_idle_minutes | default(10080) }}
+    },
+    "maintenance": {
+      "coldStorage": {
+        "enabled": true,
+        "afterDays": 30
+      }
     }
   },
   "logging": {

@@ -24,6 +24,10 @@ services:
       # 作るため、read_only ルートFSのままだと起動できない。npm cache と同じく
       # 書き込み可能な永続ボリューム配下へ逃がす
       XDG_CACHE_HOME: {{ openclaw_home }}/.cache
+      # schema migration は DB サイズ級の SQLite 一時ファイルを作る。既定の /tmp
+      # (tmpfs 100M) では溢れて "database or disk is full" で起動できないため
+      # ディスク上の永続ボリューム配下へ逃がす
+      SQLITE_TMPDIR: {{ openclaw_home }}/.cache
     env_file:
       - .env-docker-compose
     tmpfs:
@@ -31,6 +35,12 @@ services:
     volumes:
       - {{ openclaw_home }}:{{ openclaw_home }}
       - {{ openclaw_home }}/workspace:{{ openclaw_home }}/workspace
+      # doctor は migration 前の state capture を state dir の兄弟ディレクトリへ作る。
+      # read_only ルートFSのままだと EROFS で capture を取れずに migration が進む
+      - {{ openclaw_home }}.update-captures:{{ openclaw_home }}.update-captures
+      # codex プラグインの resident catalog は user scope の $HOME/.codex を作る。
+      # 無いと起動のたびに ENOENT で background update が失敗する
+      - {{ openclaw_home | dirname }}/.codex:/home/node/.codex
       - /usr/bin/tailscale:/usr/bin/tailscale:ro
       - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock:ro
       - /var/run/docker.sock:/var/run/docker.sock
