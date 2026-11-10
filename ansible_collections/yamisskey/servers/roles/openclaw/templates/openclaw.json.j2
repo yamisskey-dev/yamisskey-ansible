@@ -6,13 +6,22 @@
     - plugins.entries.memory-core: {"config": {}} の形のまま
     - meta.migrations.modelPolicyAllowlist / agents.defaults.modelPolicy.allow:
       2026.9.4 の一度きり migration が書き戻す（allow は agents.defaults.models のキー）
+    - meta.migrations.webhookListeners / utilityModelSeparation:
+      2026.11.2 への更新時に doctor が書き戻す一度きり migration の完了フラグ
     - ファイル末尾に改行を付けない
 -#}
 {
   "meta": {
     "lastTouchedVersion": "{{ openclaw_version | default('2026.6.6') }}",
     "migrations": {
-      "modelPolicyAllowlist": true
+      "modelPolicyAllowlist": true,
+      "webhookListeners": {
+        "telegram": [],
+        "feishu": [],
+        "msteams": [],
+        "nextcloud-talk": []
+      },
+      "utilityModelSeparation": true
     }
   },
   "agents": {

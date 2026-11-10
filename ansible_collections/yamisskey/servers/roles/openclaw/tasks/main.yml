@@ -52,6 +52,9 @@
     - { path: "{{ openclaw_dir }}", mode: '0755' }
     - { path: "{{ openclaw_home }}", mode: '0700' }
     - { path: "{{ openclaw_home }}/workspace", mode: '0755' }
+    # read_only ルートFS対策で gateway にマウントする書き込み先（compose 参照）
+    - { path: "{{ openclaw_home }}.update-captures", mode: '0700' }
+    - { path: "{{ openclaw_home | dirname }}/.codex", mode: '0700' }
 
 - name: Configure OpenClaw environment
   template:
